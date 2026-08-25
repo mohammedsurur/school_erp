@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block title %}Audit Log{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+{% block content %}
+
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9;font-size:.875rem}
+  .table tbody tr:hover{background:#f8faff}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .avatar-xs{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .action-pill{padding:.25rem .7rem;border-radius:999px;font-size:.72rem;font-weight:700}
+</style>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Audit Log</h5>
+    <p class="text-muted small mb-0">Track all important actions in the system</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+  <input type="text" name="q" value="{{ q }}"
+         class="form-control search-bar" placeholder="Search by username…"
+         style="max-width:220px">
+  <select name="action" class="form-select search-bar" style="max-width:160px">
+    <option value="">All Actions</option>
+    {% for act in actions %}
+    <option value="{{ act }}" {% if action == act %}selected{% endif %}>{{ act }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="model" value="{{ model_name }}"
+         class="form-control search-bar" placeholder="Filter by model…"
+         style="max-width:180px">
+  <button type="submit" class="btn btn-outline-primary rounded-pill px-4">
+    <i class="bi bi-search me-1"></i>Filter
+  </button>
+  {% if q or action or model_name %}
+  <a href="{% url 'audit_log' %}" class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-x me-1"></i>Clear
+  </a>
+  {% endif %}
+  <span class="ms-auto text-muted small">{{ logs.paginator.count }} record{{ logs.paginator.count|pluralize }}</span>
+</form>
+
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Model</th>
+          <th>Detail</th>
+          <th>IP Address</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ log.user.first_name|first|upper }}{{ log.user.last_name|first|upper }}
+              </div>
+              <span class="fw-semibold small">{{ log.user.username|default:"System" }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="action-pill
+              {% if log.action == 'CREATE' %}bg-success-subtle text-success
+              {% elif log.action == 'UPDATE' %}bg-primary-subtle text-primary
+              {% elif log.action == 'DELETE' %}bg-danger-subtle text-danger
+              {% else %}bg-secondary-subtle text-secondary{% endif %}">
+              {{ log.action }}
+            </span>
+          </td>
+          <td>
+            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3">
+              {{ log.model_name }}
+            </span>
+          </td>
+          <td class="text-muted small" style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            {{ log.detail|default:"—" }}
+          </td>
+          <td class="text-muted small font-monospace">{{ log.ip_address|default:"—" }}</td>
+          <td class="text-muted small">{{ log.timestamp|date:"M d, Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="text-center py-5">
+              <i class="bi bi-clock-history fs-1 text-muted opacity-25 d-block mb-3"></i>
+              <h6 class="fw-bold text-dark">No audit logs yet</h6>
+              <p class="text-muted small mb-0">Actions will be recorded here automatically.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if logs.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if logs.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ logs.previous_page_number }}&q={{ q }}&action={{ action }}&model={{ model_name }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in logs.paginator.page_range %}
+    <li class="page-item {% if logs.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&q={{ q }}&action={{ action }}&model={{ model_name }}">
+        {{ num }}
+      </a>
+    </li>
+    {% endfor %}
+    {% if logs.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ logs.next_page_number }}&q={{ q }}&action={{ action }}&model={{ model_name }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

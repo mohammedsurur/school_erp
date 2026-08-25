@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Collect Fine{% endblock %}
+{% block page_title %}Collect Fine{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-pay{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#15803d,#22c55e);border:none;transition:opacity .2s,transform .2s}
+  .btn-pay:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* ── Fine hero ── */
+  .fine-hero{background:linear-gradient(135deg,#7f1d1d,#dc2626);border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden;text-align:center}
+  .fine-hero::before{content:"";position:absolute;top:-35px;right:-35px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .fine-hero::after{content:"";position:absolute;bottom:-25px;left:-25px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.05)}
+  .fine-amount{font-size:3rem;font-weight:800;font-family:monospace;line-height:1;position:relative;z-index:1}
+  .fine-sub{opacity:.8;font-size:.85rem;margin-top:.5rem;position:relative;z-index:1}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;padding:.65rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:130px;flex-shrink:0}
+
+  /* ── Receipt preview ── */
+  .receipt{background:#f8f9fb;border:1.5px dashed #e2e8f0;border-radius:.875rem;padding:1.25rem 1.5rem}
+  .receipt-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f1f5f9;font-size:.83rem}
+  .receipt-row:last-child{border-bottom:none;padding-top:.65rem;margin-top:.25rem;font-size:.95rem}
+
+  .amount-mono{font-family:monospace;font-weight:700}
+  .adm-no{font-family:monospace;font-size:.7rem;color:#94a3b8}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5 col-xl-4">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'issuance_detail' fine.issuance.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">Collect Fine</h5>
+        <p class="text-muted small mb-0">Mark overdue fine as paid</p>
+      </div>
+    </div>
+
+    <!-- Fine amount hero -->
+    <div class="fine-hero">
+      <div style="opacity:.75;font-size:.78rem;margin-bottom:.5rem;position:relative;z-index:1">
+        <i class="bi bi-cash-coin me-1"></i>Outstanding Fine
+      </div>
+      <div class="fine-amount">ETB {{ fine.total_amount|floatformat:2 }}</div>
+      <div class="fine-sub">
+        {{ fine.days_overdue }} day{{ fine.days_overdue|pluralize }}
+        × ETB {{ fine.fine_per_day|floatformat:2 }}/day
+      </div>
+    </div>
+
+    <!-- Fine details -->
+    <div class="form-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Fine Details
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Borrower</span>
+        <span class="fw-semibold small">{{ fine.issuance.borrower }}</span>
+      </div>
+      {% if fine.issuance.student %}
+      <div class="info-row">
+        <span class="info-label">Admission No</span>
+        <span class="adm-no">{{ fine.issuance.student.admission_number }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Book</span>
+        <span class="fw-semibold small">
+          {{ fine.issuance.book_copy.book.title|truncatechars:35 }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Due Date</span>
+        <span class="small text-danger fw-semibold">
+          {{ fine.issuance.due_date|date:"M d, Y" }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Returned</span>
+        <span class="small">
+          {{ fine.issuance.returned_date|date:"M d, Y"|default:"Not yet returned" }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Days Overdue</span>
+        <span class="amount-mono text-danger">{{ fine.days_overdue }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Rate / Day</span>
+        <span class="amount-mono">ETB {{ fine.fine_per_day|floatformat:2 }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Total Fine</span>
+        <span class="amount-mono text-danger fs-6 fw-bold">
+          ETB {{ fine.total_amount|floatformat:2 }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Payment form -->
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        <div class="section-head">
+          <i class="bi bi-receipt me-2"></i>Payment Notes
+        </div>
+        <div class="mb-4">
+          <label>Notes <span class="text-muted fw-normal">(optional)</span></label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+          <small class="text-danger d-block mt-1">{{ form.notes.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            e.g. "Cash received", receipt number, etc.
+          </small>
+        </div>
+
+        <!-- Receipt preview -->
+        <div class="receipt mb-4">
+          <div class="fw-semibold small mb-2 text-muted text-uppercase"
+               style="letter-spacing:.06em;font-size:.68rem">
+            <i class="bi bi-receipt me-1"></i>Payment Receipt Preview
+          </div>
+          <div class="receipt-row">
+            <span class="text-muted">Borrower</span>
+            <span class="fw-semibold small">{{ fine.issuance.borrower }}</span>
+          </div>
+          <div class="receipt-row">
+            <span class="text-muted">Book</span>
+            <span class="small">
+              {{ fine.issuance.book_copy.book.title|truncatechars:25 }}
+            </span>
+          </div>
+          <div class="receipt-row">
+            <span class="text-muted">Days Overdue</span>
+            <span class="amount-mono">{{ fine.days_overdue }}</span>
+          </div>
+          <div class="receipt-row">
+            <span class="text-muted">Rate / Day</span>
+            <span class="amount-mono">ETB {{ fine.fine_per_day|floatformat:2 }}</span>
+          </div>
+          <div class="receipt-row">
+            <span class="fw-bold">Total Collected</span>
+            <span class="amount-mono text-success fw-bold fs-6">
+              ETB {{ fine.total_amount|floatformat:2 }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'issuance_detail' fine.issuance.pk %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-pay text-white"
+                  onclick="return confirm('Confirm payment of ETB {{ fine.total_amount|floatformat:2 }}?')">
+            <i class="bi bi-check-circle me-2"></i>
+            Confirm Payment
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Waive link -->
+    <div class="text-center mt-3">
+      <a href="{% url 'fine_waive' fine.pk %}"
+         class="text-info small text-decoration-none">
+        <i class="bi bi-shield-check me-1"></i>
+        Waive this fine instead
+      </a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

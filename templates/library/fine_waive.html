@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Waive Fine{% endblock %}
+{% block page_title %}Waive Fine{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus{border-color:#0369a1;box-shadow:0 0 0 .2rem rgba(3,105,161,.12);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .btn-waive{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#0369a1,#06b6d4);border:none;transition:opacity .2s,transform .2s}
+  .btn-waive:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* ── Hero ── */
+  .waive-hero{background:linear-gradient(135deg,#0c4a6e,#0369a1);border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;text-align:center;position:relative;overflow:hidden}
+  .waive-hero::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .waive-icon{font-size:3rem;margin-bottom:.75rem;position:relative;z-index:1}
+  .waive-amount{font-size:2.5rem;font-weight:800;font-family:monospace;line-height:1;position:relative;z-index:1;text-decoration:line-through;opacity:.6}
+  .waive-sub{opacity:.75;font-size:.85rem;margin-top:.5rem;position:relative;z-index:1}
+  .waive-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.35rem 1.1rem;font-size:.82rem;font-weight:700;display:inline-block;margin-top:.75rem;position:relative;z-index:1}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;padding:.65rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:130px;flex-shrink:0}
+
+  /* ── Reason quick-picks ── */
+  .reason-chip{border:1.5px solid #e2e8f0;border-radius:999px;padding:.3rem .9rem;font-size:.78rem;font-weight:500;cursor:pointer;background:#fff;transition:all .2s;white-space:nowrap}
+  .reason-chip:hover{background:#e0f2fe;border-color:#0369a1;color:#0369a1}
+  .reason-chip.selected{background:#0369a1;border-color:#0369a1;color:#fff}
+
+  /* ── Warn box ── */
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#92400e}
+
+  .amount-mono{font-family:monospace;font-weight:700}
+  .adm-no{font-family:monospace;font-size:.7rem;color:#94a3b8}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5 col-xl-4">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'issuance_detail' fine.issuance.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">Waive Fine</h5>
+        <p class="text-muted small mb-0">Cancel outstanding overdue fine</p>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="waive-hero">
+      <div class="waive-icon">🛡</div>
+      <div style="opacity:.75;font-size:.78rem;margin-bottom:.4rem;position:relative;z-index:1">
+        Fine to be Waived
+      </div>
+      <div class="waive-amount">ETB {{ fine.total_amount|floatformat:2 }}</div>
+      <div class="waive-sub">
+        {{ fine.days_overdue }} day{{ fine.days_overdue|pluralize }}
+        × ETB {{ fine.fine_per_day|floatformat:2 }}/day
+      </div>
+      <div class="waive-badge">
+        <i class="bi bi-shield-check me-1"></i>Will be fully waived
+      </div>
+    </div>
+
+    <!-- Fine summary -->
+    <div class="form-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Fine Summary
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Borrower</span>
+        <span class="fw-semibold small">{{ fine.issuance.borrower }}</span>
+      </div>
+      {% if fine.issuance.student %}
+      <div class="info-row">
+        <span class="info-label">Admission No</span>
+        <span class="adm-no">{{ fine.issuance.student.admission_number }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Book</span>
+        <span class="fw-semibold small">
+          {{ fine.issuance.book_copy.book.title|truncatechars:35 }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Due Date</span>
+        <span class="small text-danger">
+          {{ fine.issuance.due_date|date:"M d, Y" }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Days Overdue</span>
+        <span class="amount-mono text-danger">{{ fine.days_overdue }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Fine Amount</span>
+        <span class="amount-mono text-danger fw-bold fs-6">
+          ETB {{ fine.total_amount|floatformat:2 }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Waive form -->
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Warning -->
+        <div class="warn-box mb-4">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <strong>Note:</strong> Waiving a fine permanently cancels the
+          outstanding amount of
+          <strong>ETB {{ fine.total_amount|floatformat:2 }}</strong>.
+          This action <strong>cannot be undone</strong>.
+        </div>
+
+        <!-- Reason quick-picks -->
+        <div class="mb-3">
+          <label class="mb-2">Quick Reasons</label>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="reason-chip"
+                  onclick="setReason('Financial hardship', this)">
+              Financial hardship
+            </span>
+            <span class="reason-chip"
+                  onclick="setReason('Scholarship student', this)">
+              Scholarship student
+            </span>
+            <span class="reason-chip"
+                  onclick="setReason('Administrative error', this)">
+              Administrative error
+            </span>
+            <span class="reason-chip"
+                  onclick="setReason('First offence — waived', this)">
+              First offence
+            </span>
+            <span class="reason-chip"
+                  onclick="setReason('Principal approval', this)">
+              Principal approval
+            </span>
+          </div>
+        </div>
+
+        <!-- Reason textarea -->
+        <div class="mb-4">
+          <label>Reason for Waiver <span style="color:#ef4444">*</span></label>
+          {{ form.reason }}
+          {% if form.reason.errors %}
+          <small class="text-danger d-block mt-1">{{ form.reason.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            This reason will be saved on the fine record for audit purposes.
+          </small>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'issuance_detail' fine.issuance.pk %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-waive text-white"
+                  onclick="return confirm('Waive ETB {{ fine.total_amount|floatformat:2 }} fine for {{ fine.issuance.borrower }}?')">
+            <i class="bi bi-shield-check me-2"></i>Confirm Waiver
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Collect instead link -->
+    <div class="text-center mt-3">
+      <a href="{% url 'fine_pay' fine.pk %}"
+         class="text-success small text-decoration-none">
+        <i class="bi bi-cash-coin me-1"></i>
+        Collect payment instead
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function setReason(text, el){
+  const ta = document.querySelector('[name="reason"]');
+  if(ta) ta.value = text;
+  document.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}Confirm Delete{% endblock %}
+
+{% block content %}
+<style>
+  .confirm-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .danger-icon{width:80px;height:80px;border-radius:50%;background:#fff1f2;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:2rem;color:#ef4444}
+  .btn-delete{border-radius:.875rem;padding:.8rem 2rem;font-weight:600;background:linear-gradient(135deg,#dc2626,#ef4444);border:none;transition:opacity .2s,transform .2s}
+  .btn-delete:hover{opacity:.9;transform:translateY(-1px)}
+  .warn-box{background:#fff1f2;border:1px solid #fecaca;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#991b1b}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5 col-xl-4">
+
+    <div class="confirm-card card p-4 text-center">
+
+      <div class="danger-icon">
+        <i class="bi bi-trash"></i>
+      </div>
+
+      <h5 class="fw-bold mb-2">{{ title }}</h5>
+      <p class="text-muted small mb-1">You are about to permanently delete:</p>
+      <p class="fw-bold text-dark mb-4 fs-6">{{ object }}</p>
+
+      <div class="warn-box text-start mb-4">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Warning:</strong> This action
+        <strong>cannot be undone</strong>.
+        All related data linked to this record will also be affected.
+      </div>
+
+      <div class="d-flex gap-3 justify-content-center">
+        <a href="{% url back_url %}"
+           class="btn btn-outline-secondary rounded-pill px-4">
+          <i class="bi bi-arrow-left me-2"></i>Cancel
+        </a>
+        <form method="POST">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-delete text-white">
+            <i class="bi bi-trash me-2"></i>Yes, Delete
+          </button>
+        </form>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

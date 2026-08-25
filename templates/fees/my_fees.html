@@ -1,0 +1,316 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}My Fees{% endblock %}
+{% block page_title %}My Fees{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Cards ── */
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:48px;height:48px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+  .stat-num{font-size:1.35rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+
+  /* ── Hero ── */
+  .fee-hero{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .fee-hero::before{content:"";position:absolute;top:-35px;right:-35px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .hero-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+  .avatar-hero{width:56px;height:56px;border-radius:50%;border:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;color:#fff;flex-shrink:0;object-fit:cover}
+
+  /* ── Overall progress ── */
+  .overall-bar{background:rgba(255,255,255,.2);border-radius:999px;overflow:hidden;height:10px;margin-top:1rem}
+  .overall-fill{height:100%;border-radius:999px;background:#fff;transition:width .6s ease}
+  .overall-labels{display:flex;justify-content:space-between;font-size:.72rem;opacity:.8;margin-top:.35rem}
+
+  /* ── Fee item card ── */
+  .fee-item{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;margin-bottom:1rem;transition:transform .2s,box-shadow .2s}
+  .fee-item:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+  .fee-item-header{padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+  .fee-item-body{padding:.85rem 1.25rem;border-top:1px solid #f1f5f9}
+
+  /* ── Status badges ── */
+  .s-pending {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.25rem .85rem;font-size:.72rem;font-weight:700}
+  .s-partial  {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.25rem .85rem;font-size:.72rem;font-weight:700}
+  .s-paid     {background:#dcfce7;color:#15803d;border-radius:999px;padding:.25rem .85rem;font-size:.72rem;font-weight:700}
+  .s-waived   {background:#f0f9ff;color:#0369a1;border-radius:999px;padding:.25rem .85rem;font-size:.72rem;font-weight:700}
+  .s-overdue  {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.25rem .85rem;font-size:.72rem;font-weight:700}
+
+  /* ── Amount details ── */
+  .fee-amounts{display:flex;gap:1.5rem;flex-wrap:wrap}
+  .amt-item .lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;font-weight:700;margin-bottom:.15rem}
+  .amt-item .val{font-family:monospace;font-weight:700;font-size:.95rem;color:#1e293b}
+
+  /* ── Per-fee progress bar ── */
+  .fee-bar{height:6px;background:#e9ecef;border-radius:999px;overflow:hidden;margin-top:.65rem}
+  .fee-bar-fill{height:100%;border-radius:999px;transition:width .5s ease}
+
+  /* ── Due date ── */
+  .due-chip{border-radius:.5rem;padding:.2rem .65rem;font-size:.72rem;font-weight:600;display:inline-flex;align-items:center;gap:.3rem}
+  .due-ok     {background:#f0fdf4;color:#15803d}
+  .due-soon   {background:#fef9c3;color:#854d0e}
+  .due-overdue{background:#fee2e2;color:#dc2626}
+
+  /* ── Category icon ── */
+  .cat-icon{width:40px;height:40px;border-radius:.75rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;flex-shrink:0}
+
+  /* ── Empty ── */
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+
+  .amount-mono{font-family:monospace;font-weight:700}
+</style>
+
+<!-- Hero -->
+<div class="fee-hero">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3"
+       style="position:relative;z-index:1">
+    <div class="d-flex align-items-center gap-3">
+      {% if request.user.student.photo %}
+      <img src="{{ request.user.student.photo.url }}" class="avatar-hero" alt="">
+      {% else %}
+      <div class="avatar-hero">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <h5 class="fw-bold text-white mb-1">My Fees</h5>
+        <div class="hero-meta">
+          <span><i class="bi bi-person me-1"></i>{{ request.user.get_full_name }}</span>
+          {% if current_year %}
+          <span><i class="bi bi-calendar2-range me-1"></i>{{ current_year.name }}</span>
+          {% endif %}
+          <span><i class="bi bi-receipt me-1"></i>{{ fees|length }} fee{{ fees|length|pluralize }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overall % -->
+    <div class="text-center flex-shrink-0" style="min-width:80px">
+      <div style="font-size:1.75rem;font-weight:800;line-height:1">
+        {% if total_due > 0 %}
+        {{ total_paid|floatformat:0 }}
+        {% else %}0{% endif %}
+      </div>
+      <div style="opacity:.75;font-size:.72rem">ETB Paid</div>
+    </div>
+  </div>
+
+  <!-- Overall progress -->
+  {% if total_due > 0 %}
+  <div style="position:relative;z-index:1">
+    <div class="overall-bar">
+      <div class="overall-fill"
+           style="width:{% widthratio total_paid total_due 100 %}%">
+      </div>
+    </div>
+    <div class="overall-labels">
+      <span>ETB 0</span>
+      <span>{% widthratio total_paid total_due 100 %}% paid of ETB {{ total_due|floatformat:2 }}</span>
+      <span>ETB {{ total_due|floatformat:2 }}</span>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-receipt text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">
+          ETB {{ total_due|floatformat:2 }}
+        </div>
+        <div class="stat-lbl">Total Fees</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success">
+          ETB {{ total_paid|floatformat:2 }}
+        </div>
+        <div class="stat-lbl">Paid</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-exclamation-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">
+          ETB {{ outstanding|floatformat:2 }}
+        </div>
+        <div class="stat-lbl">Outstanding</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-calendar-event text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning" id="overdueCount">0</div>
+        <div class="stat-lbl">Overdue</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fee items -->
+{% if fees %}
+{% for fee in fees %}
+<div class="fee-item" data-overdue="{{ fee.is_overdue|yesno:'1,0' }}">
+
+  <!-- Header -->
+  <div class="fee-item-header">
+    <div class="d-flex align-items-center gap-3">
+      <div class="cat-icon">
+        <i class="bi bi-cash-coin"></i>
+      </div>
+      <div>
+        <div class="fw-bold">{{ fee.fee_structure.fee_category.name }}</div>
+        <div class="text-muted small">
+          {{ fee.fee_structure.grade }}
+          {% if fee.fee_structure.term %} &nbsp;·&nbsp; {{ fee.fee_structure.term }}{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <!-- Due date chip -->
+      {% if fee.due_date %}
+      {% if fee.is_overdue %}
+      <span class="due-chip due-overdue">
+        <i class="bi bi-exclamation-circle"></i>
+        Due {{ fee.due_date|date:"M d, Y" }} — Overdue
+      </span>
+      {% elif fee.due_date <= today %}
+      <span class="due-chip due-soon">
+        <i class="bi bi-clock"></i>
+        Due {{ fee.due_date|date:"M d, Y" }}
+      </span>
+      {% else %}
+      <span class="due-chip due-ok">
+        <i class="bi bi-calendar-check"></i>
+        Due {{ fee.due_date|date:"M d, Y" }}
+      </span>
+      {% endif %}
+      {% endif %}
+
+      <!-- Status -->
+      <span class="s-{{ fee.status }}">
+        {% if fee.status == 'pending'  %}<i class="bi bi-clock me-1"></i>Pending
+        {% elif fee.status == 'partial' %}<i class="bi bi-half me-1"></i>Partial
+        {% elif fee.status == 'paid'    %}<i class="bi bi-check-circle me-1"></i>Paid
+        {% elif fee.status == 'waived'  %}<i class="bi bi-shield-check me-1"></i>Waived
+        {% elif fee.status == 'overdue' %}<i class="bi bi-exclamation-circle me-1"></i>Overdue
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="fee-item-body">
+    <div class="fee-amounts">
+      <div class="amt-item">
+        <div class="lbl">Amount Due</div>
+        <div class="val">ETB {{ fee.amount_due|floatformat:2 }}</div>
+      </div>
+      {% if fee.discount %}
+      <div class="amt-item">
+        <div class="lbl">Discount</div>
+        <div class="val text-info">-ETB {{ fee.discount|floatformat:2 }}</div>
+      </div>
+      {% endif %}
+      <div class="amt-item">
+        <div class="lbl">Net Amount</div>
+        <div class="val fw-bold">ETB {{ fee.effective_amount|floatformat:2 }}</div>
+      </div>
+      <div class="amt-item">
+        <div class="lbl">Paid</div>
+        <div class="val text-success">ETB {{ fee.amount_paid|floatformat:2 }}</div>
+      </div>
+      <div class="amt-item">
+        <div class="lbl">Balance</div>
+        <div class="val {% if fee.balance > 0 %}text-danger{% else %}text-success{% endif %}">
+          ETB {{ fee.balance|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-fee progress bar -->
+    {% if fee.effective_amount > 0 %}
+    <div class="fee-bar">
+      <div class="fee-bar-fill"
+           style="width:{% widthratio fee.amount_paid fee.effective_amount 100 %}%;
+           background:{% if fee.status == 'paid' %}#22c55e{% elif fee.status == 'partial' %}#f59e0b{% elif fee.status == 'waived' %}#0ea5a0{% else %}#e9ecef{% endif %}">
+      </div>
+    </div>
+    <div class="d-flex justify-content-between mt-1" style="font-size:.7rem;color:#9ca3af">
+      <span>ETB 0</span>
+      <span>
+        {% if fee.status == 'paid' %}
+        ✅ Fully Paid
+        {% elif fee.status == 'waived' %}
+        🛡 Waived
+        {% elif fee.status == 'partial' %}
+        {% widthratio fee.amount_paid fee.effective_amount 100 %}% paid
+        {% else %}
+        Not paid yet
+        {% endif %}
+      </span>
+      <span>ETB {{ fee.effective_amount|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+
+    {% if fee.waiver_reason %}
+    <div class="mt-2 small text-muted">
+      <i class="bi bi-info-circle me-1"></i>{{ fee.waiver_reason }}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endfor %}
+
+{% else %}
+<!-- Empty state -->
+<div class="info-card card">
+  <div class="empty-state">
+    <i class="bi bi-receipt fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No Fees Assigned</h6>
+    <p class="small text-muted mb-0">
+      You have no fee records for {{ current_year.name|default:"this academic year" }}.
+      Please contact the school administration.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Note at bottom -->
+<div class="mt-4 p-3 rounded-3 text-center"
+     style="background:#f8f9fb;font-size:.8rem;color:#9ca3af">
+  <i class="bi bi-info-circle me-1"></i>
+  For payments, fee receipts or waiver requests, please visit the
+  <strong>school accounts office</strong>.
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const overdue = document.querySelectorAll('.fee-item[data-overdue="1"]').length;
+  const el      = document.getElementById('overdueCount');
+  if(el) el.textContent = overdue || '0';
+});
+</script>
+
+{% endblock %}

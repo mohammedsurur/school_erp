@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}Users{% endblock %}
+{% block page_title %}User Management{% endblock %}
+{% block content %}
+
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .avatar-sm{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;object-fit:cover}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .role-tab{border:none;background:transparent;padding:.45rem 1rem;border-radius:999px;font-size:.83rem;font-weight:500;color:#6b7280;cursor:pointer;transition:background .15s,color .15s}
+  .role-tab.active,.role-tab:hover{background:#eff6ff;color:#1a3c72;font-weight:600}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;transition:background .15s,color .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">All Users</h5>
+    <p class="text-muted small mb-0">Manage staff, students and system users</p>
+  </div>
+  <a href="{% url 'user_create' %}" class="btn btn-add text-white">
+    <i class="bi bi-person-plus me-2"></i>Add User
+  </a>
+</div>
+
+<!-- Role filter tabs -->
+<div class="d-flex flex-wrap gap-1 mb-3">
+  <a href="{% url 'user_list' %}" class="role-tab {% if not current_role %}active{% endif %}">
+    All ({{ users.paginator.count }})
+  </a>
+  {% for value, label in roles %}
+  <a href="?role={{ value }}{% if q %}&q={{ q }}{% endif %}"
+     class="role-tab {% if current_role == value %}active{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Search bar -->
+<form method="get" class="d-flex gap-2 mb-4 flex-wrap">
+  {% if current_role %}<input type="hidden" name="role" value="{{ current_role }}">{% endif %}
+  <input type="text" name="q" value="{{ q }}" class="form-control search-bar flex-grow-1" placeholder="Search by name, username or email…" style="max-width:360px">
+  <button type="submit" class="btn btn-outline-primary rounded-pill px-4"><i class="bi bi-search me-1"></i>Search</button>
+  {% if q %}<a href="?{% if current_role %}role={{ current_role }}{% endif %}" class="btn btn-outline-secondary rounded-pill px-4">Clear</a>{% endif %}
+  <span class="ms-auto text-muted small align-self-center">{{ users.paginator.count }} user{{ users.paginator.count|pluralize }}</span>
+</form>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>User</th>
+          <th>Role</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              {% if u.profile_image %}
+              <img src="{{ u.profile_image.url }}" class="avatar-sm" alt="">
+              {% else %}
+              <div class="avatar-sm">{{ u.first_name|first|upper }}{{ u.last_name|first|upper }}</div>
+              {% endif %}
+              <div>
+                <div class="fw-semibold small">{{ u.get_full_name|default:u.username }}</div>
+                <div class="text-muted" style="font-size:.75rem">@{{ u.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge rounded-pill px-3
+              {% if u.role == 'super_admin' %}bg-dark text-white
+              {% elif u.role == 'principal' %}bg-primary-subtle text-primary
+              {% elif u.role == 'teacher' %}bg-success-subtle text-success
+              {% elif u.role == 'student' %}bg-info-subtle text-info
+              {% elif u.role == 'parent' %}bg-warning-subtle text-warning
+              {% elif u.role == 'accountant' %}bg-secondary-subtle text-secondary
+              {% elif u.role == 'librarian' %}bg-danger-subtle text-danger
+              {% else %}bg-secondary-subtle text-secondary{% endif %}">
+              {{ u.get_role_display }}
+            </span>
+          </td>
+          <td class="small text-muted">{{ u.email|default:"—" }}</td>
+          <td class="small text-muted">{{ u.phone|default:"—" }}</td>
+          <td>
+            {% if u.is_active %}
+            <span class="badge rounded-pill bg-success-subtle text-success px-3"><i class="bi bi-check-circle me-1"></i>Active</span>
+            {% else %}
+            <span class="badge rounded-pill bg-danger-subtle text-danger px-3"><i class="bi bi-x-circle me-1"></i>Inactive</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted">{{ u.date_joined|date:"M d, Y" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'user_update' u.pk %}" class="action-icon text-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'user_toggle' u.pk %}"
+                 class="action-icon {% if u.is_active %}text-warning{% else %}text-success{% endif %}"
+                 title="{% if u.is_active %}Deactivate{% else %}Activate{% endif %}"
+                 onclick="return confirm('{% if u.is_active %}Deactivate{% else %}Activate{% endif %} {{ u.username }}?')">
+                <i class="bi bi-{% if u.is_active %}pause-circle{% else %}play-circle{% endif %}"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-people fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No users found</h6>
+              <p class="small mb-3">{% if q %}No results for "{{ q }}"{% else %}No users yet{% endif %}</p>
+              <a href="{% url 'user_create' %}" class="btn btn-primary rounded-pill px-4"><i class="bi bi-person-plus me-2"></i>Add First User</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if users.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if users.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3" href="?page={{ users.previous_page_number }}{% if current_role %}&role={{ current_role }}{% endif %}{% if q %}&q={{ q }}{% endif %}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in users.paginator.page_range %}
+    <li class="page-item {% if users.number == num %}active{% endif %}">
+      <a class="page-link rounded-3" href="?page={{ num }}{% if current_role %}&role={{ current_role }}{% endif %}{% if q %}&q={{ q }}{% endif %}">{{ num }}</a>
+    </li>
+    {% endfor %}
+    {% if users.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3" href="?page={{ users.next_page_number }}{% if current_role %}&role={{ current_role }}{% endif %}{% if q %}&q={{ q }}{% endif %}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

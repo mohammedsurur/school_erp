@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Fee — {{ sf.student.user.get_full_name }}{% endblock %}
+{% block page_title %}Fee Detail{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Cards ── */
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:.85rem;padding-bottom:.4rem;border-bottom:1px solid #f1f5f9}
+
+  /* ── Hero banner ── */
+  .fee-hero{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .fee-hero::before{content:"";position:absolute;top:-35px;right:-35px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .hero-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+  .avatar-hero{width:54px;height:54px;border-radius:50%;border:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;color:#fff;flex-shrink:0;object-fit:cover}
+
+  /* ── Balance panel ── */
+  .balance-panel{background:rgba(255,255,255,.15);border-radius:.875rem;padding:1rem 1.25rem;display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1.25rem}
+  .bal-item .num{font-size:1.4rem;font-weight:800;line-height:1}
+  .bal-item .lbl{font-size:.65rem;opacity:.8;text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem}
+
+  /* ── Progress bar ── */
+  .fee-prog-wrap{margin-top:1rem}
+  .fee-prog-bar{height:8px;background:rgba(255,255,255,.2);border-radius:999px;overflow:hidden}
+  .fee-prog-fill{height:100%;border-radius:999px;background:#fff;transition:width .6s ease}
+  .fee-prog-label{display:flex;justify-content:space-between;font-size:.72rem;opacity:.8;margin-top:.3rem}
+
+  /* ── Status badges ── */
+  .s-pending {background:#eff6ff;color:#1d4ed8}
+  .s-partial  {background:#fef9c3;color:#854d0e}
+  .s-paid     {background:#dcfce7;color:#15803d}
+  .s-waived   {background:#f0f9ff;color:#0369a1}
+  .s-overdue  {background:#fee2e2;color:#dc2626}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;align-items:center;padding:.75rem 0;border-bottom:1px solid #f1f5f9}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.78rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:130px;flex-shrink:0}
+  .info-value{font-weight:500;color:#1e293b;font-size:.875rem}
+
+  /* ── Payment history ── */
+  .payment-row{display:flex;align-items:center;gap:.85rem;padding:.85rem 0;border-bottom:1px solid #f8f9fb}
+  .payment-row:last-child{border-bottom:none}
+  .payment-icon{width:36px;height:36px;border-radius:.75rem;background:#f0fdf4;display:flex;align-items:center;justify-content:center;color:#22c55e;font-size:.95rem;flex-shrink:0}
+  .method-chip{background:#f1f5f9;border-radius:.4rem;padding:.15rem .55rem;font-size:.72rem;font-weight:600;color:#475569}
+  .ref-chip{font-family:monospace;font-size:.72rem;background:#eff6ff;color:#1d4ed8;border-radius:.4rem;padding:.15rem .5rem}
+
+  /* ── Collect form ── */
+  .collect-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .collect-header{background:#f8f9fb;padding:1rem 1.5rem;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between}
+  .btn-pay{border-radius:.875rem;padding:.75rem 2rem;font-weight:600;background:linear-gradient(135deg,#15803d,#22c55e);border:none;transition:opacity .2s,transform .2s}
+  .btn-pay:hover{opacity:.9;transform:translateY(-1px)}
+  .currency-wrap{position:relative}
+  .currency-prefix{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:#9ca3af;font-weight:600;font-size:.9rem;pointer-events:none}
+  .currency-wrap .form-control{padding-left:2.35rem}
+
+  /* ── Waive section ── */
+  .waive-zone{border:1.5px dashed #fecaca;border-radius:.875rem;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem}
+
+  .amount-mono{font-family:monospace;font-weight:700}
+  .empty-pays{text-align:center;padding:2rem;color:#9ca3af}
+</style>
+
+<!-- Back nav -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'student_fee_list' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">Fee Detail</h5>
+    <p class="text-muted small mb-0">View and collect payment</p>
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="fee-hero">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3"
+       style="position:relative;z-index:1">
+    <div class="d-flex align-items-center gap-3">
+      {% if sf.student.photo %}
+      <img src="{{ sf.student.photo.url }}" class="avatar-hero" alt="">
+      {% else %}
+      <div class="avatar-hero">
+        {{ sf.student.user.first_name|first|upper }}{{ sf.student.user.last_name|first|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <h5 class="fw-bold text-white mb-1">{{ sf.student.user.get_full_name }}</h5>
+        <div class="hero-meta">
+          <span><i class="bi bi-hash me-1"></i>{{ sf.student.admission_number }}</span>
+          <span><i class="bi bi-cash-coin me-1"></i>{{ sf.fee_structure.fee_category.name }}</span>
+          <span><i class="bi bi-building me-1"></i>{{ sf.fee_structure.grade }}</span>
+          <span><i class="bi bi-calendar2-range me-1"></i>{{ sf.academic_year }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status badge -->
+    <div>
+      <span class="badge rounded-pill px-4 py-2 s-{{ sf.status }}" style="font-size:.82rem">
+        {% if sf.status == 'pending'  %}<i class="bi bi-clock me-1"></i>Pending
+        {% elif sf.status == 'partial' %}<i class="bi bi-half me-1"></i>Partially Paid
+        {% elif sf.status == 'paid'    %}<i class="bi bi-check-circle me-1"></i>Paid
+        {% elif sf.status == 'waived'  %}<i class="bi bi-shield-check me-1"></i>Waived
+        {% elif sf.status == 'overdue' %}<i class="bi bi-exclamation-circle me-1"></i>Overdue
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- Balance panel -->
+  <div class="balance-panel">
+    <div class="bal-item">
+      <div class="num">ETB {{ sf.amount_due|floatformat:2 }}</div>
+      <div class="lbl">Amount Due</div>
+    </div>
+    {% if sf.discount %}
+    <div class="bal-item">
+      <div class="num">-ETB {{ sf.discount|floatformat:2 }}</div>
+      <div class="lbl">Discount</div>
+    </div>
+    {% endif %}
+    <div class="bal-item">
+      <div class="num">ETB {{ sf.effective_amount|floatformat:2 }}</div>
+      <div class="lbl">Net Amount</div>
+    </div>
+    <div class="bal-item">
+      <div class="num">ETB {{ sf.amount_paid|floatformat:2 }}</div>
+      <div class="lbl">Paid</div>
+    </div>
+    <div class="bal-item">
+      <div class="num">ETB {{ sf.balance|floatformat:2 }}</div>
+      <div class="lbl">Balance</div>
+    </div>
+  </div>
+
+  <!-- Payment progress bar -->
+  {% if sf.effective_amount > 0 %}
+  <div class="fee-prog-wrap" style="position:relative;z-index:1">
+    <div class="fee-prog-bar">
+      <div class="fee-prog-fill"
+           style="width:{% widthratio sf.amount_paid sf.effective_amount 100 %}%">
+      </div>
+    </div>
+    <div class="fee-prog-label">
+      <span>ETB 0</span>
+      <span>{% widthratio sf.amount_paid sf.effective_amount 100 %}% paid</span>
+      <span>ETB {{ sf.effective_amount|floatformat:2 }}</span>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Fee info + payment history -->
+  <div class="col-lg-7">
+
+    <!-- Fee details -->
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Fee Information
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Category</span>
+        <span class="info-value">{{ sf.fee_structure.fee_category.name }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Grade</span>
+        <span class="info-value">{{ sf.fee_structure.grade }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Academic Year</span>
+        <span class="info-value">{{ sf.academic_year }}</span>
+      </div>
+      {% if sf.fee_structure.term %}
+      <div class="info-row">
+        <span class="info-label">Term</span>
+        <span class="info-value">{{ sf.fee_structure.term }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Amount Due</span>
+        <span class="info-value amount-mono">ETB {{ sf.amount_due|floatformat:2 }}</span>
+      </div>
+      {% if sf.discount %}
+      <div class="info-row">
+        <span class="info-label">Discount</span>
+        <span class="info-value amount-mono text-info">-ETB {{ sf.discount|floatformat:2 }}</span>
+      </div>
+      {% if sf.waiver_reason %}
+      <div class="info-row">
+        <span class="info-label">Reason</span>
+        <span class="info-value text-muted small">{{ sf.waiver_reason }}</span>
+      </div>
+      {% endif %}
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Net Amount</span>
+        <span class="info-value amount-mono fw-bold">ETB {{ sf.effective_amount|floatformat:2 }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Amount Paid</span>
+        <span class="info-value amount-mono text-success">ETB {{ sf.amount_paid|floatformat:2 }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Balance</span>
+        <span class="info-value amount-mono {% if sf.balance > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">
+          ETB {{ sf.balance|floatformat:2 }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Due Date</span>
+        <span class="info-value">
+          {% if sf.due_date %}
+          <span class="{% if sf.is_overdue %}text-danger fw-semibold{% endif %}">
+            {% if sf.is_overdue %}<i class="bi bi-exclamation-circle me-1"></i>{% endif %}
+            {{ sf.due_date|date:"M d, Y" }}
+          </span>
+          {% else %}—{% endif %}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Status</span>
+        <span class="info-value">
+          <span class="badge rounded-pill px-3 s-{{ sf.status }}">
+            {{ sf.get_status_display }}
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Payment history -->
+    <div class="info-card card">
+      <div class="d-flex align-items-center justify-content-between p-4 pb-2">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-clock-history me-2 text-success"></i>
+          Payment History
+          <span class="badge rounded-pill bg-success-subtle text-success ms-2"
+                style="font-size:.72rem">
+            {{ payments|length }}
+          </span>
+        </h6>
+      </div>
+      <div class="px-4 pb-3">
+        {% for payment in payments %}
+        <div class="payment-row">
+          <div class="payment-icon">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <span class="fw-bold amount-mono text-success">
+                ETB {{ payment.amount|floatformat:2 }}
+              </span>
+              <span class="method-chip">{{ payment.get_payment_method_display }}</span>
+              {% if payment.reference_number %}
+              <span class="ref-chip">{{ payment.reference_number }}</span>
+              {% endif %}
+            </div>
+            <div class="text-muted" style="font-size:.75rem;margin-top:.2rem">
+              <i class="bi bi-calendar me-1"></i>{{ payment.payment_date|date:"M d, Y" }}
+              {% if payment.collected_by %}
+              &nbsp;·&nbsp; <i class="bi bi-person me-1"></i>{{ payment.collected_by.get_full_name }}
+              {% endif %}
+              {% if payment.note %}
+              &nbsp;·&nbsp; {{ payment.note }}
+              {% endif %}
+            </div>
+          </div>
+          <div class="text-muted small">{{ payment.created_at|date:"H:i" }}</div>
+        </div>
+        {% empty %}
+        <div class="empty-pays">
+          <i class="bi bi-receipt fs-1 d-block mb-2 opacity-25"></i>
+          <p class="small mb-0">No payments recorded yet</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Collect payment + waive -->
+  <div class="col-lg-5">
+
+    <!-- Collect payment form -->
+    {% if sf.status not in 'paid,waived' %}
+    <div class="collect-card mb-4">
+      <div class="collect-header">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-cash-coin me-2 text-success"></i>Collect Payment
+        </h6>
+        <span class="text-muted small fw-semibold">
+          Balance: <span class="text-danger fw-bold">ETB {{ sf.balance|floatformat:2 }}</span>
+        </span>
+      </div>
+      <div class="p-4">
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3 small">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <form method="POST" novalidate>
+          {% csrf_token %}
+
+          <!-- Amount -->
+          <div class="mb-3">
+            <label>Amount (ETB) <span style="color:#ef4444">*</span></label>
+            <div class="currency-wrap">
+              <span class="currency-prefix">ETB</span>
+              {{ form.amount }}
+            </div>
+            {% if form.amount.errors %}
+            <small class="text-danger d-block mt-1">{{ form.amount.errors.0 }}</small>
+            {% endif %}
+            <!-- Quick-fill buttons -->
+            <div class="d-flex flex-wrap gap-2 mt-2">
+              <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2"
+                      style="font-size:.72rem"
+                      onclick="fillAmount({{ sf.balance }})">
+                Full Balance ({{ sf.balance|floatformat:2 }})
+              </button>
+              {% if sf.balance > 0 %}
+              <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2"
+                      style="font-size:.72rem"
+                      onclick="fillAmount({{ sf.balance|floatformat:0|divisibleby:2|yesno:'half,half' }})">
+                Half
+              </button>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Payment method -->
+          <div class="mb-3">
+            <label>Payment Method <span style="color:#ef4444">*</span></label>
+            {{ form.payment_method }}
+            {% if form.payment_method.errors %}
+            <small class="text-danger d-block mt-1">{{ form.payment_method.errors.0 }}</small>
+            {% endif %}
+          </div>
+
+          <!-- Date -->
+          <div class="mb-3">
+            <label>Payment Date <span style="color:#ef4444">*</span></label>
+            {{ form.payment_date }}
+            {% if form.payment_date.errors %}
+            <small class="text-danger d-block mt-1">{{ form.payment_date.errors.0 }}</small>
+            {% endif %}
+          </div>
+
+          <!-- Reference -->
+          <div class="mb-3">
+            <label>Reference / Receipt No.</label>
+            {{ form.reference_number }}
+          </div>
+
+          <!-- Note -->
+          <div class="mb-4">
+            <label>Note</label>
+            {{ form.note }}
+          </div>
+
+          <button type="submit" class="btn btn-pay text-white w-100">
+            <i class="bi bi-check2-circle me-2"></i>Record Payment
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- Paid / Waived message -->
+    <div class="info-card card p-4 mb-4 text-center">
+      {% if sf.status == 'paid' %}
+      <i class="bi bi-check-circle-fill text-success" style="font-size:2.5rem"></i>
+      <h6 class="fw-bold mt-2 mb-1 text-success">Fully Paid</h6>
+      <p class="text-muted small mb-0">
+        ETB {{ sf.amount_paid|floatformat:2 }} collected in
+        {{ payments|length }} payment{{ payments|length|pluralize }}.
+      </p>
+      {% elif sf.status == 'waived' %}
+      <i class="bi bi-shield-check-fill text-info" style="font-size:2.5rem"></i>
+      <h6 class="fw-bold mt-2 mb-1 text-info">Fee Waived</h6>
+      {% if sf.waiver_reason %}
+      <p class="text-muted small mb-0">{{ sf.waiver_reason }}</p>
+      {% endif %}
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Waive fee (principal only) -->
+    {% if sf.status not in 'paid,waived' %}
+    {% if request.user.role in 'super_admin,principal' %}
+    <div class="waive-zone">
+      <div>
+        <div class="fw-semibold small text-danger">Waive This Fee</div>
+        <div class="text-muted" style="font-size:.75rem">
+          Grant a full waiver — this cannot be undone.
+        </div>
+      </div>
+      <a href="{% url 'waive_fee' sf.pk %}"
+         class="btn btn-sm btn-outline-danger rounded-pill px-3"
+         onclick="return confirm('Waive fee for {{ sf.student.user.get_full_name }}?')">
+        <i class="bi bi-shield-check me-1"></i>Waive Fee
+      </a>
+    </div>
+    {% endif %}
+    {% endif %}
+
+  </div>
+
+</div>
+
+<script>
+function fillAmount(val){
+  const inp = document.querySelector('[name="amount"]');
+  if(inp) inp.value = parseFloat(val).toFixed(2);
+}
+</script>
+
+{% endblock %}

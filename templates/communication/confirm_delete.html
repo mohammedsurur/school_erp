@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}Confirm Action{% endblock %}
+
+{% block content %}
+<style>
+  .confirm-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .danger-icon{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:2rem}
+  .object-box{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1rem 1.5rem;margin-bottom:1.25rem;text-align:left}
+  .warn-box{border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;margin-bottom:1.5rem}
+  .btn-confirm{border-radius:.875rem;padding:.8rem 2rem;font-weight:600;border:none;transition:opacity .2s,transform .2s;color:#fff}
+  .btn-confirm:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+  .btn-danger {background:linear-gradient(135deg,#dc2626,#ef4444)}
+  .btn-warning{background:linear-gradient(135deg,#d97706,#f59e0b)}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5 col-xl-4">
+    <div class="confirm-card card p-4 text-center">
+
+      <!-- Icon -->
+      <div class="danger-icon
+        {% if btn_class == 'btn-warning' %}
+        " style="background:#fff7ed;color:#f59e0b">
+        <i class="bi bi-chat-left-x"></i>
+        {% else %}
+        " style="background:#fff1f2;color:#ef4444">
+        <i class="bi bi-trash"></i>
+        {% endif %}
+      </div>
+
+      <!-- Title -->
+      <h5 class="fw-bold mb-1">{{ title }}</h5>
+      <p class="text-muted small mb-3">
+        {% if btn_class == 'btn-warning' %}
+        You are about to remove:
+        {% else %}
+        You are about to permanently delete:
+        {% endif %}
+      </p>
+
+      <!-- Object -->
+      <div class="object-box">
+        <div class="fw-bold text-dark">{{ object }}</div>
+        {% if object.audience %}
+        <div class="text-muted small mt-1">
+          <i class="bi bi-people me-1"></i>Audience: {{ object.get_audience_display }}
+        </div>
+        {% endif %}
+        {% if object.subject %}
+        <div class="text-muted small mt-1">
+          <i class="bi bi-envelope me-1"></i>{{ object.subject|default:"(No subject)" }}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Warning -->
+      <div class="warn-box
+        {% if btn_class == 'btn-warning' %}
+        " style="background:#fff7ed;border:1px solid #fed7aa;color:#92400e">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Note:</strong> This conversation will be removed from
+        your inbox. Other participants will still be able to see it.
+        {% else %}
+        " style="background:#fff1f2;border:1px solid #fecaca;color:#991b1b">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Warning:</strong> This action
+        <strong>cannot be undone</strong>.
+        {% endif %}
+      </div>
+
+      <!-- Actions -->
+      <div class="d-flex gap-3 justify-content-center">
+        <a href="{{ back_url }}"
+           class="btn btn-outline-secondary rounded-pill px-4">
+          <i class="bi bi-arrow-left me-2"></i>Cancel
+        </a>
+        <form method="POST">
+          {% csrf_token %}
+          <button type="submit"
+                  class="btn btn-confirm
+                  {% if btn_class %}{{ btn_class }}{% else %}btn-danger{% endif %}">
+            <i class="bi bi-{% if btn_class == 'btn-warning' %}chat-left-x{% else %}trash{% endif %} me-2"></i>
+            {{ btn_label|default:"Yes, Delete" }}
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

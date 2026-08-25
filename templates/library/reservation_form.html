@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}New Reservation{% endblock %}
+{% block page_title %}New Reservation{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Info strip ── */
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+
+  /* ── Quick date buttons ── */
+  .date-btn{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.78rem;font-weight:600;cursor:pointer;background:#fff;transition:all .2s}
+  .date-btn:hover{background:#eff6ff;border-color:#1a3c72;color:#1a3c72}
+
+  /* ── Expiry pill ── */
+  .expiry-pill{border-radius:.75rem;padding:.85rem 1.1rem;font-size:.82rem;display:flex;align-items:center;gap:.5rem;transition:all .2s}
+  .expiry-pill.ok  {background:#f0fdf4;border:1.5px solid #86efac;color:#15803d}
+  .expiry-pill.warn{background:#fff7ed;border:1.5px solid #fed7aa;color:#92400e}
+  .expiry-pill.err {background:#fff1f2;border:1.5px solid #fecaca;color:#dc2626}
+
+  /* ── Summary card ── */
+  .summary-card{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1rem 1.25rem}
+  .sum-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f1f5f9;font-size:.83rem}
+  .sum-row:last-child{border-bottom:none}
+  .sum-label{color:#9ca3af;font-weight:500}
+  .sum-val{font-weight:600;color:#1e293b;max-width:180px;text-align:right;font-size:.82rem}
+
+  /* ── Availability indicator ── */
+  .avail-indicator{border-radius:.75rem;padding:.75rem 1rem;font-size:.82rem;display:flex;align-items:center;gap:.6rem}
+  .avail-yes{background:#f0fdf4;border:1.5px solid #86efac;color:#15803d}
+  .avail-no {background:#fff1f2;border:1.5px solid #fecaca;color:#dc2626}
+  .avail-none{background:#f8f9fb;border:1.5px solid #e2e8f0;color:#9ca3af}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'reservation_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">New Reservation</h5>
+        <p class="text-muted small mb-0">
+          Reserve a book for a student — held until the expiry date
+        </p>
+      </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>How it works:</strong> A reservation holds a book for a student
+      until the expiry date. When the book becomes available, the librarian
+      can <strong>fulfil</strong> the reservation to issue the book directly.
+      Reservations auto-expire if not fulfilled by the expiry date.
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Book -->
+        <div class="section-head">
+          <i class="bi bi-journal-text me-2"></i>Book
+        </div>
+        <div class="mb-3">
+          <label>Select Book <span class="req">*</span></label>
+          {{ form.book }}
+          {% if form.book.errors %}
+          <small class="text-danger d-block mt-1">{{ form.book.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Live availability indicator -->
+        <div class="avail-indicator avail-none mb-4" id="availIndicator">
+          <i class="bi bi-info-circle"></i>
+          <span id="availText">Select a book to see availability</span>
+        </div>
+
+        <!-- Student -->
+        <div class="section-head">
+          <i class="bi bi-person me-2"></i>Student
+        </div>
+        <div class="mb-4">
+          <label>Select Student <span class="req">*</span></label>
+          {{ form.student }}
+          {% if form.student.errors %}
+          <small class="text-danger d-block mt-1">{{ form.student.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Expiry date -->
+        <div class="section-head">
+          <i class="bi bi-calendar me-2"></i>Expiry Date
+        </div>
+        <div class="mb-3">
+          <label>Reservation Expires On <span class="req">*</span></label>
+          {{ form.expiry_date }}
+          {% if form.expiry_date.errors %}
+          <small class="text-danger d-block mt-1">
+            {{ form.expiry_date.errors.0 }}
+          </small>
+          {% endif %}
+          <small class="text-muted">
+            Reservation auto-cancels if not fulfilled by this date
+          </small>
+        </div>
+
+        <!-- Quick expiry buttons -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="text-muted small fw-semibold">Quick set:</span>
+          <button type="button" class="date-btn" onclick="setExpiry(3)">
+            3 days
+          </button>
+          <button type="button" class="date-btn" onclick="setExpiry(7)">
+            1 week ★
+          </button>
+          <button type="button" class="date-btn" onclick="setExpiry(14)">
+            2 weeks
+          </button>
+          <button type="button" class="date-btn" onclick="setExpiry(30)">
+            1 month
+          </button>
+        </div>
+
+        <!-- Expiry status pill -->
+        <div class="expiry-pill err mb-4" id="expiryPill" style="display:none">
+          <i class="bi bi-calendar-check" id="expiryIcon"></i>
+          <span id="expiryText">—</span>
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-4">
+          <label>Notes <span class="text-muted fw-normal">(optional)</span></label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+          <small class="text-danger d-block mt-1">{{ form.notes.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-card mb-4">
+          <div class="fw-semibold small mb-2">
+            <i class="bi bi-bookmark me-2 text-primary"></i>Reservation Summary
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Book</span>
+            <span class="sum-val" id="sumBook">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Student</span>
+            <span class="sum-val" id="sumStudent">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Reserved From</span>
+            <span class="sum-val" id="sumFrom">Today</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Expires On</span>
+            <span class="sum-val" id="sumExpiry">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Held For</span>
+            <span class="sum-val" id="sumDays">—</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'reservation_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-bookmark-plus me-2"></i>Create Reservation
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<!-- Book availability data -->
+<script>
+const BOOK_DATA = {
+  {% for book in form.book.field.queryset %}
+  "{{ book.pk }}": {
+    title:     "{{ book.title|escapejs }}",
+    available: {{ book.available_copies }},
+    total:     {{ book.total_copies }},
+  },
+  {% endfor %}
+};
+
+const STUDENT_DATA = {
+  {% for student in form.student.field.queryset %}
+  "{{ student.pk }}": "{{ student.user.get_full_name|escapejs }}",
+  {% endfor %}
+};
+
+// ── Availability indicator ───────────────────
+const bookSel   = document.querySelector('[name="book"]');
+const studSel   = document.querySelector('[name="student"]');
+const expiryInp = document.querySelector('[name="expiry_date"]');
+const indicator = document.getElementById('availIndicator');
+const availText = document.getElementById('availText');
+
+function updateAvail(){
+  const pk   = bookSel?.value;
+  const data = BOOK_DATA[pk];
+  if(!data){
+    indicator.className = 'avail-indicator avail-none mb-4';
+    availText.textContent = 'Select a book to see availability';
+    return;
+  }
+  if(data.available > 0){
+    indicator.className = 'avail-indicator avail-yes mb-4';
+    availText.innerHTML = `<i class="bi bi-check-circle me-1"></i>
+      <strong>${data.available}</strong> cop${data.available !== 1 ? 'ies' : 'y'}
+      available now — can be issued immediately after reserving`;
+  } else {
+    indicator.className = 'avail-indicator avail-no mb-4';
+    availText.innerHTML = `<i class="bi bi-x-circle me-1"></i>
+      No copies currently available (${data.total} total) —
+      reservation will be fulfilled when a copy is returned`;
+  }
+  updateSummary();
+}
+
+// ── Quick expiry ─────────────────────────────
+function setExpiry(days){
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  expiryInp.value = d.toISOString().slice(0,10);
+  updateExpiryPill();
+  updateSummary();
+}
+
+// ── Expiry pill ──────────────────────────────
+function updateExpiryPill(){
+  const pill = document.getElementById('expiryPill');
+  const text = document.getElementById('expiryText');
+  const icon = document.getElementById('expiryIcon');
+  const val  = expiryInp?.value;
+  if(!val){ pill.style.display = 'none'; return; }
+  pill.style.display = 'flex';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp   = new Date(val);
+  const days  = Math.round((exp - today) / 86400000);
+  if(days <= 0){
+    pill.className = 'expiry-pill err mb-4';
+    icon.className = 'bi bi-exclamation-circle';
+    text.textContent = 'Expiry date must be in the future';
+  } else if(days < 3){
+    pill.className = 'expiry-pill warn mb-4';
+    icon.className = 'bi bi-clock';
+    text.textContent = `Only ${days} day${days !== 1 ? 's' : ''} — consider a longer period`;
+  } else {
+    pill.className = 'expiry-pill ok mb-4';
+    icon.className = 'bi bi-calendar-check';
+    text.textContent = `Reservation held for ${days} day${days !== 1 ? 's' : ''} until ${exp.toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'})}`;
+  }
+}
+
+// ── Summary update ───────────────────────────
+function updateSummary(){
+  const pk      = bookSel?.value;
+  const spk     = studSel?.value;
+  const expVal  = expiryInp?.value;
+  const book    = BOOK_DATA[pk];
+  const student = STUDENT_DATA[spk];
+
+  const set = (id, val) => {
+    const el = document.getElementById(id); if(el) el.textContent = val;
+  };
+
+  set('sumBook',    book    ? book.title.slice(0,35) + (book.title.length > 35 ? '…' : '') : '—');
+  set('sumStudent', student || '—');
+  set('sumFrom',    new Date().toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'}));
+
+  if(expVal){
+    const exp  = new Date(expVal);
+    const days = Math.round((exp - new Date().setHours(0,0,0,0)) / 86400000 + 0.5);
+    set('sumExpiry', exp.toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'}));
+    set('sumDays',   days > 0 ? `${days} day${days !== 1 ? 's' : ''}` : 'Invalid date');
+  } else {
+    set('sumExpiry', '—');
+    set('sumDays',   '—');
+  }
+}
+
+// ── Event listeners ──────────────────────────
+bookSel?.addEventListener('change',   updateAvail);
+studSel?.addEventListener('change',   updateSummary);
+expiryInp?.addEventListener('change', () => { updateExpiryPill(); updateSummary(); });
+document.addEventListener('DOMContentLoaded', () => {
+  updateAvail();
+  updateExpiryPill();
+  updateSummary();
+  // Default to 7 days if empty
+  if(!expiryInp?.value) setExpiry(7);
+});
+</script>
+
+{% endblock %}

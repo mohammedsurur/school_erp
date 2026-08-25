@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Components — {{ schedule.subject }}{% endblock %}
+{% block page_title %}Exam Components{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Banner ── */
+  .comp-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .comp-banner::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .banner-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+
+  /* ── Progress arc ── */
+  .total-circle{width:90px;height:90px;border-radius:50%;border:6px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+  .total-circle .num{font-size:1.4rem;font-weight:800;line-height:1}
+  .total-circle .lbl{font-size:.6rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em}
+
+  /* ── Component bar ── */
+  .comp-visual-bar{height:14px;background:#e9ecef;border-radius:999px;overflow:hidden;display:flex;gap:2px;margin:.75rem 0}
+  .comp-visual-seg{height:100%;border-radius:999px;transition:flex .4s}
+  .remaining-seg{background:#f1f5f9;border-radius:999px}
+
+  /* ── Type colours ── */
+  .quiz-colour    {background:#3b82f6}
+  .mid-colour     {background:#8b5cf6}
+  .final-colour   {background:#0ea5a0}
+  .assign-colour  {background:#f59e0b}
+  .attend-colour  {background:#22c55e}
+
+  /* ── Range badges ── */
+  .range-ok  {background:#dcfce7;color:#15803d;border-radius:.4rem;padding:.15rem .6rem;font-size:.72rem;font-weight:600}
+  .range-warn{background:#fff7ed;color:#c2410c;border-radius:.4rem;padding:.15rem .6rem;font-size:.72rem;font-weight:600}
+
+  /* ── Status strip ── */
+  .status-strip{border-radius:.875rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;font-size:.85rem;font-weight:500}
+  .status-strip.ready    {background:#f0fdf4;border:1.5px solid #86efac;color:#15803d}
+  .status-strip.partial  {background:#fff7ed;border:1.5px solid #fed7aa;color:#92400e}
+  .status-strip.empty    {background:#fff1f2;border:1.5px solid #fecaca;color:#dc2626}
+
+  /* ── Action buttons ── */
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+  .amount-mono{font-family:monospace;font-weight:700}
+</style>
+
+<!-- Banner -->
+<div class="comp-banner">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3"
+       style="position:relative;z-index:1">
+    <div>
+      <div style="opacity:.75;font-size:.78rem;margin-bottom:.25rem">
+        <i class="bi bi-list-check me-1"></i>
+        {{ schedule.exam.name }}  →  Components
+      </div>
+      <h5 class="fw-bold text-white mb-0">{{ schedule.subject.name }}</h5>
+      <div class="banner-meta">
+        <span><i class="bi bi-building me-1"></i>
+          {{ schedule.section.grade }} — {{ schedule.section.name }}
+        </span>
+        <span><i class="bi bi-calendar me-1"></i>
+          {{ schedule.exam_date|date:"M d, Y" }}
+        </span>
+        <span><i class="bi bi-clock me-1"></i>
+          {{ schedule.start_time|time:"H:i" }} – {{ schedule.end_time|time:"H:i" }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Total circle -->
+    <div class="total-circle"
+         style="border-color:{% if is_complete %}#86efac{% elif total > 0 %}#fed7aa{% else %}#fca5a5{% endif %};
+                color:{% if is_complete %}#86efac{% elif total > 0 %}#fed7aa{% else %}#fca5a5{% endif %}">
+      <span class="num">{{ total }}</span>
+      <span class="lbl">/100</span>
+    </div>
+  </div>
+</div>
+
+<!-- Status strip -->
+<div class="status-strip mb-4
+  {% if is_complete %}ready{% elif total > 0 %}partial{% else %}empty{% endif %}">
+  {% if is_complete %}
+  <i class="bi bi-check-circle-fill fs-5"></i>
+  <div>
+    <div class="fw-bold">Components Complete ✅</div>
+    <div style="font-size:.78rem;opacity:.85">
+      All components sum to exactly 100 marks.
+      You can now enter results.
+    </div>
+  </div>
+  <a href="{% url 'result_entry' schedule.pk %}"
+     class="btn btn-success rounded-pill px-4 ms-auto fw-semibold">
+    <i class="bi bi-pencil-square me-2"></i>Enter Results
+  </a>
+  {% elif total > 0 %}
+  <i class="bi bi-hourglass-split fs-5"></i>
+  <div>
+    <div class="fw-bold">Incomplete — {{ total }}/100</div>
+    <div style="font-size:.78rem;opacity:.85">
+      Add {{ remaining }} more marks across remaining components.
+    </div>
+  </div>
+  {% else %}
+  <i class="bi bi-exclamation-circle-fill fs-5"></i>
+  <div>
+    <div class="fw-bold">No Components Defined</div>
+    <div style="font-size:.78rem;opacity:.85">
+      Add Quiz, Mid-Term, Final, Assignment and Attendance components
+      that sum to exactly 100.
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+  <div class="d-flex gap-2">
+    <a href="{% url 'exam_detail' schedule.exam.pk %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-arrow-left me-1"></i>Back to Exam
+    </a>
+  </div>
+  {% if not is_complete %}
+  <a href="{% url 'component_add' schedule.pk %}"
+     class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Add Component
+  </a>
+  {% endif %}
+</div>
+
+<!-- Visual component bar -->
+{% if components %}
+<div class="info-card card p-4 mb-4">
+  <div class="d-flex align-items-center justify-content-between mb-1">
+    <span class="fw-semibold small">Mark Distribution</span>
+    <span class="small text-muted">{{ total }}/100 defined
+      {% if remaining > 0 %}
+      — <span class="text-warning fw-semibold">{{ remaining }} remaining</span>
+      {% endif %}
+    </span>
+  </div>
+  <div class="comp-visual-bar">
+    {% for comp in components %}
+    <div class="comp-visual-seg
+      {% if comp.component_type == 'quiz' %}quiz-colour
+      {% elif comp.component_type == 'mid_term' %}mid-colour
+      {% elif comp.component_type == 'final' %}final-colour
+      {% elif comp.component_type == 'assignment' %}assign-colour
+      {% else %}attend-colour{% endif %}"
+         style="flex:{{ comp.max_marks }}"
+         title="{{ comp.get_component_type_display }}: {{ comp.max_marks }}">
+    </div>
+    {% endfor %}
+    {% if remaining > 0 %}
+    <div class="remaining-seg" style="flex:{{ remaining }}"></div>
+    {% endif %}
+  </div>
+  <!-- Legend -->
+  <div class="d-flex flex-wrap gap-3" style="font-size:.72rem;color:#64748b">
+    {% for comp in components %}
+    <span class="d-flex align-items-center gap-1">
+      <span style="width:10px;height:10px;border-radius:50%;display:inline-block;
+        background:{% if comp.component_type == 'quiz' %}#3b82f6
+        {% elif comp.component_type == 'mid_term' %}#8b5cf6
+        {% elif comp.component_type == 'final' %}#0ea5a0
+        {% elif comp.component_type == 'assignment' %}#f59e0b
+        {% else %}#22c55e{% endif %}">
+      </span>
+      {{ comp.get_component_type_display }} ({{ comp.max_marks }})
+    </span>
+    {% endfor %}
+    {% if remaining > 0 %}
+    <span class="d-flex align-items-center gap-1">
+      <span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#e9ecef"></span>
+      Remaining ({{ remaining }})
+    </span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Components table -->
+<div class="info-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Component</th>
+          <th>Max Marks</th>
+          <th>Allowed Range</th>
+          <th>In Range</th>
+          <th>Order</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for comp in components %}
+        <tr>
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Component type with colour dot -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span style="width:12px;height:12px;border-radius:50%;flex-shrink:0;
+                background:{% if comp.component_type == 'quiz' %}#3b82f6
+                {% elif comp.component_type == 'mid_term' %}#8b5cf6
+                {% elif comp.component_type == 'final' %}#0ea5a0
+                {% elif comp.component_type == 'assignment' %}#f59e0b
+                {% else %}#22c55e{% endif %}">
+              </span>
+              <span class="fw-semibold small">
+                {{ comp.get_component_type_display }}
+              </span>
+            </div>
+          </td>
+
+          <!-- Max marks -->
+          <td>
+            <span class="amount-mono fs-6">{{ comp.max_marks }}</span>
+          </td>
+
+          <!-- Allowed range -->
+          <td class="text-muted small">
+            {% if comp.component_type == 'quiz' %}5 – 10
+            {% elif comp.component_type == 'mid_term' %}20 – 30
+            {% elif comp.component_type == 'final' %}40 – 50
+            {% elif comp.component_type == 'assignment' %}10 – 20
+            {% elif comp.component_type == 'attendance' %}5 – 10
+            {% endif %}
+          </td>
+
+          <!-- In range badge -->
+          <td>
+            {% if comp.component_type == 'quiz' %}
+              {% if comp.max_marks >= 5 and comp.max_marks <= 10 %}
+              <span class="range-ok"><i class="bi bi-check me-1"></i>OK</span>
+              {% else %}
+              <span class="range-warn"><i class="bi bi-exclamation me-1"></i>Out of range</span>
+              {% endif %}
+            {% elif comp.component_type == 'mid_term' %}
+              {% if comp.max_marks >= 20 and comp.max_marks <= 30 %}
+              <span class="range-ok"><i class="bi bi-check me-1"></i>OK</span>
+              {% else %}
+              <span class="range-warn"><i class="bi bi-exclamation me-1"></i>Out of range</span>
+              {% endif %}
+            {% elif comp.component_type == 'final' %}
+              {% if comp.max_marks >= 40 and comp.max_marks <= 50 %}
+              <span class="range-ok"><i class="bi bi-check me-1"></i>OK</span>
+              {% else %}
+              <span class="range-warn"><i class="bi bi-exclamation me-1"></i>Out of range</span>
+              {% endif %}
+            {% elif comp.component_type == 'assignment' %}
+              {% if comp.max_marks >= 10 and comp.max_marks <= 20 %}
+              <span class="range-ok"><i class="bi bi-check me-1"></i>OK</span>
+              {% else %}
+              <span class="range-warn"><i class="bi bi-exclamation me-1"></i>Out of range</span>
+              {% endif %}
+            {% elif comp.component_type == 'attendance' %}
+              {% if comp.max_marks >= 5 and comp.max_marks <= 10 %}
+              <span class="range-ok"><i class="bi bi-check me-1"></i>OK</span>
+              {% else %}
+              <span class="range-warn"><i class="bi bi-exclamation me-1"></i>Out of range</span>
+              {% endif %}
+            {% endif %}
+          </td>
+
+          <!-- Order -->
+          <td class="text-muted small">{{ comp.order }}</td>
+
+          <!-- Delete -->
+          <td>
+            <a href="{% url 'component_delete' comp.pk %}"
+               class="action-icon text-danger"
+               title="Delete"
+               onclick="return confirm('Delete {{ comp.get_component_type_display }}?')">
+              <i class="bi bi-trash"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-list-check fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No Components Yet</h6>
+              <p class="small text-muted mb-3">
+                Add the 5 Ethiopian grading components.<br>
+                They must sum to exactly <strong>100 marks</strong>.
+              </p>
+              <a href="{% url 'component_add' schedule.pk %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add First Component
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+
+      {% if components %}
+      <tfoot>
+        <tr style="background:#f8f9fb;font-weight:700;border-top:2px solid #e9ecef">
+          <td colspan="2"
+              class="text-muted small text-uppercase"
+              style="letter-spacing:.05em;padding:.85rem 1rem">
+            Total
+          </td>
+          <td class="amount-mono fs-6 {% if is_complete %}text-success{% else %}text-danger{% endif %}"
+              style="padding:.85rem 1rem">
+            {{ total }}/100
+          </td>
+          <td colspan="4" style="padding:.85rem 1rem">
+            {% if is_complete %}
+            <span style="color:#15803d;font-size:.8rem">
+              <i class="bi bi-check-circle-fill me-1"></i>
+              Exactly 100 — ready for result entry
+            </span>
+            {% else %}
+            <span style="color:#dc2626;font-size:.8rem">
+              <i class="bi bi-exclamation-circle me-1"></i>
+              {{ remaining }} marks still needed
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<!-- Ethiopian grading reference -->
+<div class="mt-4 p-3 rounded-3"
+     style="background:#eff6ff;border:1px solid #bfdbfe;font-size:.8rem;color:#1e40af">
+  <strong><i class="bi bi-info-circle me-1"></i>Ethiopian System — Component Ranges:</strong>
+  &nbsp; Quiz: 5–10 &nbsp;|&nbsp; Mid-Term: 20–30 &nbsp;|&nbsp;
+  Final: 40–50 &nbsp;|&nbsp; Assignment: 10–20 &nbsp;|&nbsp;
+  Attendance+Book: 5–10 &nbsp;|&nbsp; <strong>Total: 100</strong>
+</div>
+
+{% endblock %}

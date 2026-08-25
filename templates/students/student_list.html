@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Students{% endblock %}
+{% block page_title %}Students{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .avatar-sm{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0;flex-shrink:0}
+  .avatar-ph{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.82rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;color:inherit;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover,.filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .adm-no{font-family:monospace;font-size:.78rem;background:#f1f5f9;padding:.2rem .55rem;border-radius:.4rem;color:#475569}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">All Students</h5>
+    <p class="text-muted small mb-0">{{ students.paginator.count }} student{{ students.paginator.count|pluralize }} registered</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'bulk_enroll' %}" class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-people me-1"></i>Bulk Enroll
+    </a>
+    <a href="{% url 'student_promote' %}" class="btn btn-outline-warning rounded-pill px-3">
+      <i class="bi bi-arrow-up-circle me-1"></i>Promote
+    </a>
+    <a href="{% url 'student_create' %}" class="btn btn-add text-white">
+      <i class="bi bi-person-plus me-2"></i>Add Student
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{% url 'student_list' %}{% if q %}?q={{ q }}{% endif %}"
+     class="filter-tab {% if not grade_id and not status %}active{% endif %}">All</a>
+  {% for grade in grades %}
+  <a href="?grade={{ grade.pk }}{% if q %}&q={{ q }}{% endif %}"
+     class="filter-tab {% if grade_id == grade.pk|stringformat:'s' %}active{% endif %}">
+    {{ grade.name }}
+  </a>
+  {% endfor %}
+  <a href="?status=active{% if q %}&q={{ q }}{% endif %}"
+     class="filter-tab {% if status == 'active' %}active{% endif %}">
+    <i class="bi bi-check-circle me-1"></i>Active
+  </a>
+  <a href="?status=inactive{% if q %}&q={{ q }}{% endif %}"
+     class="filter-tab {% if status == 'inactive' %}active{% endif %}">
+    <i class="bi bi-x-circle me-1"></i>Inactive
+  </a>
+</div>
+
+<!-- Search -->
+<form method="get" class="d-flex gap-2 mb-4 flex-wrap">
+  {% if grade_id %}<input type="hidden" name="grade" value="{{ grade_id }}">{% endif %}
+  {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+  <input type="text" name="q" value="{{ q }}"
+         class="form-control search-bar" placeholder="Search by name, admission no or email…"
+         style="max-width:360px">
+  <button type="submit" class="btn btn-outline-primary rounded-pill px-4">
+    <i class="bi bi-search me-1"></i>Search
+  </button>
+  {% if q %}<a href="?{% if grade_id %}grade={{ grade_id }}&{% endif %}{% if status %}status={{ status }}{% endif %}" class="btn btn-outline-secondary rounded-pill px-3">Clear</a>{% endif %}
+  <span class="ms-auto text-muted small align-self-center">{{ students.paginator.count }} result{{ students.paginator.count|pluralize }}</span>
+</form>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Admission No</th>
+          <th>Class</th>
+          <th>Gender</th>
+          <th>Phone</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
+        <tr>
+          <td class="text-muted small fw-semibold">
+            {{ students.start_index|add:forloop.counter0 }}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              {% if student.photo %}
+              <img src="{{ student.photo.url }}" class="avatar-sm" alt="">
+              {% else %}
+              <div class="avatar-ph">
+                {{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}
+              </div>
+              {% endif %}
+              <div>
+                <a href="{% url 'student_detail' student.pk %}"
+                   class="fw-semibold small text-decoration-none text-dark">
+                  {{ student.user.get_full_name }}
+                </a>
+                <div class="text-muted" style="font-size:.73rem">{{ student.user.email|default:"—" }}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="adm-no">{{ student.admission_number }}</span></td>
+          <td>
+            {% with enr=student.enrollments.all|first %}
+            {% if enr %}
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-3">
+              {{ enr.section.grade }} — {{ enr.section.name }}
+            </span>
+            {% else %}
+            <span class="text-muted small">Not enrolled</span>
+            {% endif %}
+            {% endwith %}
+          </td>
+          <td class="small text-muted">{{ student.get_gender_display|default:"—" }}</td>
+          <td class="small text-muted">{{ student.user.phone|default:"—" }}</td>
+          <td>
+            {% if student.is_active %}
+            <span class="badge rounded-pill bg-success-subtle text-success px-3">
+              <i class="bi bi-check-circle me-1"></i>Active
+            </span>
+            {% else %}
+            <span class="badge rounded-pill bg-danger-subtle text-danger px-3">
+              <i class="bi bi-x-circle me-1"></i>Inactive
+            </span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'student_detail' student.pk %}"
+                 class="action-icon text-primary" title="View Profile">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'student_edit' student.pk %}"
+                 class="action-icon text-success" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'student_id_card' student.pk %}"
+                 class="action-icon text-warning" title="ID Card">
+                <i class="bi bi-card-heading"></i>
+              </a>
+              <a href="{% url 'student_enroll_direct' student.pk %}"
+                 class="action-icon text-info" title="Enroll">
+                <i class="bi bi-journal-check"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-mortarboard fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No students found</h6>
+              <p class="small mb-3">
+                {% if q %}No results for "{{ q }}"{% else %}No students registered yet{% endif %}
+              </p>
+              <a href="{% url 'student_create' %}" class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-person-plus me-2"></i>Add First Student
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if students.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if students.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ students.previous_page_number }}&q={{ q }}&grade={{ grade_id }}&status={{ status }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in students.paginator.page_range %}
+    <li class="page-item {% if students.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&q={{ q }}&grade={{ grade_id }}&status={{ status }}">{{ num }}</a>
+    </li>
+    {% endfor %}
+    {% if students.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ students.next_page_number }}&q={{ q }}&grade={{ grade_id }}&status={{ status }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

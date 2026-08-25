@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Add Staff{% endblock %}
+{% block page_title %}Add New Staff{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .step-badge{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .pw-wrap{position:relative}
+  .pw-toggle{position:absolute;right:.85rem;top:50%;transform:translateY(-50%);border:none;background:transparent;color:#9ca3af;cursor:pointer}
+  .pw-toggle:hover{color:#1a3c72}
+  .photo-ph{width:90px;height:90px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:2.2rem;color:#9ca3af}
+  .photo-preview{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #e2e8f0}
+  .req{color:#ef4444}
+</style>
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'staff_list' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">Add New Staff</h5>
+    <p class="text-muted small mb-0">Fill in account info and professional details</p>
+  </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+
+  {% if user_form.non_field_errors or profile_form.non_field_errors %}
+  <div class="alert alert-danger rounded-3 mb-4">
+    {{ user_form.non_field_errors }}{{ profile_form.non_field_errors }}
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+
+    <!-- LEFT: Account -->
+    <div class="col-lg-6">
+      <div class="form-card card p-4 h-100">
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <div class="step-badge">1</div>
+          <div>
+            <h6 class="fw-bold mb-0">Login Account</h6>
+            <p class="text-muted small mb-0">Username, password and role</p>
+          </div>
+        </div>
+
+        <div class="section-head"><i class="bi bi-person me-2"></i>Name</div>
+        <div class="row g-3 mb-4">
+          <div class="col-6">
+            <label>First Name <span class="req">*</span></label>
+            {{ user_form.first_name }}
+            {% if user_form.first_name.errors %}
+            <small class="text-danger">{{ user_form.first_name.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-6">
+            <label>Last Name <span class="req">*</span></label>
+            {{ user_form.last_name }}
+            {% if user_form.last_name.errors %}
+            <small class="text-danger">{{ user_form.last_name.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="section-head"><i class="bi bi-shield-check me-2"></i>Role & Credentials</div>
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <label>System Role <span class="req">*</span></label>
+            {{ user_form.role }}
+            {% if user_form.role.errors %}
+            <small class="text-danger">{{ user_form.role.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Determines what this staff member can access</small>
+          </div>
+          <div class="col-12">
+            <label>Username <span class="req">*</span></label>
+            {{ user_form.username }}
+            {% if user_form.username.errors %}
+            <small class="text-danger">{{ user_form.username.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Email</label>
+            {{ user_form.email }}
+          </div>
+          <div class="col-md-6">
+            <label>Phone</label>
+            {{ user_form.phone }}
+          </div>
+          <div class="col-6">
+            <label>Password <span class="req">*</span></label>
+            <div class="pw-wrap">
+              {{ user_form.password1 }}
+              <button type="button" class="pw-toggle" onclick="togglePw(this)">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            {% if user_form.password1.errors %}
+            <small class="text-danger">{{ user_form.password1.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-6">
+            <label>Confirm Password <span class="req">*</span></label>
+            <div class="pw-wrap">
+              {{ user_form.password2 }}
+              <button type="button" class="pw-toggle" onclick="togglePw(this)">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            {% if user_form.password2.errors %}
+            <small class="text-danger">{{ user_form.password2.errors.0 }}</small>
+            {% endif %}
+            <small class="text-danger d-none" id="pwMismatch">Passwords do not match</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Professional Profile -->
+    <div class="col-lg-6">
+      <div class="form-card card p-4 h-100">
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <div class="step-badge">2</div>
+          <div>
+            <h6 class="fw-bold mb-0">Professional Details</h6>
+            <p class="text-muted small mb-0">Employment and qualification info</p>
+          </div>
+        </div>
+
+        <!-- Photo -->
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <div class="photo-ph" id="photoPh"><i class="bi bi-person-badge"></i></div>
+          <img class="photo-preview d-none" id="photoImg" alt="Preview">
+          <div>
+            <label>Photo</label>
+            {{ profile_form.photo }}
+            <small class="text-muted d-block">JPG or PNG — max 5MB</small>
+          </div>
+        </div>
+
+        <div class="section-head"><i class="bi bi-briefcase me-2"></i>Employment</div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Staff Type <span class="req">*</span></label>
+            {{ profile_form.staff_type }}
+            {% if profile_form.staff_type.errors %}
+            <small class="text-danger">{{ profile_form.staff_type.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Department</label>
+            {{ profile_form.department }}
+          </div>
+          <div class="col-md-6">
+            <label>Join Date <span class="req">*</span></label>
+            {{ profile_form.join_date }}
+            {% if profile_form.join_date.errors %}
+            <small class="text-danger">{{ profile_form.join_date.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Salary <span class="req">*</span></label>
+            {{ profile_form.salary }}
+            {% if profile_form.salary.errors %}
+            <small class="text-danger">{{ profile_form.salary.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="section-head"><i class="bi bi-mortarboard me-2"></i>Qualification</div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Qualification</label>
+            {{ profile_form.qualification }}
+          </div>
+          <div class="col-md-6">
+            <label>Specialization</label>
+            {{ profile_form.specialization }}
+          </div>
+          <div class="col-md-6">
+            <label>Years of Experience</label>
+            {{ profile_form.experience_years }}
+          </div>
+        </div>
+
+        <div class="section-head"><i class="bi bi-exclamation-circle me-2"></i>Emergency Contact</div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label>Contact Name</label>
+            {{ profile_form.emergency_contact_name }}
+          </div>
+          <div class="col-md-6">
+            <label>Contact Phone</label>
+            {{ profile_form.emergency_contact_phone }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Submit -->
+  <div class="d-flex gap-3 justify-content-end mt-4">
+    <a href="{% url 'staff_list' %}"
+       class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+    <button type="submit" class="btn btn-save text-white">
+      <i class="bi bi-person-plus me-2"></i>Register Staff
+    </button>
+  </div>
+
+</form>
+
+<script>
+function togglePw(btn){
+  const inp = btn.closest('.pw-wrap').querySelector('input');
+  const ico = btn.querySelector('i');
+  inp.type  = inp.type === 'password' ? 'text' : 'password';
+  ico.className = inp.type === 'text' ? 'bi bi-eye-slash' : 'bi bi-eye';
+}
+const pw1 = document.querySelector('[name="password1"]');
+const pw2 = document.querySelector('[name="password2"]');
+pw2?.addEventListener('input', () => {
+  document.getElementById('pwMismatch').classList.toggle(
+    'd-none', pw2.value === pw1.value || !pw2.value
+  );
+});
+document.querySelector('[name="photo"]')?.addEventListener('change', function(){
+  if(this.files && this.files[0]){
+    const img = document.getElementById('photoImg');
+    const ph  = document.getElementById('photoPh');
+    img.src   = URL.createObjectURL(this.files[0]);
+    img.classList.remove('d-none');
+    ph.classList.add('d-none');
+  }
+});
+</script>
+{% endblock %}

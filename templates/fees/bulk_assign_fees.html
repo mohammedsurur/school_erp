@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% block title %}Bulk Assign Fees{% endblock %}
+{% block page_title %}Bulk Assign Fees{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#92400e}
+  .step-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem;display:flex;align-items:flex-start;gap:.85rem}
+  .step-num{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.82rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .preview-card{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1.25rem 1.5rem;display:none}
+  .preview-row{display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .preview-row:last-child{border-bottom:none}
+  .preview-label{color:#9ca3af;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  .preview-val{font-weight:600;color:#1e293b}
+  .amount-mono{font-family:monospace;font-weight:700;color:#1a3c72}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'student_fee_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">Bulk Assign Fees</h5>
+        <p class="text-muted small mb-0">
+          Assign a fee structure to all enrolled students in a grade at once
+        </p>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div>
+            <div class="fw-semibold small">Select Fee Structure</div>
+            <div class="text-muted" style="font-size:.75rem">
+              Choose category, grade and year
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div>
+            <div class="fw-semibold small">Confirm Year</div>
+            <div class="text-muted" style="font-size:.75rem">
+              Defaults to current academic year
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div>
+            <div class="fw-semibold small">Auto Assign</div>
+            <div class="text-muted" style="font-size:.75rem">
+              Existing assignments are skipped
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-3">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>How it works:</strong> This will assign the selected fee to every
+      <strong>active enrolled student</strong> in the matching grade and academic year.
+      Students who already have this fee assigned will be
+      <strong>skipped automatically</strong> — no duplicates.
+    </div>
+
+    <!-- Warning -->
+    <div class="warn-box mb-4">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      <strong>Note:</strong> Only <strong>mandatory</strong> fee categories are
+      recommended for bulk assign. Optional fees should be assigned individually
+      from the student fee detail page.
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate
+            onsubmit="return confirm('Bulk assign this fee to all eligible students?')">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Fee Structure -->
+        <div class="section-head">
+          <i class="bi bi-list-check me-2"></i>Fee Structure
+        </div>
+        <div class="mb-4">
+          <label>Select Fee Structure <span class="req">*</span></label>
+          {{ form.fee_structure }}
+          {% if form.fee_structure.errors %}
+          <small class="text-danger d-block mt-1">{{ form.fee_structure.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            Shows category — grade — year — amount.
+            Only <a href="{% url 'fee_structure_list' %}">existing structures</a> can be bulk assigned.
+          </small>
+        </div>
+
+        <!-- Academic Year -->
+        <div class="section-head">
+          <i class="bi bi-calendar2-range me-2"></i>Academic Year
+        </div>
+        <div class="mb-4">
+          <label>Academic Year <span class="req">*</span></label>
+          {{ form.academic_year }}
+          {% if form.academic_year.errors %}
+          <small class="text-danger d-block mt-1">{{ form.academic_year.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            Only students enrolled in this year will receive the fee
+          </small>
+        </div>
+
+        <!-- Live Preview -->
+        <div class="preview-card mb-4" id="previewCard">
+          <div class="fw-semibold small mb-3">
+            <i class="bi bi-eye me-2 text-primary"></i>Assignment Preview
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">Fee Category</span>
+            <span class="preview-val" id="prevCat">—</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">Target Grade</span>
+            <span class="preview-val" id="prevGrade">—</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">Amount per Student</span>
+            <span class="preview-val amount-mono" id="prevAmount">—</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">Academic Year</span>
+            <span class="preview-val" id="prevYear">—</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-label">Due Date</span>
+            <span class="preview-val" id="prevDue">—</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'student_fee_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-people me-2"></i>Run Bulk Assignment
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Quick links -->
+    <div class="d-flex flex-wrap gap-3 mt-4">
+      <a href="{% url 'fee_structure_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3 btn-sm">
+        <i class="bi bi-list-check me-1"></i>Manage Fee Structures
+      </a>
+      <a href="{% url 'fee_category_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3 btn-sm">
+        <i class="bi bi-tags me-1"></i>Manage Categories
+      </a>
+      <a href="{% url 'student_fee_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3 btn-sm">
+        <i class="bi bi-receipt me-1"></i>View All Student Fees
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Embedded fee structure data for live preview
+const feeStructures = {
+  {% for fs in form.fee_structure.field.queryset %}
+  "{{ fs.pk }}": {
+    cat:    "{{ fs.fee_category.name }}",
+    grade:  "{{ fs.grade.name }}",
+    amount: "ETB {{ fs.amount|floatformat:2 }}",
+    due:    "{{ fs.due_date|date:'M d, Y'|default:'Not set' }}",
+  },
+  {% endfor %}
+};
+
+const academicYears = {
+  {% for yr in form.academic_year.field.queryset %}
+  "{{ yr.pk }}": "{{ yr.name }}",
+  {% endfor %}
+};
+
+const fsSelect   = document.querySelector('[name="fee_structure"]');
+const yearSelect = document.querySelector('[name="academic_year"]');
+const card       = document.getElementById('previewCard');
+
+function updatePreview(){
+  const fsId   = fsSelect?.value;
+  const yearId = yearSelect?.value;
+  const fs     = feeStructures[fsId];
+  const year   = academicYears[yearId];
+
+  if(fs){
+    document.getElementById('prevCat').textContent    = fs.cat;
+    document.getElementById('prevGrade').textContent  = fs.grade;
+    document.getElementById('prevAmount').textContent = fs.amount;
+    document.getElementById('prevDue').textContent    = fs.due;
+    card.style.display = 'block';
+  } else {
+    card.style.display = 'none';
+  }
+  if(year){
+    document.getElementById('prevYear').textContent = year;
+  }
+}
+
+fsSelect?.addEventListener('change',   updatePreview);
+yearSelect?.addEventListener('change', updatePreview);
+document.addEventListener('DOMContentLoaded', updatePreview);
+</script>
+
+{% endblock %}

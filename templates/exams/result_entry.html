@@ -1,0 +1,534 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Enter Results — {{ schedule.subject }}{% endblock %}
+{% block page_title %}Enter Results{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Layout ── */
+  .entry-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .form-control{border-radius:.6rem;border:1.5px solid #e2e8f0;padding:.4rem .6rem;font-size:.85rem;transition:border-color .2s}
+  .form-control:focus{border-color:#1a3c72;box-shadow:0 0 0 .15rem rgba(26,60,114,.1);outline:none}
+
+  /* ── Banner ── */
+  .entry-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .entry-banner::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .banner-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+
+  /* ── Live stat pills ── */
+  .live-pill{background:rgba(255,255,255,.15);border-radius:.65rem;padding:.5rem 1rem;text-align:center;min-width:70px}
+  .live-pill .num{font-size:1.3rem;font-weight:800;line-height:1}
+  .live-pill .lbl{font-size:.62rem;opacity:.8;text-transform:uppercase;letter-spacing:.06em}
+
+  /* ── Component header ── */
+  .comp-header{background:#1a3c72;color:#fff;text-align:center;font-size:.7rem;font-weight:700;padding:.5rem .4rem;text-transform:uppercase;letter-spacing:.05em;line-height:1.3}
+  .comp-max{font-size:.65rem;opacity:.75;font-weight:400;margin-top:.15rem}
+
+  /* ── Table ── */
+  .entry-table{font-size:.83rem}
+  .entry-table thead th{background:#f8f9fb;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.65rem .75rem;font-weight:700;white-space:nowrap}
+  .entry-table tbody td{padding:.5rem .6rem;vertical-align:middle;border-color:#f8f9fb}
+  .entry-table tbody tr{transition:background .15s}
+  .entry-table tbody tr:hover{background:#f8faff}
+
+  /* ── Marks input ── */
+  .marks-input{width:68px;text-align:center;font-weight:700;font-family:monospace;font-size:.88rem;padding:.4rem .3rem}
+  .marks-input::-webkit-inner-spin-button{opacity:1}
+
+  /* ── Total chip ── */
+  .total-chip{border-radius:.6rem;padding:.28rem .7rem;font-size:.8rem;font-weight:800;font-family:monospace;min-width:52px;text-align:center;display:inline-block;transition:all .2s}
+  .grade-excellent   {background:#dcfce7;color:#15803d}
+  .grade-very-good   {background:#dbeafe;color:#1d4ed8}
+  .grade-good        {background:#fef9c3;color:#854d0e}
+  .grade-satisfactory{background:#fed7aa;color:#c2410c}
+  .grade-pass        {background:#e0f2fe;color:#0369a1}
+  .grade-fail        {background:#fee2e2;color:#dc2626}
+  .grade-absent      {background:#f1f5f9;color:#64748b}
+  .grade-empty       {background:#f1f5f9;color:#cbd5e1;opacity:.6}
+
+  /* ── Row states ── */
+  .row-pass  {background:#f0fdf4!important}
+  .row-fail  {background:#fff8f8!important}
+  .row-absent{background:#f8f9fb!important;opacity:.75}
+
+  /* ── Absent toggle ── */
+  .absent-check{width:18px;height:18px;cursor:pointer;accent-color:#64748b}
+
+  /* ── Avatar ── */
+  .avatar-xs{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.68rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Progress bar per student ── */
+  .pct-bar{height:4px;background:#e9ecef;border-radius:999px;overflow:hidden;width:55px}
+  .pct-fill{height:100%;border-radius:999px;transition:width .3s,background .3s}
+
+  /* ── Quick-mark ── */
+  .mark-btn{border:1.5px solid #e2e8f0;border-radius:.65rem;padding:.3rem .75rem;font-size:.76rem;font-weight:600;cursor:pointer;background:#fff;transition:all .2s}
+  .mark-btn:hover{background:#f8faff;border-color:#1a3c72}
+
+  /* ── Warn box ── */
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:.85rem 1.25rem;font-size:.84rem;color:#92400e}
+
+  /* ── Sticky save ── */
+  .save-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #e9ecef;padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;z-index:100;border-radius:0 0 1rem 1rem}
+  .btn-save{border-radius:.875rem;padding:.7rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+</style>
+
+<!-- Banner -->
+<div class="entry-banner">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div style="position:relative;z-index:1">
+      <div style="opacity:.75;font-size:.78rem;margin-bottom:.2rem">
+        <i class="bi bi-pencil-square me-1"></i>Result Entry
+      </div>
+      <h5 class="fw-bold text-white mb-0">{{ schedule.subject.name }}</h5>
+      <div class="banner-meta">
+        <span><i class="bi bi-building me-1"></i>{{ schedule.section.grade }} — {{ schedule.section.name }}</span>
+        <span><i class="bi bi-calendar me-1"></i>{{ schedule.exam_date|date:"M d, Y" }}</span>
+        <span><i class="bi bi-clock me-1"></i>{{ schedule.start_time|time:"H:i" }} – {{ schedule.end_time|time:"H:i" }}</span>
+        {% if schedule.room %}
+        <span><i class="bi bi-geo-alt me-1"></i>{{ schedule.room }}</span>
+        {% endif %}
+        <span><i class="bi bi-people me-1"></i>{{ enrollments|length }} students</span>
+      </div>
+    </div>
+    <!-- Live stats -->
+    <div class="d-flex gap-2 flex-wrap" style="position:relative;z-index:1">
+      <div class="live-pill">
+        <div class="num" id="cntPass">0</div>
+        <div class="lbl">Pass</div>
+      </div>
+      <div class="live-pill">
+        <div class="num" id="cntFail">0</div>
+        <div class="lbl">Fail</div>
+      </div>
+      <div class="live-pill">
+        <div class="num" id="cntAbsent">0</div>
+        <div class="lbl">Absent</div>
+      </div>
+      <div class="live-pill">
+        <div class="num" id="liveAvg">—</div>
+        <div class="lbl">Avg</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Component total warning -->
+{% if comp_total != 100 %}
+<div class="warn-box mb-3">
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  <strong>Warning:</strong> Components only sum to
+  <strong>{{ comp_total }}/100</strong>.
+  <a href="{% url 'component_add' schedule.pk %}" class="fw-semibold ms-1">
+    Add the remaining {{ 100|add:"-"|add:comp_total }} marks
+  </a>
+  before entering results.
+</div>
+{% endif %}
+
+<!-- Controls row -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <a href="{% url 'exam_detail' exam.pk %}"
+       class="btn btn-outline-secondary rounded-pill px-3 btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+    <a href="{% url 'component_list' schedule.pk %}"
+       class="btn btn-outline-primary rounded-pill px-3 btn-sm">
+      <i class="bi bi-list-check me-1"></i>Components
+    </a>
+
+    <!-- Component summary chips -->
+    {% for comp in components %}
+    <span class="badge rounded-pill bg-primary-subtle text-primary px-2"
+          style="font-size:.72rem">
+      {{ comp.get_component_type_display }}: {{ comp.max_marks }}
+    </span>
+    {% endfor %}
+    <span class="badge rounded-pill {% if comp_total == 100 %}bg-success-subtle text-success{% else %}bg-danger-subtle text-danger{% endif %} px-2"
+          style="font-size:.72rem">
+      Total: {{ comp_total }}/100
+    </span>
+  </div>
+
+  <!-- Quick fill -->
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <span class="text-muted small fw-semibold">Quick fill:</span>
+    <button type="button" class="mark-btn" onclick="fillAllMax()">
+      <i class="bi bi-check-all me-1 text-success"></i>All Max
+    </button>
+    <button type="button" class="mark-btn" onclick="fillAllZero()">
+      <i class="bi bi-x me-1 text-warning"></i>All Zero
+    </button>
+    <button type="button" class="mark-btn" onclick="markAllAbsent()">
+      <i class="bi bi-person-slash me-1 text-secondary"></i>All Absent
+    </button>
+    <button type="button" class="mark-btn" onclick="clearAllAbsent()">
+      <i class="bi bi-person-check me-1 text-primary"></i>Clear Absent
+    </button>
+  </div>
+</div>
+
+<!-- Grade legend -->
+<div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+  <span class="text-muted small fw-semibold">Grades:</span>
+  <span class="total-chip grade-excellent">90–100 Excellent</span>
+  <span class="total-chip grade-very-good">80–89 Very Good</span>
+  <span class="total-chip grade-good">70–79 Good</span>
+  <span class="total-chip grade-satisfactory">60–69 Satisfactory</span>
+  <span class="total-chip grade-pass">50–59 Pass</span>
+  <span class="total-chip grade-fail">0–49 Fail</span>
+</div>
+
+<!-- Form -->
+<form method="POST" id="resultForm">
+  {% csrf_token %}
+
+  <div class="entry-card card">
+    <div class="table-responsive">
+      <table class="table entry-table mb-0">
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th>Student</th>
+
+            <!-- One column per component -->
+            {% for comp in components %}
+            <th class="text-center" style="min-width:80px">
+              <div>{{ comp.get_component_type_display }}</div>
+              <div class="comp-max">/ {{ comp.max_marks }}</div>
+            </th>
+            {% endfor %}
+
+            <th class="text-center" style="min-width:80px">Total<div class="comp-max">/ 100</div></th>
+            <th class="text-center" style="min-width:90px">Grade</th>
+            <th style="min-width:60px">Progress</th>
+            <th class="text-center" style="min-width:64px">Absent</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enr in enrollments %}
+          {% with student=enr.student %}
+          <tr class="student-row" id="row-{{ student.pk }}">
+
+            <!-- # -->
+            <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+            <!-- Student -->
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="avatar-xs">
+                  {{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}
+                </div>
+                <div>
+                  <div class="fw-semibold small lh-1">{{ student.user.get_full_name }}</div>
+                  <div><span class="adm-no">{{ student.admission_number }}</span></div>
+                </div>
+              </div>
+            </td>
+
+            <!-- One input per component -->
+            {% for comp in components %}
+            <td class="text-center">
+              <input type="number"
+                    name="marks_{{ student.pk }}_{{ comp.pk }}"
+                    id="marks_{{ student.pk }}_{{ comp.pk }}"
+                    class="form-control marks-input"
+                    min="0"
+                    max="{{ comp.max_marks }}"
+                    step="0.5"
+                    placeholder="0"
+                    data-student="{{ student.pk }}"
+                    data-comp="{{ comp.pk }}"
+                    data-max="{{ comp.max_marks }}"
+                    value=""
+                    oninput="onMarksChange(this)"
+                    onchange="onMarksChange(this)">
+            </td>
+            {% endfor %}
+
+            <!-- Live total -->
+            <td class="text-center">
+              <span class="total-chip grade-empty" id="total-{{ student.pk }}">—</span>
+            </td>
+
+            <!-- Live grade label -->
+            <td class="text-center">
+              <span class="small fw-semibold text-muted" id="grade-{{ student.pk }}">—</span>
+            </td>
+
+            <!-- Progress bar -->
+            <td>
+              <div class="pct-bar">
+                <div class="pct-fill" id="pct-{{ student.pk }}"
+                     style="width:0%;background:#e9ecef"></div>
+              </div>
+            </td>
+
+            <!-- Absent checkbox -->
+            <td class="text-center">
+              <input type="checkbox"
+                     name="absent_{{ student.pk }}"
+                     id="absent_{{ student.pk }}"
+                     class="absent-check"
+                     onchange="onAbsentChange(this, {{ student.pk }})">
+            </td>
+
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sticky save bar -->
+    <div class="save-bar">
+      <div class="text-muted small">
+        <i class="bi bi-people me-1"></i>
+        <strong>{{ enrollments|length }}</strong>
+        student{{ enrollments|length|pluralize }}
+        &nbsp;·&nbsp;
+        <span id="saveSummary">—</span>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'exam_detail' exam.pk %}"
+           class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+        <button type="submit" class="btn btn-save text-white">
+          <i class="bi bi-check2-all me-2"></i>Save Results
+        </button>
+      </div>
+    </div>
+  </div>
+
+</form>
+
+<script>
+// ── Component data from Django ──────────────────────────
+const COMPONENTS = [
+  {% for comp in components %}
+  { pk: {{ comp.pk }}, max: {{ comp.max_marks }}, label: "{{ comp.get_component_type_display }}" },
+  {% endfor %}
+];
+
+// ── Pre-fill existing results ───────────────────────────
+
+
+const EXISTING = {
+  {% for key, data in existing_js.items %}
+  "{{ key }}": { marks: {{ data.marks }}, absent: {{ data.absent|yesno:"true,false" }} },
+  {% endfor %}
+};
+// ── Ethiopian grade label ───────────────────────────────
+function getGradeLabel(total, absent){
+  if(absent)      return { label: 'Absent',       cls: 'grade-absent' };
+  if(total >= 90) return { label: 'Excellent',    cls: 'grade-excellent' };
+  if(total >= 80) return { label: 'Very Good',    cls: 'grade-very-good' };
+  if(total >= 70) return { label: 'Good',         cls: 'grade-good' };
+  if(total >= 60) return { label: 'Satisfactory', cls: 'grade-satisfactory' };
+  if(total >= 50) return { label: 'Pass',         cls: 'grade-pass' };
+  return           { label: 'Fail',              cls: 'grade-fail' };
+}
+
+// ── Update a single student row ─────────────────────────
+function updateRow(studentPk, absent){
+  const row      = document.getElementById(`row-${studentPk}`);
+  const totalEl  = document.getElementById(`total-${studentPk}`);
+  const gradeEl  = document.getElementById(`grade-${studentPk}`);
+  const pctEl    = document.getElementById(`pct-${studentPk}`);
+
+  if(absent){
+    row.className = 'student-row row-absent';
+    COMPONENTS.forEach(comp => {
+      const inp = document.getElementById(`marks_${studentPk}_${comp.pk}`);
+      if(inp){ inp.disabled = true; inp.value = ''; }
+    });
+    totalEl.textContent = 'ABS';
+    totalEl.className   = 'total-chip grade-absent';
+    gradeEl.textContent = 'Absent';
+    gradeEl.className   = 'small fw-semibold text-muted';
+    pctEl.style.width   = '0%';
+    pctEl.style.background = '#e2e8f0';
+    return;
+  }
+
+  // Re-enable inputs
+  COMPONENTS.forEach(comp => {
+    const inp = document.getElementById(`marks_${studentPk}_${comp.pk}`);
+    if(inp) inp.disabled = false;
+  });
+
+  // Sum all components
+  let total     = 0;
+  let allEmpty  = true;
+  COMPONENTS.forEach(comp => {
+    const inp = document.getElementById(`marks_${studentPk}_${comp.pk}`);
+    if(inp && inp.value !== ''){
+      total    += parseFloat(inp.value) || 0;
+      allEmpty  = false;
+    }
+  });
+
+  if(allEmpty){
+    totalEl.textContent = '—';
+    totalEl.className   = 'total-chip grade-empty';
+    gradeEl.textContent = '—';
+    gradeEl.className   = 'small fw-semibold text-muted';
+    pctEl.style.width   = '0%';
+    pctEl.style.background = '#e9ecef';
+    row.className = 'student-row';
+    return;
+  }
+
+  total = Math.min(100, Math.round(total * 10) / 10);
+  const g   = getGradeLabel(total, false);
+  const pass = total >= 50;
+
+  totalEl.textContent = total;
+  totalEl.className   = `total-chip ${g.cls}`;
+
+  gradeEl.textContent = g.label;
+  gradeEl.className   = `small fw-semibold ${pass ? 'text-success' : 'text-danger'}`;
+
+  const colour = total >= 90 ? '#22c55e'
+               : total >= 50 ? '#0ea5a0'
+               : '#ef4444';
+  pctEl.style.width      = total + '%';
+  pctEl.style.background = colour;
+
+  row.className = `student-row ${pass ? 'row-pass' : 'row-fail'}`;
+
+  updateStats();
+}
+
+// ── Input change ────────────────────────────────────────
+function onMarksChange(inp){
+  const pk     = inp.dataset.student;
+  const max    = parseFloat(inp.dataset.max);
+  const val    = parseFloat(inp.value);
+
+  // Clamp to component max
+  if(!isNaN(val) && val > max){
+    inp.value = max;
+    inp.style.borderColor = '#ef4444';
+    setTimeout(() => inp.style.borderColor = '', 800);
+  }
+
+  const absent = document.getElementById(`absent_${pk}`).checked;
+  if(!absent) updateRow(pk, false);
+}
+
+// ── Absent checkbox ─────────────────────────────────────
+function onAbsentChange(chk, pk){
+  updateRow(pk, chk.checked);
+  updateStats();
+}
+
+// ── Live stats ──────────────────────────────────────────
+function updateStats(){
+  const rows = document.querySelectorAll('.student-row');
+  let pass = 0, fail = 0, absent = 0, sum = 0, counted = 0;
+
+  rows.forEach(row => {
+    const pk      = row.id.replace('row-', '');
+    const absCh   = document.getElementById(`absent_${pk}`);
+    const totalEl = document.getElementById(`total-${pk}`);
+    const total   = parseFloat(totalEl?.textContent);
+
+    if(absCh?.checked){ absent++; return; }
+    if(totalEl?.textContent === '—' || isNaN(total)) return;
+    counted++;
+    sum += total;
+    if(total >= 50) pass++; else fail++;
+  });
+
+  document.getElementById('cntPass').textContent   = pass;
+  document.getElementById('cntFail').textContent   = fail;
+  document.getElementById('cntAbsent').textContent = absent;
+  document.getElementById('liveAvg').textContent   =
+    counted > 0 ? (sum / counted).toFixed(1) : '—';
+
+  const parts = [];
+  if(pass)   parts.push(`${pass} Pass`);
+  if(fail)   parts.push(`${fail} Fail`);
+  if(absent) parts.push(`${absent} Absent`);
+  document.getElementById('saveSummary').textContent =
+    parts.join(' · ') || '—';
+}
+
+// ── Quick fill buttons ──────────────────────────────────
+function fillAllMax(){
+  COMPONENTS.forEach(comp => {
+    document.querySelectorAll(`[data-comp="${comp.pk}"]`).forEach(inp => {
+      if(!inp.disabled) inp.value = comp.max;
+    });
+  });
+  document.querySelectorAll('.student-row:not(.row-absent)').forEach(row => {
+    updateRow(row.id.replace('row-',''), false);
+  });
+  updateStats();
+}
+
+function fillAllZero(){
+  COMPONENTS.forEach(comp => {
+    document.querySelectorAll(`[data-comp="${comp.pk}"]`).forEach(inp => {
+      if(!inp.disabled) inp.value = 0;
+    });
+  });
+  document.querySelectorAll('.student-row').forEach(row => {
+    updateRow(row.id.replace('row-',''), false);
+  });
+  updateStats();
+}
+
+function markAllAbsent(){
+  document.querySelectorAll('.absent-check').forEach(chk => {
+    chk.checked = true;
+    const pk = chk.name.replace('absent_','');
+    updateRow(pk, true);
+  });
+  updateStats();
+}
+
+function clearAllAbsent(){
+  document.querySelectorAll('.absent-check').forEach(chk => {
+    chk.checked = false;
+    const pk = chk.name.replace('absent_','');
+    updateRow(pk, false);
+  });
+  updateStats();
+}
+
+// ── Init: prefill existing results ─────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  {% for enr in enrollments %}
+  {% with student=enr.student %}
+  {% for comp in components %}
+  (function(){
+    const key = "{{ student.pk }}_{{ comp.pk }}";
+    const data = EXISTING[key];
+    if(!data) return;
+    const inp = document.getElementById(`marks_{{ student.pk }}_{{ comp.pk }}`);
+    if(inp) inp.value = data.marks;
+    if(data.absent){
+      const chk = document.getElementById(`absent_{{ student.pk }}`);
+      if(chk) chk.checked = true;
+    }
+  })();
+  {% endfor %}
+  {% endwith %}
+  {% endfor %}
+
+  // Update all rows after pre-fill
+  document.querySelectorAll('.student-row').forEach(row => {
+    const pk     = row.id.replace('row-', '');
+    const absCh  = document.getElementById(`absent_${pk}`);
+    updateRow(pk, absCh?.checked || false);
+  });
+  updateStats();
+});
+</script>
+
+{% endblock %}

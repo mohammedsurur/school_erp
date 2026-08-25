@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}Add Parent{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .student-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.25rem 1.5rem;color:#fff;display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem}
+  .student-avatar{width:52px;height:52px;border-radius:50%;border:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;color:#fff;flex-shrink:0;object-fit:cover}
+  .tip-box{background:#fffbeb;border:1px solid #fde68a;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#92400e}
+  .pw-wrap{position:relative}
+  .pw-toggle{position:absolute;right:.85rem;top:50%;transform:translateY(-50%);border:none;background:transparent;color:#9ca3af;cursor:pointer}
+  .pw-toggle:hover{color:#1a3c72}
+  .req{color:#ef4444}
+</style>
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'student_detail' student.pk %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">{{ title }}</h5>
+    <p class="text-muted small mb-0">Create a parent account and link to student</p>
+  </div>
+</div>
+
+<!-- Student Banner -->
+<div class="student-banner">
+  {% if student.photo %}
+  <img src="{{ student.photo.url }}" class="student-avatar" alt="">
+  {% else %}
+  <div class="student-avatar">
+    {{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}
+  </div>
+  {% endif %}
+  <div>
+    <div class="fw-bold">{{ student.user.get_full_name }}</div>
+    <div class="opacity-75 small">
+      <i class="bi bi-hash me-1"></i>{{ student.admission_number }}
+    </div>
+  </div>
+  <div class="ms-auto">
+    <span class="badge rounded-pill"
+          style="background:rgba(255,255,255,.2);color:#fff;font-size:.78rem">
+      Linking parent to this student
+    </span>
+  </div>
+</div>
+
+<!-- Tip -->
+<div class="tip-box mb-4">
+  <i class="bi bi-lightbulb me-2"></i>
+  <strong>Tip:</strong> A parent account will be created so they can login and monitor
+  their child's progress, attendance, fees and notices.
+  Default password is set to <strong>parent123</strong> — they should change it after first login.
+</div>
+
+<div class="form-card card p-4">
+  <form method="POST" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger rounded-3 mb-3">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <!-- Login Account -->
+    <div class="section-head"><i class="bi bi-person-badge me-2"></i>Login Account</div>
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <label>First Name <span class="req">*</span></label>
+        {{ form.first_name }}
+        {% if form.first_name.errors %}
+        <small class="text-danger">{{ form.first_name.errors.0 }}</small>
+        {% endif %}
+      </div>
+      <div class="col-md-6">
+        <label>Last Name <span class="req">*</span></label>
+        {{ form.last_name }}
+        {% if form.last_name.errors %}
+        <small class="text-danger">{{ form.last_name.errors.0 }}</small>
+        {% endif %}
+      </div>
+      <div class="col-md-6">
+        <label>Username <span class="req">*</span></label>
+        {{ form.username }}
+        {% if form.username.errors %}
+        <small class="text-danger">{{ form.username.errors.0 }}</small>
+        {% endif %}
+      </div>
+      <div class="col-md-6">
+        <label>Default Password <span class="req">*</span></label>
+        <div class="pw-wrap">
+          {{ form.password }}
+          <button type="button" class="pw-toggle" onclick="togglePw(this)">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+        <small class="text-muted">{{ form.password.help_text }}</small>
+      </div>
+      <div class="col-md-6">
+        <label>Email</label>
+        {{ form.email }}
+      </div>
+      <div class="col-md-6">
+        <label>Phone</label>
+        {{ form.phone }}
+      </div>
+    </div>
+
+    <!-- Relation Details -->
+    <div class="section-head"><i class="bi bi-people me-2"></i>Relation to Student</div>
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <label>Relation <span class="req">*</span></label>
+        {{ form.relation }}
+        {% if form.relation.errors %}
+        <small class="text-danger">{{ form.relation.errors.0 }}</small>
+        {% endif %}
+      </div>
+      <div class="col-md-6">
+        <label>Occupation</label>
+        {{ form.occupation }}
+      </div>
+      <div class="col-md-6">
+        <label>Work Phone</label>
+        {{ form.work_phone }}
+      </div>
+      <div class="col-md-6">
+        <label>Annual Income</label>
+        {{ form.annual_income }}
+      </div>
+    </div>
+
+    <div class="d-flex gap-3 justify-content-end">
+      <a href="{% url 'student_detail' student.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+      <button type="submit" class="btn btn-save text-white">
+        <i class="bi bi-person-plus me-2"></i>Create & Link Parent
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+function togglePw(btn){
+  const inp = btn.closest('.pw-wrap').querySelector('input');
+  const ico = btn.querySelector('i');
+  inp.type  = inp.type === 'password' ? 'text' : 'password';
+  ico.className = inp.type === 'text' ? 'bi bi-eye-slash' : 'bi bi-eye';
+}
+</script>
+
+{% endblock %}

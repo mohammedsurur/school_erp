@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#92400e}
+  .preview-card{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1.25rem 1.5rem}
+  .preview-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:.25rem}
+  .preview-val{font-size:1.1rem;font-weight:800;color:#1a3c72}
+  .currency-wrap{position:relative}
+  .currency-prefix{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:#9ca3af;font-weight:600;font-size:.9rem;pointer-events:none}
+  .currency-wrap .form-control{padding-left:2.25rem}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'fee_structure_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if structure %}Edit fee amount and due date
+          {% else %}Define fee amount per grade per academic year{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Edit banner -->
+    {% if structure %}
+    <div class="preview-card mb-4 d-flex align-items-center gap-3">
+      <div style="width:44px;height:44px;border-radius:.75rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0">
+        <i class="bi bi-cash-coin"></i>
+      </div>
+      <div class="flex-grow-1">
+        <div class="fw-bold small">{{ structure.fee_category.name }}</div>
+        <div class="text-muted" style="font-size:.75rem">
+          {{ structure.grade }} &nbsp;·&nbsp; {{ structure.academic_year }}
+          {% if structure.term %} &nbsp;·&nbsp; {{ structure.term }}{% endif %}
+        </div>
+      </div>
+      <span class="badge rounded-pill bg-warning-subtle text-warning px-3">Editing</span>
+    </div>
+    {% else %}
+    <!-- Tip -->
+    <div class="tip-box mb-3">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Tip:</strong> Each combination of
+      <strong>Fee Category + Grade + Academic Year + Term</strong> must be unique.
+      Leave <strong>Term</strong> blank for annual fees.
+    </div>
+    <!-- Warning -->
+    <div class="warn-box mb-4">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      <strong>Due date</strong> must fall within the academic year dates
+      and cannot be in the past for new structures.
+    </div>
+    {% endif %}
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Academic Period -->
+        <div class="section-head">
+          <i class="bi bi-calendar2-range me-2"></i>Academic Period
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Academic Year <span class="req">*</span></label>
+            {{ form.academic_year }}
+            {% if form.academic_year.errors %}
+            <small class="text-danger d-block mt-1">{{ form.academic_year.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Term</label>
+            {{ form.term }}
+            {% if form.term.errors %}
+            <small class="text-danger d-block mt-1">{{ form.term.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Leave blank for annual fee</small>
+          </div>
+        </div>
+
+        <!-- Grade & Category -->
+        <div class="section-head">
+          <i class="bi bi-building me-2"></i>Grade & Fee Category
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Grade <span class="req">*</span></label>
+            {{ form.grade }}
+            {% if form.grade.errors %}
+            <small class="text-danger d-block mt-1">{{ form.grade.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Fee Category <span class="req">*</span></label>
+            {{ form.fee_category }}
+            {% if form.fee_category.errors %}
+            <small class="text-danger d-block mt-1">{{ form.fee_category.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Amount & Due Date -->
+        <div class="section-head">
+          <i class="bi bi-cash-coin me-2"></i>Amount & Due Date
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Amount <span class="req">*</span></label>
+            <div class="currency-wrap">
+              <span class="currency-prefix">ETB</span>
+              {{ form.amount }}
+            </div>
+            {% if form.amount.errors %}
+            <small class="text-danger d-block mt-1">{{ form.amount.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Due Date</label>
+            {{ form.due_date }}
+            {% if form.due_date.errors %}
+            <small class="text-danger d-block mt-1">{{ form.due_date.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">
+              Must fall within the academic year
+            </small>
+          </div>
+        </div>
+
+        <!-- Live preview -->
+        <div class="preview-card mb-4">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="fw-semibold small">
+              <i class="bi bi-eye me-1 text-primary"></i>Preview
+            </span>
+          </div>
+          <div class="row g-3">
+            <div class="col-4 text-center">
+              <div class="preview-label">Category</div>
+              <div class="preview-val" id="previewCat" style="font-size:.9rem">—</div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="preview-label">Grade</div>
+              <div class="preview-val" id="previewGrade" style="font-size:.9rem">—</div>
+            </div>
+            <div class="col-4 text-center">
+              <div class="preview-label">Amount (ETB)</div>
+              <div class="preview-val" id="previewAmount">0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'fee_structure_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if structure %}Save Changes{% else %}Create Structure{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const catSel   = document.querySelector('[name="fee_category"]');
+const gradeSel = document.querySelector('[name="grade"]');
+const amtInp   = document.querySelector('[name="amount"]');
+
+function updatePreview(){
+  const cat   = catSel?.options[catSel.selectedIndex]?.text   || '—';
+  const grade = gradeSel?.options[gradeSel.selectedIndex]?.text || '—';
+  const amt   = parseFloat(amtInp?.value) || 0;
+
+  document.getElementById('previewCat').textContent   = cat   === '— Select fee category —' ? '—' : cat;
+  document.getElementById('previewGrade').textContent = grade === '---------' ? '—' : grade;
+  document.getElementById('previewAmount').textContent= amt.toLocaleString('en', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+}
+
+catSel?.addEventListener('change',  updatePreview);
+gradeSel?.addEventListener('change', updatePreview);
+amtInp?.addEventListener('input',   updatePreview);
+document.addEventListener('DOMContentLoaded', updatePreview);
+</script>
+
+{% endblock %}

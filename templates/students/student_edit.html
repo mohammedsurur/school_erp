@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Edit Student{% endblock %}
+{% block page_title %}Edit Student{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .avatar-wrap{width:90px;height:90px;border-radius:50%;overflow:hidden;border:3px solid #e2e8f0;flex-shrink:0}
+  .avatar-wrap img{width:100%;height:100%;object-fit:cover}
+  .avatar-ph{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;flex-shrink:0}
+</style>
+
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'student_detail' student.pk %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Back
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">{{ title }}</h5>
+    <p class="text-muted small mb-0">Update student information</p>
+  </div>
+</div>
+
+<div class="form-card card p-4">
+
+  <!-- Student header -->
+  <div class="d-flex align-items-center gap-3 mb-4 pb-4" style="border-bottom:1px solid #f1f5f9">
+    {% if student.photo %}
+    <div class="avatar-wrap"><img src="{{ student.photo.url }}" alt=""></div>
+    {% else %}
+    <div class="avatar-ph">
+      {{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}
+    </div>
+    {% endif %}
+    <div>
+      <div class="fw-bold">{{ student.user.get_full_name }}</div>
+      <div class="text-muted small">{{ student.admission_number }}</div>
+    </div>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <!-- Contact -->
+    <div class="section-head"><i class="bi bi-person me-2"></i>Name & Contact</div>
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <label>First Name</label>
+        {{ form.first_name }}
+        {% if form.first_name.errors %}<small class="text-danger">{{ form.first_name.errors.0 }}</small>{% endif %}
+      </div>
+      <div class="col-md-6">
+        <label>Last Name</label>
+        {{ form.last_name }}
+        {% if form.last_name.errors %}<small class="text-danger">{{ form.last_name.errors.0 }}</small>{% endif %}
+      </div>
+      <div class="col-md-6">
+        <label>Email</label>
+        {{ form.email }}
+      </div>
+      <div class="col-md-6">
+        <label>Phone</label>
+        {{ form.phone }}
+      </div>
+    </div>
+
+    <!-- Personal -->
+    <div class="section-head"><i class="bi bi-info-circle me-2"></i>Personal Details</div>
+    <div class="row g-3 mb-4">
+      <div class="col-md-6">
+        <label>Date of Birth</label>
+        {{ form.date_of_birth }}
+      </div>
+      <div class="col-md-6">
+        <label>Gender</label>
+        {{ form.gender }}
+      </div>
+      <div class="col-md-6">
+        <label>Blood Group</label>
+        {{ form.blood_group }}
+      </div>
+      <div class="col-md-6">
+        <label>Nationality</label>
+        {{ form.nationality }}
+      </div>
+      <div class="col-md-6">
+        <label>Religion</label>
+        {{ form.religion }}
+      </div>
+      <div class="col-md-6">
+        <label>City</label>
+        {{ form.city }}
+      </div>
+      <div class="col-12">
+        <label>Address</label>
+        {{ form.address }}
+      </div>
+      <div class="col-12">
+        <label>Previous School</label>
+        {{ form.previous_school }}
+      </div>
+      <div class="col-12">
+        <label>Medical Notes</label>
+        {{ form.medical_notes }}
+      </div>
+    </div>
+
+    <!-- Photo -->
+    <div class="section-head"><i class="bi bi-image me-2"></i>Profile Photo</div>
+    <div class="mb-4">
+      {{ form.photo }}
+      <small class="text-muted d-block mt-1">Upload new photo to replace current one</small>
+    </div>
+
+    <!-- Status -->
+    <div class="section-head"><i class="bi bi-toggle-on me-2"></i>Account Status</div>
+    <div class="mb-4 d-flex align-items-center gap-3 p-3 rounded-3"
+         style="background:#f8f9fb;border:1.5px solid #e2e8f0">
+      {{ form.is_active }}
+      <label class="mb-0" for="{{ form.is_active.id_for_label }}">
+        Student account is active
+        <div class="text-muted" style="font-size:.78rem;font-weight:400">
+          Uncheck to prevent this student from logging in
+        </div>
+      </label>
+    </div>
+
+    <div class="d-flex gap-3 justify-content-end">
+      <a href="{% url 'student_detail' student.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+      <button type="submit" class="btn btn-save text-white">
+        <i class="bi bi-check-circle me-2"></i>Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

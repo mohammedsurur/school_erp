@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Route preview ── */
+  .route-preview{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .route-preview::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .route-meta{opacity:.75;font-size:.8rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+  .prev-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.2rem .75rem;font-size:.75rem;font-weight:700}
+
+  /* ── Direction selector ── */
+  .dir-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.75rem 1rem;text-align:center;cursor:pointer;transition:all .2s;background:#fff;flex:1}
+  .dir-btn:hover{border-color:#1a3c72}
+  .dir-btn.selected{border-color:var(--dc);background:var(--db)}
+  .dir-btn .dir-icon{font-size:1.4rem;margin-bottom:.3rem}
+  .dir-btn .dir-name{font-size:.8rem;font-weight:700;color:#374151}
+  .dir-btn .dir-hint{font-size:.68rem;color:#9ca3af;margin-top:.1rem}
+
+  /* ── Fee preview ── */
+  .fee-preview{background:#f0fdf4;border:1.5px solid #86efac;border-radius:.75rem;padding:.85rem 1.1rem;font-size:.85rem;color:#15803d;display:flex;align-items:center;gap:.5rem}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'route_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if route %}Update route details{% else %}Create a new transport route{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div class="route-preview">
+      <div style="position:relative;z-index:1">
+        <div style="opacity:.75;font-size:.78rem;margin-bottom:.3rem">
+          <i class="bi bi-signpost-split me-1"></i>Route Preview
+        </div>
+        <h5 class="fw-bold text-white mb-1" id="prevName">
+          {% if route %}{{ route.name }}{% else %}Route Name{% endif %}
+        </h5>
+        <div class="route-meta">
+          <span id="prevPoints">
+            <i class="bi bi-geo-alt me-1"></i>
+            {% if route %}{{ route.start_point }} → {{ route.end_point }}
+            {% else %}Start → End{% endif %}
+          </span>
+          <span id="prevDir">
+            <span class="prev-badge" id="dirBadge">
+              {% if route %}{{ route.get_direction_display }}{% else %}Both Directions{% endif %}
+            </span>
+          </span>
+          <span id="prevTimes" class="{% if not route or not route.departure_time %}d-none{% endif %}">
+            <i class="bi bi-clock me-1"></i>
+            <span id="prevDepTime">
+              {% if route and route.departure_time %}{{ route.departure_time|time:"H:i" }}{% endif %}
+            </span>
+          </span>
+          <span id="prevFee">
+            <i class="bi bi-cash-coin me-1"></i>
+            ETB <span id="prevFeeAmt">
+              {% if route %}{{ route.monthly_fee|floatformat:0 }}{% else %}0{% endif %}
+            </span>/mo
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Basic info -->
+        <div class="section-head">
+          <i class="bi bi-signpost-split me-2"></i>Route Details
+        </div>
+        <div class="mb-3">
+          <label>Route Name <span class="req">*</span></label>
+          {{ form.name }}
+          {% if form.name.errors %}
+          <small class="text-danger d-block mt-1">{{ form.name.errors.0 }}</small>
+          {% endif %}
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Start Point <span class="req">*</span></label>
+            {{ form.start_point }}
+            {% if form.start_point.errors %}
+            <small class="text-danger d-block mt-1">{{ form.start_point.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>End Point <span class="req">*</span></label>
+            {{ form.end_point }}
+            {% if form.end_point.errors %}
+            <small class="text-danger d-block mt-1">{{ form.end_point.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-12">
+            <label>Description</label>
+            {{ form.description }}
+          </div>
+        </div>
+
+        <!-- Direction selector -->
+        <div class="section-head">
+          <i class="bi bi-arrow-left-right me-2"></i>Direction
+        </div>
+        <div class="d-flex gap-2 mb-4">
+          <div class="dir-btn {% if not route or route.direction == 'both' %}selected{% endif %}"
+               data-value="both"
+               style="--dc:#1a3c72;--db:#eff6ff"
+               onclick="pickDir('both', this)">
+            <div class="dir-icon">↔️</div>
+            <div class="dir-name">Both</div>
+            <div class="dir-hint">Morning & Afternoon</div>
+          </div>
+          <div class="dir-btn {% if route.direction == 'morning' %}selected{% endif %}"
+               data-value="morning"
+               style="--dc:#854d0e;--db:#fef9c3"
+               onclick="pickDir('morning', this)">
+            <div class="dir-icon">🌅</div>
+            <div class="dir-name">Morning</div>
+            <div class="dir-hint">Home → School</div>
+          </div>
+          <div class="dir-btn {% if route.direction == 'afternoon' %}selected{% endif %}"
+               data-value="afternoon"
+               style="--dc:#15803d;--db:#f0fdf4"
+               onclick="pickDir('afternoon', this)">
+            <div class="dir-icon">🌇</div>
+            <div class="dir-name">Afternoon</div>
+            <div class="dir-hint">School → Home</div>
+          </div>
+        </div>
+        <div style="display:none">{{ form.direction }}</div>
+
+        <!-- Vehicle & times -->
+        <div class="section-head">
+          <i class="bi bi-truck me-2"></i>Vehicle & Schedule
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <label>Vehicle</label>
+            {{ form.vehicle }}
+            {% if form.vehicle.errors %}
+            <small class="text-danger d-block mt-1">{{ form.vehicle.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Only active vehicles are shown</small>
+          </div>
+          <div class="col-md-6" id="depTimeField">
+            <label>Departure Time</label>
+            {{ form.departure_time }}
+            <small class="text-muted">Morning pickup departure</small>
+          </div>
+          <div class="col-md-6" id="retTimeField">
+            <label>Return Time</label>
+            {{ form.return_time }}
+            <small class="text-muted">Afternoon return departure</small>
+          </div>
+        </div>
+
+        <!-- Fee -->
+        <div class="section-head">
+          <i class="bi bi-cash-coin me-2"></i>Monthly Fee
+        </div>
+        <div class="mb-3">
+          <label>Monthly Transport Fee (ETB) <span class="req">*</span></label>
+          {{ form.monthly_fee }}
+          {% if form.monthly_fee.errors %}
+          <small class="text-danger d-block mt-1">{{ form.monthly_fee.errors.0 }}</small>
+          {% endif %}
+        </div>
+        <div class="fee-preview mb-4">
+          <i class="bi bi-calculator"></i>
+          Students on this route pay
+          <strong>ETB <span id="feeDisplay">
+            {{ route.monthly_fee|default:0|floatformat:0 }}
+          </span></strong>
+          per month &nbsp;·&nbsp;
+          <strong>ETB <span id="annualFee">
+            {% if route %}{{ route.monthly_fee|floatformat:0 }}{% else %}0{% endif %}
+          </span></strong>
+          per year (×10 terms)
+        </div>
+
+        <!-- Active toggle -->
+        <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-4"
+             style="background:#f8f9fb;border:1.5px solid #e2e8f0">
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">Active Route</div>
+            <div class="text-muted" style="font-size:.78rem">
+              Inactive routes are hidden from assignment forms
+            </div>
+          </div>
+          {{ form.is_active }}
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'route_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if route %}Save Changes{% else %}Create Route{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const DIR_LABELS = {
+  both:      'Both Directions',
+  morning:   'Morning Only',
+  afternoon: 'Afternoon Only',
+};
+
+function pickDir(val, el){
+  document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="direction"]').value = val;
+  document.getElementById('dirBadge').textContent = DIR_LABELS[val];
+  // Show/hide time fields
+  document.getElementById('depTimeField').style.opacity = val === 'afternoon' ? '.4' : '1';
+  document.getElementById('retTimeField').style.opacity = val === 'morning'   ? '.4' : '1';
+}
+
+function updatePreview(){
+  const name  = document.querySelector('[name="name"]')?.value.trim()        || 'Route Name';
+  const start = document.querySelector('[name="start_point"]')?.value.trim() || 'Start';
+  const end   = document.querySelector('[name="end_point"]')?.value.trim()   || 'End';
+  const dep   = document.querySelector('[name="departure_time"]')?.value     || '';
+  const fee   = parseFloat(document.querySelector('[name="monthly_fee"]')?.value) || 0;
+
+  document.getElementById('prevName').textContent   = name;
+  document.getElementById('prevPoints').innerHTML   = `<i class="bi bi-geo-alt me-1"></i>${start} → ${end}`;
+  document.getElementById('prevDepTime').textContent = dep || '';
+  document.getElementById('prevTimes').className     = dep ? '' : 'd-none';
+  document.getElementById('prevFeeAmt').textContent  = fee.toFixed(0);
+
+  // Fee preview
+  document.getElementById('feeDisplay').textContent  = fee.toFixed(0);
+  document.getElementById('annualFee').textContent   = (fee * 10).toFixed(0);
+}
+
+['name','start_point','end_point','departure_time','monthly_fee'].forEach(n => {
+  document.querySelector(`[name="${n}"]`)?.addEventListener('input', updatePreview);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const dir = document.querySelector('[name="direction"]')?.value || 'both';
+  document.getElementById('depTimeField').style.opacity = dir === 'afternoon' ? '.4' : '1';
+  document.getElementById('retTimeField').style.opacity = dir === 'morning'   ? '.4' : '1';
+  updatePreview();
+});
+</script>
+
+{% endblock %}

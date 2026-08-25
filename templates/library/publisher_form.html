@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Publisher preview ── */
+  .pub-preview{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:1rem;padding:1.1rem 1.5rem;display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem}
+  .pub-icon-lg{width:52px;height:52px;border-radius:.875rem;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+
+  /* ── Example chips ── */
+  .example-chip{background:#f1f5f9;border-radius:999px;padding:.25rem .85rem;font-size:.78rem;font-weight:500;color:#475569;cursor:pointer;transition:all .2s;border:1.5px solid transparent}
+  .example-chip:hover{background:#f5f3ff;border-color:#7c3aed;color:#7c3aed}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-xl-5">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'library_publisher_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if publisher %}Update publisher details
+          {% else %}Add a new publisher to the system{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div class="pub-preview">
+      <div class="pub-icon-lg">
+        <i class="bi bi-building"></i>
+      </div>
+      <div>
+        <div class="fw-bold" id="namePreview" style="font-size:.95rem;color:#1e293b">
+          {% if publisher %}{{ publisher.name }}{% else %}Publisher Name{% endif %}
+        </div>
+        <div class="text-muted small mt-1" id="addressPreview">
+          {% if publisher and publisher.address %}{{ publisher.address|truncatechars:50 }}
+          {% else %}Address will appear here{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Name -->
+        <div class="section-head">
+          <i class="bi bi-building me-2"></i>Publisher Details
+        </div>
+        <div class="mb-3">
+          <label>Publisher Name <span class="req">*</span></label>
+          {{ form.name }}
+          {% if form.name.errors %}
+          <small class="text-danger d-block mt-1">{{ form.name.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">Must be unique across all publishers</small>
+        </div>
+
+        <!-- Quick-fill examples -->
+        {% if not publisher %}
+        <div class="mb-4">
+          <div class="text-muted small fw-semibold mb-2">Quick examples:</div>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="example-chip" onclick="fillName('Mega Publishing')">Mega Publishing</span>
+            <span class="example-chip" onclick="fillName('Oxford University Press')">Oxford University Press</span>
+            <span class="example-chip" onclick="fillName('Longman')">Longman</span>
+            <span class="example-chip" onclick="fillName('Cambridge University Press')">Cambridge University Press</span>
+            <span class="example-chip" onclick="fillName('Ethiopian Ministry of Education')">MoE Ethiopia</span>
+            <span class="example-chip" onclick="fillName('Macmillan')">Macmillan</span>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Address -->
+        <div class="section-head">
+          <i class="bi bi-geo-alt me-2"></i>Address
+        </div>
+        <div class="mb-4">
+          <label>Address <span class="text-muted fw-normal">(optional)</span></label>
+          {{ form.address }}
+          {% if form.address.errors %}
+          <small class="text-danger d-block mt-1">{{ form.address.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            City, country or full address of the publisher
+          </small>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'library_publisher_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if publisher %}Save Changes{% else %}Add Publisher{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const nameInp    = document.querySelector('[name="name"]');
+const addressInp = document.querySelector('[name="address"]');
+const namePrev   = document.getElementById('namePreview');
+const addrPrev   = document.getElementById('addressPreview');
+
+function updatePreview(){
+  const name = nameInp?.value.trim()    || 'Publisher Name';
+  const addr = addressInp?.value.trim() || 'Address will appear here';
+  namePrev.textContent = name;
+  addrPrev.textContent = addr.length > 60 ? addr.slice(0, 60) + '…' : addr;
+}
+
+function fillName(name){
+  if(nameInp){ nameInp.value = name; updatePreview(); nameInp.focus(); }
+}
+
+nameInp?.addEventListener('input',    updatePreview);
+addressInp?.addEventListener('input', updatePreview);
+</script>
+
+{% endblock %}

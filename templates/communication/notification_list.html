@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Notifications{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.38rem .95rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .filter-tab.unread-tab{border-color:#fca5a5;color:#dc2626}
+  .filter-tab.unread-tab:hover{background:#fff1f2}
+  .filter-tab.unread-tab.active{background:#dc2626;border-color:#dc2626;color:#fff}
+
+  /* ── Notification item ── */
+  .notif-item{border:none;border-radius:1rem;box-shadow:0 2px 8px rgba(0,0,0,.05);padding:1rem 1.25rem;margin-bottom:.6rem;display:flex;align-items:flex-start;gap:.9rem;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s;position:relative}
+  .notif-item:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1);color:inherit}
+  .notif-item.unread{background:#f8faff;border-left:4px solid #1a3c72}
+  .notif-item.read  {background:#fff;border-left:4px solid transparent;opacity:.8}
+
+  /* ── Type icon ── */
+  .notif-icon{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+
+  /* ── Unread dot ── */
+  .unread-dot{width:9px;height:9px;border-radius:50%;background:#1a3c72;flex-shrink:0;margin-top:.4rem}
+
+  /* ── Type badge ── */
+  .type-badge{border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+
+  .btn-mark-all{border-radius:.875rem;padding:.55rem 1.25rem;font-size:.82rem;font-weight:600;border:1.5px solid #e2e8f0;background:#fff;transition:all .2s;color:#374151}
+  .btn-mark-all:hover{background:#f0fdf4;border-color:#22c55e;color:#15803d}
+
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s;max-width:300px}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+  .time-ago{font-size:.7rem;color:#9ca3af;white-space:nowrap;flex-shrink:0;margin-top:.15rem}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Notifications</h5>
+    <p class="text-muted small mb-0">
+      {{ notifications.paginator.count }}
+      notification{{ notifications.paginator.count|pluralize }}
+      {% if unread_count %}
+      &nbsp;·&nbsp;
+      <span class="text-danger fw-semibold">{{ unread_count }} unread</span>
+      {% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'comm_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+    {% if unread_count %}
+    <a href="{% url 'notification_mark_all_read' %}"
+       class="btn-mark-all">
+      <i class="bi bi-check-all me-1"></i>Mark All Read
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-bell text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ notifications.paginator.count }}</div>
+        <div class="stat-lbl">Total</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-bell-fill text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">{{ unread_count }}</div>
+        <div class="stat-lbl">Unread</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-bell-slash text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntRead">—</div>
+        <div class="stat-lbl">Read</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#faf5ff">
+        <i class="bi bi-megaphone" style="color:#7c3aed"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#7c3aed" id="cntAnn">—</div>
+        <div class="stat-lbl">Announcements</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter tabs + search -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'notification_list' %}"
+       class="filter-tab {% if not request.GET.type and not request.GET.unread %}active{% endif %}">
+      All
+    </a>
+    <a href="?unread=1"
+       class="filter-tab unread-tab {% if request.GET.unread %}active{% endif %}">
+      <i class="bi bi-bell-fill me-1"></i>Unread
+    </a>
+    <a href="?type=announcement"
+       class="filter-tab {% if request.GET.type == 'announcement' %}active{% endif %}">
+      <i class="bi bi-megaphone me-1"></i>Announcements
+    </a>
+    <a href="?type=message"
+       class="filter-tab {% if request.GET.type == 'message' %}active{% endif %}">
+      <i class="bi bi-envelope me-1"></i>Messages
+    </a>
+    <a href="?type=fee"
+       class="filter-tab {% if request.GET.type == 'fee' %}active{% endif %}">
+      <i class="bi bi-cash-coin me-1"></i>Fees
+    </a>
+    <a href="?type=exam"
+       class="filter-tab {% if request.GET.type == 'exam' %}active{% endif %}">
+      <i class="bi bi-journal-check me-1"></i>Exams
+    </a>
+  </div>
+  <input type="text" id="searchInput"
+         class="search-bar form-control"
+         placeholder="Search notifications…"
+         oninput="filterNotifs(this.value)">
+</div>
+
+<!-- Notification list -->
+<div id="notifList">
+  {% if notifications %}
+  {% for notif in notifications %}
+  <a href="{% url 'notification_mark_read' notif.pk %}"
+     class="notif-item {% if notif.is_read %}read{% else %}unread{% endif %}"
+     data-type="{{ notif.notif_type }}"
+     data-read="{{ notif.is_read|yesno:'1,0' }}"
+     data-title="{{ notif.title|lower }}">
+
+    <!-- Type icon -->
+    <div class="notif-icon
+      {% if notif.notif_type == 'announcement' %}
+      " style="background:#eff6ff;color:#1d4ed8">
+      <i class="bi bi-megaphone"></i>
+      {% elif notif.notif_type == 'message' %}
+      " style="background:#f0f9ff;color:#0369a1">
+      <i class="bi bi-envelope"></i>
+      {% elif notif.notif_type == 'fee' %}
+      " style="background:#fef9c3;color:#854d0e">
+      <i class="bi bi-cash-coin"></i>
+      {% elif notif.notif_type == 'exam' %}
+      " style="background:#f0fdf4;color:#15803d">
+      <i class="bi bi-journal-check"></i>
+      {% elif notif.notif_type == 'attendance' %}
+      " style="background:#fff7ed;color:#c2410c">
+      <i class="bi bi-person-check"></i>
+      {% elif notif.notif_type == 'library' %}
+      " style="background:#faf5ff;color:#7c3aed">
+      <i class="bi bi-book"></i>
+      {% elif notif.notif_type == 'transport' %}
+      " style="background:#fff7ed;color:#c2410c">
+      <i class="bi bi-bus-front"></i>
+      {% else %}
+      " style="background:#f1f5f9;color:#64748b">
+      <i class="bi bi-bell"></i>
+      {% endif %}
+    </div>
+
+    <!-- Content -->
+    <div class="flex-grow-1 min-w-0">
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <span class="fw-{% if not notif.is_read %}bold{% else %}semibold{% endif %} small text-dark">
+          {{ notif.title }}
+        </span>
+        <span class="type-badge
+          {% if notif.notif_type == 'announcement' %}
+          " style="background:#eff6ff;color:#1d4ed8">
+          Announcement
+          {% elif notif.notif_type == 'message' %}
+          " style="background:#f0f9ff;color:#0369a1">
+          Message
+          {% elif notif.notif_type == 'fee' %}
+          " style="background:#fef9c3;color:#854d0e">
+          Fee
+          {% elif notif.notif_type == 'exam' %}
+          " style="background:#f0fdf4;color:#15803d">
+          Exam
+          {% elif notif.notif_type == 'library' %}
+          " style="background:#faf5ff;color:#7c3aed">
+          Library
+          {% elif notif.notif_type == 'transport' %}
+          " style="background:#fff7ed;color:#c2410c">
+          Transport
+          {% else %}
+          " style="background:#f1f5f9;color:#64748b">
+          General
+          {% endif %}
+        </span>
+      </div>
+      {% if notif.body %}
+      <p class="text-muted small mb-1" style="line-height:1.5">
+        {{ notif.body|truncatechars:100 }}
+      </p>
+      {% endif %}
+    </div>
+
+    <!-- Right: time + unread dot -->
+    <div class="d-flex flex-column align-items-end gap-1">
+      <span class="time-ago">{{ notif.created_at|timesince }} ago</span>
+      {% if not notif.is_read %}
+      <div class="unread-dot"></div>
+      {% endif %}
+    </div>
+
+  </a>
+  {% endfor %}
+
+  <!-- JS empty state -->
+  <div id="noResults" class="empty-state" style="display:none">
+    <i class="bi bi-search fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No notifications found</h6>
+    <p class="small text-muted mb-0">Try a different filter or search term</p>
+  </div>
+
+  {% else %}
+  <div class="card empty-state"
+       style="border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+    <i class="bi bi-bell-slash fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No Notifications Yet</h6>
+    <p class="small text-muted mb-0">
+      Notifications will appear here when there is activity in the system.
+    </p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if notifications.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if notifications.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ notifications.previous_page_number }}&type={{ request.GET.type|default:'' }}&unread={{ request.GET.unread|default:'' }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in notifications.paginator.page_range %}
+    <li class="page-item {% if notifications.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&type={{ request.GET.type|default:'' }}">
+        {{ num }}
+      </a>
+    </li>
+    {% endfor %}
+    {% if notifications.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ notifications.next_page_number }}&type={{ request.GET.type|default:'' }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+// Live search
+function filterNotifs(q){
+  const term  = q.toLowerCase().trim();
+  const items = document.querySelectorAll('#notifList .notif-item');
+  let visible = 0;
+  items.forEach(item => {
+    const match = !term || item.dataset.title.includes(term) ||
+                  item.textContent.toLowerCase().includes(term);
+    item.style.display = match ? '' : 'none';
+    if(match) visible++;
+  });
+  const noRes = document.getElementById('noResults');
+  if(noRes) noRes.style.display = visible === 0 ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const items = document.querySelectorAll('#notifList .notif-item');
+  let read = 0, ann = 0;
+  items.forEach(i => {
+    if(i.dataset.read  === '1')            read++;
+    if(i.dataset.type  === 'announcement') ann++;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntRead', read);
+  set('cntAnn',  ann);
+});
+</script>
+
+{% endblock %}

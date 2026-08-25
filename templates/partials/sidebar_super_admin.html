@@ -1,0 +1,24 @@
+<a href="{% url 'admin_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+  <i class="bi bi-speedometer2"></i> Dashboard
+</a>
+
+<div class="nav-section">People</div>
+<a href="{% url 'user_list' %}" class="nav-link"><i class="bi bi-people"></i> All Users</a>
+<a href="#" class="nav-link"><i class="bi bi-person-badge"></i> Staff</a>
+<a href="#" class="nav-link"><i class="bi bi-person-graduate"></i> Students</a>
+
+<div class="nav-section">Academic</div>
+<a href="#" class="nav-link"><i class="bi bi-building"></i> Classes</a>
+<a href="#" class="nav-link"><i class="bi bi-book"></i> Subjects</a>
+<a href="#" class="nav-link"><i class="bi bi-calendar3"></i> Timetable</a>
+
+<div class="nav-section">Operations</div>
+<a href="#" class="nav-link"><i class="bi bi-check2-square"></i> Attendance</a>
+<a href="#" class="nav-link"><i class="bi bi-file-earmark-text"></i> Exams</a>
+<a href="#" class="nav-link"><i class="bi bi-cash-coin"></i> Fees</a>
+<a href="#" class="nav-link"><i class="bi bi-book-half"></i> Library</a>
+<a href="#" class="nav-link"><i class="bi bi-bus-front"></i> Transport</a>
+
+<div class="nav-section">System</div>
+<a href="{% url 'user_create' %}" class="nav-link"><i class="bi bi-person-plus"></i> Add User</a>
+<a href="/admin/" class="nav-link"><i class="bi bi-gear"></i> Django Admin</a>

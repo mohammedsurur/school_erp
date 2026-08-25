@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .student-card{background:#f8f9fb;border-radius:.875rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem}
+  .avatar-sm{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .adm-no{font-family:monospace;font-size:.75rem;background:#e2e8f0;padding:.15rem .5rem;border-radius:.4rem;color:#475569}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% if student %}{% url 'student_detail' student.pk %}{% else %}{% url 'enrollment_list' %}{% endif %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">Assign student to a class for an academic year</p>
+      </div>
+    </div>
+
+    <!-- Info tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Note:</strong> A student can only have one active enrollment per academic year.
+      Enrolling again will be blocked if already enrolled.
+    </div>
+
+    <!-- Pre-selected student card -->
+    {% if student %}
+    <div class="student-card mb-4">
+      {% if student.photo %}
+      <img src="{{ student.photo.url }}" class="avatar-sm" style="object-fit:cover" alt="">
+      {% else %}
+      <div class="avatar-sm">
+        {{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <div class="fw-bold small">{{ student.user.get_full_name }}</div>
+        <span class="adm-no">{{ student.admission_number }}</span>
+      </div>
+      <i class="bi bi-check-circle-fill text-success ms-auto"></i>
+    </div>
+    {% endif %}
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Student selector (hidden if direct enroll) -->
+        {% if not student %}
+        <div class="section-head"><i class="bi bi-person me-2"></i>Select Student</div>
+        <div class="mb-4">
+          <label>Student <span class="text-danger">*</span></label>
+          {{ form.student }}
+          {% if form.student.errors %}
+          <small class="text-danger">{{ form.student.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">Only unenrolled students are shown</small>
+        </div>
+        {% else %}
+        {{ form.student.as_hidden }}
+        {% endif %}
+
+        <!-- Academic Year -->
+        <div class="section-head"><i class="bi bi-calendar2-range me-2"></i>Academic Period</div>
+        <div class="mb-4">
+          <label>Academic Year <span class="text-danger">*</span></label>
+          {{ form.academic_year }}
+          {% if form.academic_year.errors %}
+          <small class="text-danger">{{ form.academic_year.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Section -->
+        <div class="mb-4">
+          <label>Class / Section <span class="text-danger">*</span></label>
+          {{ form.section }}
+          {% if form.section.errors %}
+          <small class="text-danger">{{ form.section.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">Select the class and section for this student</small>
+        </div>
+
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% if student %}{% url 'student_detail' student.pk %}{% else %}{% url 'enrollment_list' %}{% endif %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-journal-check me-2"></i>Confirm Enrollment
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

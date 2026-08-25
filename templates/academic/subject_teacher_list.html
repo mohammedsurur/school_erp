@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Subject–Teacher Assignments{% endblock %}
+{% block page_title %}Subject–Teacher Assignments{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;color:inherit;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover,.filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .subject-code{font-family:monospace;font-size:.75rem;background:#f1f5f9;padding:.2rem .5rem;border-radius:.4rem;color:#475569;font-weight:600}
+  .teacher-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Subject–Teacher Assignments</h5>
+    <p class="text-muted small mb-0">
+      {{ assignments|length }} assignment{{ assignments|length|pluralize }}
+    </p>
+  </div>
+  <a href="{% url 'subject_teacher_assign' %}" class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Assign Subject
+  </a>
+</div>
+
+<!-- Year filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  {% for year in years %}
+  <a href="?year={{ year.pk }}{% if grade_id %}&grade={{ grade_id }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
+     class="filter-tab {% if year_id == year.pk|stringformat:'s' %}active{% endif %}">
+    {{ year.name }}
+    {% if year.is_current %}<i class="bi bi-check-circle-fill ms-1" style="font-size:.7rem"></i>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Grade filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+  <a href="?{% if year_id %}year={{ year_id %}{% endif %}"
+     class="filter-tab {% if not grade_id %}active{% endif %}">
+    All Grades
+  </a>
+  {% for grade in grades %}
+  <a href="?{% if year_id %}year={{ year_id }}&{% endif %}grade={{ grade.pk }}{% if q %}&q={{ q }}{% endif %}"
+     class="filter-tab {% if grade_id == grade.pk|stringformat:'s' %}active{% endif %}">
+    {{ grade.name }}
+  </a>
+  {% endfor %}
+
+  <!-- Search -->
+  <form method="get" class="d-flex gap-2 ms-auto flex-wrap">
+    {% if year_id %}<input type="hidden" name="year"  value="{{ year_id }}">{% endif %}
+    {% if grade_id %}<input type="hidden" name="grade" value="{{ grade_id }}">{% endif %}
+    <input type="text" name="q" value="{{ q }}"
+           class="form-control search-bar"
+           placeholder="Search subject, teacher or section…"
+           style="max-width:280px">
+    <button type="submit" class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-search"></i>
+    </button>
+    {% if q %}
+    <a href="?{% if year_id %}year={{ year_id }}&{% endif %}{% if grade_id %}grade={{ grade_id }}{% endif %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-x"></i>
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Subject</th>
+          <th>Section</th>
+          <th>Teacher</th>
+          <th>Grade</th>
+          <th>Academic Year</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for assignment in assignments %}
+        <tr>
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Subject -->
+          <td>
+            <div class="fw-semibold small">{{ assignment.subject.name }}</div>
+            <span class="subject-code">{{ assignment.subject.code }}</span>
+          </td>
+
+          <!-- Section -->
+          <td>
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-3">
+              {{ assignment.section.grade }} — {{ assignment.section.name }}
+            </span>
+          </td>
+
+          <!-- Teacher -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="teacher-avatar">
+                {{ assignment.teacher.first_name|first|upper }}{{ assignment.teacher.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-semibold small">{{ assignment.teacher.get_full_name }}</div>
+                <div class="text-muted" style="font-size:.72rem">
+                  {{ assignment.teacher.get_role_display }}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Grade -->
+          <td class="small text-muted">{{ assignment.subject.grade }}</td>
+
+          <!-- Year -->
+          <td class="small text-muted">{{ assignment.academic_year }}</td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'subject_teacher_edit' assignment.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'subject_teacher_delete' assignment.pk %}"
+                 class="action-icon text-danger" title="Remove"
+                 onclick="return confirm('Remove {{ assignment.subject.name }} from {{ assignment.teacher.get_full_name }}?')">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-person-workspace fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No assignments found</h6>
+              <p class="small mb-3">
+                {% if q %}No results for "{{ q }}"
+                {% else %}No subjects have been assigned to teachers yet{% endif %}
+              </p>
+              <a href="{% url 'subject_teacher_assign' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Assign Subject
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Periods{% endblock %}
+{% block page_title %}Periods{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;color:inherit;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .period-badge{width:36px;height:36px;border-radius:.75rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .time-chip{font-family:monospace;font-size:.82rem;background:#f1f5f9;padding:.3rem .75rem;border-radius:.5rem;color:#1e293b;font-weight:600;display:inline-flex;align-items:center;gap:.4rem}
+  .duration-pill{background:#eff6ff;color:#1e40af;border-radius:999px;padding:.2rem .65rem;font-size:.75rem;font-weight:600}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Periods</h5>
+    <p class="text-muted small mb-0">
+      {{ periods|length }} period{{ periods|length|pluralize }} configured
+    </p>
+  </div>
+  <a href="{% url 'period_create' %}" class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Add Period
+  </a>
+</div>
+
+<!-- Tip -->
+{% if not periods %}
+<div class="tip-box mb-4">
+  <i class="bi bi-lightbulb me-2"></i>
+  <strong>Start here:</strong> Periods define your school's daily
+  schedule slots — e.g. Period 1 (08:00–08:45), Break (10:30–11:00).
+  You must create periods before you can build a timetable.
+</div>
+{% endif %}
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th style="width:70px">Order</th>
+          <th>Period</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Duration</th>
+          <th>Used in Timetable</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for period in periods %}
+       
+        <tr>
+          <td>
+            <div class="period-badge">{{ period.order }}</div>
+          </td>
+          <td class="fw-semibold">{{ period.name }}</td>
+          <td>
+            <span class="time-chip">
+              <i class="bi bi-clock text-primary" style="font-size:.75rem"></i>
+              {{ period.start_time|time:"H:i" }}
+            </span>
+          </td>
+          <td>
+            <span class="time-chip">
+              <i class="bi bi-clock-fill text-success" style="font-size:.75rem"></i>
+              {{ period.end_time|time:"H:i" }}
+            </span>
+          </td>
+          <td>
+            <span class="duration-pill">
+              {% with start=period.start_time end=period.end_time %}
+              {{ period.duration_minutes|default:"—" }} min
+              {% endwith %}
+            </span>
+          </td>
+          <td>
+            {% with count=period.timetable_entries.count %}
+            {% if count %}
+            <span class="badge rounded-pill bg-success-subtle text-success px-3">
+              <i class="bi bi-check-circle me-1"></i>{{ count }} slot{{ count|pluralize }}
+            </span>
+            {% else %}
+            <span class="text-muted small">Not used yet</span>
+            {% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'period_edit' period.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'period_delete' period.pk %}"
+                 class="action-icon text-danger" title="Delete"
+                 onclick="return confirm('Delete period {{ period.name }}? This cannot be undone.')">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+       
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-clock fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No periods configured</h6>
+              <p class="small mb-3">
+                Add your daily schedule periods to start building the timetable.
+              </p>
+              <a href="{% url 'period_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add First Period
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if periods %}
+<!-- Timeline visual -->
+<div class="card mt-4 p-4" style="border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+  <h6 class="fw-bold mb-3">
+    <i class="bi bi-bar-chart-steps me-2 text-primary"></i>Daily Schedule Timeline
+  </h6>
+  <div class="d-flex align-items-center gap-1 flex-wrap">
+    {% for period in periods %}
+    <div class="text-center" style="min-width:80px">
+      <div class="rounded-2 px-2 py-2 mb-1 fw-semibold small"
+           style="background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-size:.72rem">
+        {{ period.name }}
+      </div>
+      <div class="text-muted" style="font-size:.65rem">
+        {{ period.start_time|time:"H:i" }}–{{ period.end_time|time:"H:i" }}
+      </div>
+    </div>
+    {% if not forloop.last %}
+    <i class="bi bi-arrow-right text-muted opacity-50"></i>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

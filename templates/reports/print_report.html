@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} — Print</title>
+  <style>
+    /* ── Screen styles ── */
+    * { box-sizing: border-box; margin: 0; padding: 0 }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      color: #1a1a1a;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    /* ── Print toolbar (hidden when printing) ── */
+    .print-toolbar {
+      background: #1a3c72;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .print-toolbar h6 { margin: 0; font-size: 15px; font-weight: 700 }
+    .print-toolbar small { opacity: .75; font-size: 11px }
+    .btn-print {
+      background: #22c55e; border: none; color: #fff;
+      padding: 9px 22px; border-radius: 6px;
+      font-weight: 700; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-back {
+      background: rgba(255,255,255,.2); border: none; color: #fff;
+      padding: 9px 18px; border-radius: 6px;
+      font-size: 13px; cursor: pointer; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-back:hover { background: rgba(255,255,255,.3); color: #fff }
+
+    /* ── Print page wrapper ── */
+    .print-page {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      padding: 32px 36px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* ── Report header ── */
+    .report-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 2px solid #1a3c72;
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+      gap: 12px;
+    }
+    .school-name { font-size: 18px; font-weight: 800; color: #1a3c72 }
+    .report-title { font-size: 13px; color: #666; margin-top: 3px }
+    .report-meta { text-align: right; font-size: 11px; color: #888; line-height: 1.6 }
+
+    /* ── Stat row ── */
+    .stat-row {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      border: 1.5px solid #e2e8f0; border-radius: 8px;
+      padding: 10px 16px; flex: 1; min-width: 110px;
+      text-align: center;
+    }
+    .stat-val { font-size: 22px; font-weight: 800; color: #1a3c72; line-height: 1 }
+    .stat-lbl { font-size: 10px; color: #9ca3af; margin-top: 3px; text-transform: uppercase; letter-spacing: .05em }
+
+    /* ── Tables ── */
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 12px; margin-top: 4px;
+    }
+    thead th {
+      background: #1a3c72; color: #fff;
+      padding: 8px 10px; text-align: left;
+      font-size: 10px; text-transform: uppercase;
+      letter-spacing: .05em; font-weight: 700;
+    }
+    tbody tr:nth-child(even) { background: #f8faff }
+    tbody tr:hover { background: #eff6ff }
+    tbody td { padding: 7px 10px; border-bottom: 1px solid #e9ecef; vertical-align: middle }
+    tfoot td {
+      padding: 8px 10px; font-weight: 700;
+      background: #f0f4ff; border-top: 2px solid #1a3c72;
+    }
+
+    /* ── Status chips ── */
+    .chip {
+      border-radius: 999px; padding: 2px 8px;
+      font-size: 10px; font-weight: 700; display: inline-block;
+    }
+    .chip-green  { background: #dcfce7; color: #15803d }
+    .chip-red    { background: #fee2e2; color: #dc2626 }
+    .chip-amber  { background: #fef9c3; color: #854d0e }
+    .chip-blue   { background: #eff6ff; color: #1d4ed8 }
+    .chip-grey   { background: #f1f5f9; color: #64748b }
+
+    /* ── Score bar (print uses solid blocks) ── */
+    .score-bar { height: 5px; border-radius: 3px; background: #e2e8f0; width: 80px }
+    .score-fill { height: 100%; border-radius: 3px }
+
+    /* ── Section header ── */
+    .section-header {
+      background: #f8faff; border-left: 3px solid #1a3c72;
+      padding: 6px 12px; margin: 16px 0 8px;
+      font-weight: 700; font-size: 11px;
+      text-transform: uppercase; letter-spacing: .06em; color: #1a3c72;
+    }
+
+    /* ── Footer ── */
+    .print-footer {
+      border-top: 1px solid #e2e8f0; margin-top: 24px;
+      padding-top: 10px; font-size: 10px; color: #9ca3af;
+      display: flex; justify-content: space-between;
+    }
+
+    /* ══════════════════════════════════════════
+       PRINT MEDIA — hides toolbar, full width
+       ══════════════════════════════════════════ */
+    @media print {
+      body { background: #fff; padding: 0; font-size: 11px }
+      .print-toolbar { display: none !important }
+      .print-page {
+        box-shadow: none; border-radius: 0;
+        padding: 16px 20px; max-width: 100%;
+      }
+      thead th { background: #1a3c72 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+      tbody tr:nth-child(even) { background: #f8faff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+      .chip { -webkit-print-color-adjust: exact; print-color-adjust: exact }
+      .score-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact }
+      @page { margin: 1.5cm; size: A4 landscape }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Print toolbar (screen only) ── -->
+<div class="print-toolbar">
+  <div>
+    <h6>🖨 {{ title }}</h6>
+    <small>Preview — click Print to save as PDF or print</small>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <a href="javascript:history.back()" class="btn-back">← Back</a>
+    <button class="btn-print" onclick="window.print()">
+      🖨 Print / Save PDF
+    </button>
+  </div>
+</div>
+
+<!-- ── Print page ── -->
+<div class="print-page">
+
+  <!-- Header -->
+  <div class="report-header">
+    <div>
+      <div class="school-name">School ERP</div>
+      <div class="report-title">{{ title }}</div>
+    </div>
+    <div class="report-meta">
+      Generated: {{ generated|date:"M d, Y H:i" }}<br>
+      Printed by: {{ request.user.get_full_name }}<br>
+      {% if request.GET.academic_year %}
+      Academic Year ID: {{ request.GET.academic_year }}<br>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════
+       REPORT CARD
+       ════════════════════════════════════ -->
+  {% if report_type == 'report_card' and cards %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val">{{ total }}</div><div class="stat-lbl">Total</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#15803d">{{ promoted }}</div><div class="stat-lbl">Promoted</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#dc2626">{{ total|add:"-"|add:promoted }}</div><div class="stat-lbl">Not Promoted</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#7c3aed">{{ avg|floatformat:1 }}</div><div class="stat-lbl">Class Avg</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Student</th><th>ID</th><th>Average</th><th>Grade</th><th>Failed</th><th>Promoted</th><th>Remarks</th></tr></thead>
+    <tbody>
+    {% for card in cards %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td><strong>{{ card.student.user.get_full_name }}</strong></td>
+      <td style="font-family:monospace">{{ card.student.student_id }}</td>
+      <td><strong style="font-family:monospace">{{ card.average_score|floatformat:1 }}</strong></td>
+      <td>
+        {% if card.average_score >= 90 %}<span class="chip chip-green">Excellent</span>
+        {% elif card.average_score >= 80 %}<span class="chip chip-blue">Very Good</span>
+        {% elif card.average_score >= 70 %}<span class="chip chip-blue">Good</span>
+        {% elif card.average_score >= 60 %}<span class="chip chip-amber">Satisfactory</span>
+        {% elif card.average_score >= 50 %}<span class="chip chip-amber">Pass</span>
+        {% else %}<span class="chip chip-red">Fail</span>{% endif %}
+      </td>
+      <td style="text-align:center">{{ card.failed_subjects }}</td>
+      <td>{% if card.is_promoted %}<span class="chip chip-green">Yes</span>{% else %}<span class="chip chip-red">No</span>{% endif %}</td>
+      <td style="color:#888;font-size:11px">{{ card.teacher_remarks|default:"—"|truncatechars:30 }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- ════════════════════════════════════
+       EXAM RESULTS
+       ════════════════════════════════════ -->
+  {% if report_type == 'exam_results' and results %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val">{{ total }}</div><div class="stat-lbl">Students</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#15803d">{{ passed }}</div><div class="stat-lbl">Passed</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#7c3aed">{{ avg|floatformat:1 }}</div><div class="stat-lbl">Class Avg</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Student</th><th>Subject</th><th>Score</th><th>Grade</th><th>Result</th></tr></thead>
+    <tbody>
+    {% for r in results %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td><strong>{{ r.student.user.get_full_name }}</strong></td>
+      <td>{{ r.subject.name }}</td>
+      <td><strong style="font-family:monospace">{{ r.total_score|floatformat:1 }}</strong>/100</td>
+      <td>
+        {% if r.total_score >= 90 %}<span class="chip chip-green">Excellent</span>
+        {% elif r.total_score >= 80 %}<span class="chip chip-blue">Very Good</span>
+        {% elif r.total_score >= 70 %}<span class="chip chip-blue">Good</span>
+        {% elif r.total_score >= 60 %}<span class="chip chip-amber">Satisfactory</span>
+        {% elif r.total_score >= 50 %}<span class="chip chip-amber">Pass</span>
+        {% else %}<span class="chip chip-red">Fail</span>{% endif %}
+      </td>
+      <td>{% if r.is_pass %}<span class="chip chip-green">Pass</span>{% else %}<span class="chip chip-red">Fail</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- ════════════════════════════════════
+       ATTENDANCE
+       ════════════════════════════════════ -->
+  {% if report_type == 'attendance' and records %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val">{{ total }}</div><div class="stat-lbl">Total</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#15803d">{{ present }}</div><div class="stat-lbl">Present</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#dc2626">{{ absent }}</div><div class="stat-lbl">Absent</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#854d0e">{{ late }}</div><div class="stat-lbl">Late</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#1a3c72">{{ rate }}%</div><div class="stat-lbl">Rate</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Date</th><th>Student</th><th>Status</th><th>Remarks</th></tr></thead>
+    <tbody>
+    {% for rec in records %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ rec.date|date:"M d, Y" }}</td>
+      <td><strong>{{ rec.student.user.get_full_name }}</strong></td>
+      <td>
+        {% if rec.status == 'present' %}<span class="chip chip-green">Present</span>
+        {% elif rec.status == 'absent' %}<span class="chip chip-red">Absent</span>
+        {% else %}<span class="chip chip-amber">{{ rec.status|title }}</span>{% endif %}
+      </td>
+      <td style="color:#888">{{ rec.remarks|default:"—" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- ════════════════════════════════════
+       FEE COLLECTION
+       ════════════════════════════════════ -->
+  {% if report_type == 'fee_collection' and payments %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val" style="color:#15803d">ETB {{ total_collected|floatformat:0 }}</div><div class="stat-lbl">Collected</div></div>
+    <div class="stat-box"><div class="stat-val">{{ payment_count }}</div><div class="stat-lbl">Transactions</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Date</th><th>Student</th><th>Category</th><th>Method</th><th>Reference</th><th style="text-align:right">Amount (ETB)</th></tr></thead>
+    <tbody>
+    {% for pay in payments %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ pay.payment_date|date:"M d, Y" }}</td>
+      <td><strong>{{ pay.student_fee.student.user.get_full_name }}</strong></td>
+      <td>{{ pay.student_fee.fee_structure.fee_category.name|default:"—" }}</td>
+      <td><span class="chip chip-grey">{{ pay.payment_method|default:"Other"|title }}</span></td>
+      <td style="font-family:monospace;font-size:11px">{{ pay.reference_number|default:"—" }}</td>
+      <td style="text-align:right;font-family:monospace;font-weight:700;color:#15803d">{{ pay.amount|floatformat:2 }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="6" style="text-align:right">Total:</td><td style="text-align:right;font-family:monospace">ETB {{ total_collected|floatformat:2 }}</td></tr></tfoot>
+  </table>
+  {% endif %}
+
+  <!-- ════════════════════════════════════
+       OUTSTANDING FEES
+       ════════════════════════════════════ -->
+  {% if report_type == 'outstanding_fees' and fees %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val" style="color:#dc2626">ETB {{ total_outstanding|floatformat:0 }}</div><div class="stat-lbl">Outstanding</div></div>
+    <div class="stat-box"><div class="stat-val">{{ student_count }}</div><div class="stat-lbl">Students</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Student</th><th>Category</th><th>Amount Due</th><th>Paid</th><th>Balance</th><th>Due Date</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for fee in fees %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td><strong>{{ fee.student.user.get_full_name }}</strong></td>
+      <td>{{ fee.fee_structure.fee_category.name|default:"—" }}</td>
+      <td style="font-family:monospace">{{ fee.amount_due|floatformat:2 }}</td>
+      <td style="font-family:monospace;color:#15803d">{{ fee.amount_paid|floatformat:2 }}</td>
+      <td style="font-family:monospace;font-weight:700;color:#dc2626">{{ fee.balance|floatformat:2 }}</td>
+      <td style="{% if fee.due_date and fee.due_date < today %}color:#dc2626;font-weight:700{% endif %}">{{ fee.due_date|date:"M d, Y"|default:"—" }}</td>
+      <td>
+        {% if fee.due_date and fee.due_date < today %}<span class="chip chip-red">Overdue</span>
+        {% elif fee.status == 'partial' %}<span class="chip chip-amber">Partial</span>
+        {% else %}<span class="chip chip-red">Unpaid</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="5" style="text-align:right">Total Outstanding:</td><td style="font-family:monospace">ETB {{ total_outstanding|floatformat:2 }}</td><td colspan="2"></td></tr></tfoot>
+  </table>
+  {% endif %}
+
+  <!-- ════════════════════════════════════
+       LIBRARY
+       ════════════════════════════════════ -->
+  {% if report_type == 'library' and issuances %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val">{{ total_issued }}</div><div class="stat-lbl">Issued</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#15803d">{{ total_returned }}</div><div class="stat-lbl">Returned</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:#dc2626">{{ total_overdue }}</div><div class="stat-lbl">Overdue</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Book</th><th>Borrower</th><th>Issued</th><th>Due</th><th>Returned</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for iss in issuances %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td><strong>{{ iss.book_copy.book.title|truncatechars:30 }}</strong></td>
+      <td>{{ iss.student.user.get_full_name }}</td>
+      <td>{{ iss.issued_date|date:"M d, Y" }}</td>
+      <td style="{% if iss.status == 'overdue' %}color:#dc2626;font-weight:700{% endif %}">{{ iss.due_date|date:"M d, Y"|default:"—" }}</td>
+      <td>{{ iss.return_date|date:"M d, Y"|default:"—" }}</td>
+      <td>
+        {% if iss.status == 'returned' %}<span class="chip chip-green">Returned</span>
+        {% elif iss.status == 'overdue' %}<span class="chip chip-red">Overdue</span>
+        {% elif iss.status == 'lost' %}<span class="chip chip-grey">Lost</span>
+        {% else %}<span class="chip chip-blue">Issued</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- ════════════════════════════════════
+       TRANSPORT
+       ════════════════════════════════════ -->
+  {% if report_type == 'transport' and assignments %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val">{{ total_students }}</div><div class="stat-lbl">Students</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Student</th><th>Route</th><th>Stop</th><th>Vehicle</th><th>Plate</th><th>Since</th></tr></thead>
+    <tbody>
+    {% for a in assignments %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td><strong>{{ a.student.user.get_full_name }}</strong></td>
+      <td>{{ a.route.name }}</td>
+      <td>{{ a.stop.stop_name|default:"—" }}</td>
+      <td>{{ a.route.vehicle.name|default:"—" }}</td>
+      <td style="font-family:monospace">{{ a.route.vehicle.plate_number|default:"—" }}</td>
+      <td>{{ a.start_date|date:"M d, Y" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- ════════════════════════════════════
+       STUDENT LIST
+       ════════════════════════════════════ -->
+  {% if report_type == 'student_list' and students %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val">{{ total }}</div><div class="stat-lbl">Students</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Student</th><th>ID</th><th>Gender</th><th>Date of Birth</th><th>Phone</th><th>Parent</th></tr></thead>
+    <tbody>
+    {% for stu in students %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td><strong>{{ stu.user.get_full_name }}</strong></td>
+      <td style="font-family:monospace">{{ stu.admission_number|default:"—" }}</td>
+      <td>{{ stu.gender|title|default:"—" }}</td>
+      <td>{{ stu.date_of_birth|date:"M d, Y"|default:"—" }}</td>
+      <td style="font-family:monospace">{{ stu.user.phone_number|default:"—" }}</td>
+      <td>{{ stu.parent_name|default:"—" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- ════════════════════════════════════
+       STAFF LIST
+       ════════════════════════════════════ -->
+  {% if report_type == 'staff_list' and staff %}
+  <div class="stat-row">
+    <div class="stat-box"><div class="stat-val">{{ total }}</div><div class="stat-lbl">Staff</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Staff Member</th><th>Role</th><th>Department</th><th>Qualification</th><th>Phone</th><th>Email</th></tr></thead>
+    <tbody>
+    {% for s in staff %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td><strong>{{ s.user.get_full_name }}</strong></td>
+      <td><span class="chip chip-blue">{{ s.user.get_role_display|default:s.user.role }}</span></td>
+      <td>{{ s.department|title|default:"—" }}</td>
+      <td style="font-size:11px">{{ s.qualification|default:"—"|truncatechars:25 }}</td>
+      <td style="font-family:monospace">{{ s.user.phone_number|default:"—" }}</td>
+      <td style="font-size:11px">{{ s.user.email|default:"—" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- Footer -->
+  <div class="print-footer">
+    <span>School ERP — Confidential</span>
+    <span>Generated: {{ generated|date:"M d, Y H:i" }} by {{ request.user.get_full_name }}</span>
+    <span>Page <span class="page-num"></span></span>
+  </div>
+</div>
+
+<script>
+  // Auto-print when URL has ?autoprint=1
+  if(new URLSearchParams(window.location.search).get('autoprint') === '1'){
+    window.addEventListener('load', () => setTimeout(() => window.print(), 600));
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+{% block content %}
+
+<style>
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform .2s,box-shadow .2s;text-decoration:none;display:block}
+  .stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+  .stat-icon{width:52px;height:52px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+  .stat-value{font-size:2rem;font-weight:800;line-height:1}
+  .stat-label{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280}
+  .stat-trend{font-size:.75rem;font-weight:600}
+  .section-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .section-head{padding:1.1rem 1.5rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
+  .activity-item{display:flex;align-items:flex-start;gap:.85rem;padding:.9rem 0;border-bottom:1px solid #f8f9fb}
+  .activity-item:last-child{border-bottom:none}
+  .activity-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+  .quick-action{border:1.5px solid #e2e8f0;border-radius:1rem;padding:1.1rem;text-align:center;text-decoration:none;color:#374151;transition:border-color .2s,background .2s,transform .2s;display:block}
+  .quick-action:hover{border-color:#1a3c72;background:#f8faff;color:#1a3c72;transform:translateY(-2px)}
+  .quick-action-icon{width:48px;height:48px;border-radius:.75rem;display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-size:1.3rem}
+  .progress-wrap{height:6px;background:#e9ecef;border-radius:999px;overflow:hidden}
+  .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1a3c72,#0ea5a0)}
+  .notice-item{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem 0;border-bottom:1px solid #f8f9fb}
+  .notice-item:last-child{border-bottom:none}
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+</style>
+
+<!-- Welcome Banner -->
+<div style="background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:2rem 2.5rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden">
+  <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)"></div>
+  <div style="position:absolute;bottom:-40px;right:80px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
+  <h4 class="fw-bold mb-1">Welcome back, {{ request.user.get_full_name|default:request.user.username }}! 👋</h4>
+  <p class="opacity-75 mb-0">Here's what's happening at your school today.</p>
+</div>
+
+<!-- Stat Cards Row 1 -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <a href="{% url 'user_list' %}?role=student" class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#eff6ff"><i class="bi bi-mortarboard text-primary fs-3"></i></div>
+        <div>
+          <div class="stat-value text-primary">{{ total_students|default:"0" }}</div>
+          <div class="stat-label">Students</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{% url 'user_list' %}?role=teacher" class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#f0fdf4"><i class="bi bi-person-badge text-success fs-3"></i></div>
+        <div>
+          <div class="stat-value text-success">{{ total_teachers|default:"0" }}</div>
+          <div class="stat-label">Teachers</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="#" class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fff7ed"><i class="bi bi-building text-warning fs-3"></i></div>
+        <div>
+          <div class="stat-value text-warning">{{ total_classes|default:"0" }}</div>
+          <div class="stat-label">Classes</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="#" class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fdf4ff"><i class="bi bi-book fs-3" style="color:#a855f7"></i></div>
+        <div>
+          <div class="stat-value" style="color:#a855f7">{{ total_subjects|default:"0" }}</div>
+          <div class="stat-label">Subjects</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Stat Cards Row 2 -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a href="#" class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#f0fdf4"><i class="bi bi-check2-square text-success fs-3"></i></div>
+        <div>
+          <div class="stat-value text-success">{{ today_attendance|default:"0" }}%</div>
+          <div class="stat-label">Today Attendance</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="#" class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fff7ed"><i class="bi bi-cash-coin text-warning fs-3"></i></div>
+        <div>
+          <div class="stat-value text-warning">${{ total_fees_collected|default:"0" }}</div>
+          <div class="stat-label">Fees Collected</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="#" class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fff1f2"><i class="bi bi-exclamation-triangle text-danger fs-3"></i></div>
+        <div>
+          <div class="stat-value text-danger">{{ fees_pending|default:"0" }}</div>
+          <div class="stat-label">Fees Pending</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="#" class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#eff6ff"><i class="bi bi-file-earmark-text text-primary fs-3"></i></div>
+        <div>
+          <div class="stat-value text-primary">{{ total_exams|default:"0" }}</div>
+          <div class="stat-label">Active Exams</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Quick Actions -->
+  <div class="col-12">
+    <div class="section-card card">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-lightning me-2 text-warning"></i>Quick Actions</h6>
+      </div>
+      <div class="p-4">
+        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3">
+          <div class="col">
+            <a href="{% url 'user_create' %}" class="quick-action">
+              <div class="quick-action-icon" style="background:#eff6ff"><i class="bi bi-person-plus text-primary"></i></div>
+              <div class="fw-semibold small">Add User</div>
+            </a>
+          </div>
+          <div class="col">
+            <a href="#" class="quick-action">
+              <div class="quick-action-icon" style="background:#f0fdf4"><i class="bi bi-person-badge text-success"></i></div>
+              <div class="fw-semibold small">Add Student</div>
+            </a>
+          </div>
+          <div class="col">
+            <a href="#" class="quick-action">
+              <div class="quick-action-icon" style="background:#fff7ed"><i class="bi bi-check2-square text-warning"></i></div>
+              <div class="fw-semibold small">Attendance</div>
+            </a>
+          </div>
+          <div class="col">
+            <a href="#" class="quick-action">
+              <div class="quick-action-icon" style="background:#fdf4ff"><i class="bi bi-cash-coin" style="color:#a855f7"></i></div>
+              <div class="fw-semibold small">Collect Fee</div>
+            </a>
+          </div>
+          <div class="col">
+            <a href="#" class="quick-action">
+              <div class="quick-action-icon" style="background:#fff1f2"><i class="bi bi-file-earmark-text text-danger"></i></div>
+              <div class="fw-semibold small">Create Exam</div>
+            </a>
+          </div>
+          <div class="col">
+            <a href="#" class="quick-action">
+              <div class="quick-action-icon" style="background:#f0fdf4"><i class="bi bi-megaphone text-success"></i></div>
+              <div class="fw-semibold small">Notice Board</div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity + Notices -->
+  <div class="col-lg-7">
+    <div class="section-card card h-100">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Activity</h6>
+        <span class="badge rounded-pill bg-primary-subtle text-primary px-3">Today</span>
+      </div>
+      <div class="p-4">
+        {% if recent_activities %}
+        {% for activity in recent_activities %}
+        <div class="activity-item">
+          <div class="activity-icon bg-primary-subtle text-primary"><i class="bi bi-{{ activity.icon|default:'bell' }}"></i></div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">{{ activity.title }}</div>
+            <div class="text-muted" style="font-size:.78rem">{{ activity.description }}</div>
+          </div>
+          <div class="text-muted" style="font-size:.73rem;white-space:nowrap">{{ activity.time }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-clock-history fs-1 text-muted opacity-25 d-block mb-3"></i>
+          <p class="text-muted small mb-0">No recent activity yet. Start by adding students and staff.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Notice Board + Attendance Summary -->
+  <div class="col-lg-5">
+    <!-- Attendance Summary -->
+    <div class="section-card card mb-4">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-bar-chart me-2 text-success"></i>Today's Attendance</h6>
+      </div>
+      <div class="p-4">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small text-muted">Present</span>
+          <span class="small fw-bold text-success">{{ present_today|default:"0" }}</span>
+        </div>
+        <div class="progress-wrap mb-3"><div class="progress-fill" style="width:{{ today_attendance|default:'0' }}%;background:linear-gradient(90deg,#22c55e,#16a34a)"></div></div>
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small text-muted">Absent</span>
+          <span class="small fw-bold text-danger">{{ absent_today|default:"0" }}</span>
+        </div>
+        <div class="progress-wrap mb-3"><div class="progress-fill" style="width:{{ absent_percent|default:'0' }}%;background:linear-gradient(90deg,#ef4444,#dc2626)"></div></div>
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small text-muted">Late</span>
+          <span class="small fw-bold text-warning">{{ late_today|default:"0" }}</span>
+        </div>
+        <div class="progress-wrap"><div class="progress-fill" style="width:{{ late_percent|default:'0' }}%;background:linear-gradient(90deg,#f59e0b,#d97706)"></div></div>
+      </div>
+    </div>
+
+    <!-- Notices -->
+    <div class="section-card card">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-megaphone me-2 text-warning"></i>Notice Board</h6>
+        <a href="#" class="btn btn-sm btn-outline-primary rounded-pill">View All</a>
+      </div>
+      <div class="p-4">
+        {% if notices %}
+        {% for notice in notices|slice:"0:4" %}
+        <div class="notice-item">
+          <div class="avatar-xs">{{ notice.published_by.first_name|first|upper }}</div>
+          <div>
+            <div class="fw-semibold small">{{ notice.title }}</div>
+            <div class="text-muted" style="font-size:.75rem">{{ notice.published_at|date:"M d, Y" }} &bull; {{ notice.get_audience_display }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-muted small text-center mb-0">No notices posted yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

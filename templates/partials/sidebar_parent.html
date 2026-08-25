@@ -1,0 +1,38 @@
+<a href="{% url 'parent_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'parent_dashboard' %}active{% endif %}">
+  <i class="bi bi-speedometer2"></i> Dashboard
+</a>
+
+<div class="nav-section">My Child</div>
+<a href="#" class="nav-link">
+  <i class="bi bi-mortarboard"></i> Academic Progress
+</a>
+<a href="#" class="nav-link">
+  <i class="bi bi-check2-circle"></i> Attendance
+</a>
+<a href="#" class="nav-link">
+  <i class="bi bi-bar-chart"></i> Exam Results
+</a>
+<a href="#" class="nav-link">
+  <i class="bi bi-calendar3"></i> Timetable
+</a>
+
+<div class="nav-section">Finance</div>
+<a href="#" class="nav-link">
+  <i class="bi bi-cash-coin"></i> Fee Payment
+</a>
+
+<div class="nav-section">Communication</div>
+<a href="#" class="nav-link">
+  <i class="bi bi-megaphone"></i> Notice Board
+</a>
+<a href="#" class="nav-link">
+  <i class="bi bi-envelope"></i> Messages
+</a>
+
+<div class="nav-section">Account</div>
+<a href="{% url 'profile' %}" class="nav-link">
+  <i class="bi bi-person"></i> My Profile
+</a>
+<a href="{% url 'change_password' %}" class="nav-link">
+  <i class="bi bi-shield-lock"></i> Change Password
+</a>

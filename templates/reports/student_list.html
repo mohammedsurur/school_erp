@@ -1,0 +1,526 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Student List{% endblock %}
+{% block page_title %}Student List Report{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.82rem;color:#374151;margin-bottom:.3rem;display:block}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+  .stat-sub{font-size:.72rem;margin-top:.2rem}
+
+  /* ── Chart cards ── */
+  .chart-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;height:100%}
+  .chart-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+
+  /* ── Include fields selector ── */
+  .field-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.55rem 1rem;cursor:pointer;transition:all .2s;background:#fff;font-size:.82rem;font-weight:600;color:#374151;text-align:center;flex:1}
+  .field-btn:hover{border-color:#1a3c72;color:#1a3c72}
+  .field-btn.selected{border-color:#1a3c72;background:#eff6ff;color:#1a3c72}
+
+  /* ── Student avatar ── */
+  .stu-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .stu-avatar.girl{background:linear-gradient(135deg,#be185d,#ec4899)}
+
+  /* ── Gender badge ── */
+  .g-male  {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.15rem .6rem;font-size:.7rem;font-weight:700}
+  .g-female{background:#fdf2f8;color:#be185d;border-radius:999px;padding:.15rem .6rem;font-size:.7rem;font-weight:700}
+  .g-other {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.15rem .6rem;font-size:.7rem;font-weight:700}
+
+  /* ── Grade chip ── */
+  .grade-chip{background:#eff6ff;color:#1d4ed8;border-radius:.5rem;padding:.15rem .55rem;font-size:.72rem;font-weight:700}
+
+  /* ── Table ── */
+  .rep-table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .rep-table tbody td{padding:.75rem 1rem;vertical-align:middle;border-color:#f1f5f9;font-size:.85rem}
+  .rep-table tbody tr{transition:background .15s}
+  .rep-table tbody tr:hover{background:#f8faff}
+
+  /* ── Grade group header ── */
+  .grade-group-row td{background:linear-gradient(135deg,#f8faff,#eff6ff);font-weight:700;color:#1a3c72;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;padding:.6rem 1rem !important;border-top:2px solid #bfdbfe}
+
+  /* ── Search + filter bar ── */
+  .search-pill{border:1.5px solid #e2e8f0;border-radius:999px;padding:.55rem 1rem .55rem 2.5rem;font-size:.85rem;transition:border-color .2s;width:100%}
+  .search-pill:focus{border-color:#1a3c72;outline:none;box-shadow:0 0 0 .2rem rgba(26,60,114,.1)}
+  .search-wrap{position:relative}
+  .search-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:.85rem}
+
+  /* ── View tabs ── */
+  .view-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.8rem;font-weight:600;cursor:pointer;color:#374151;transition:all .2s;white-space:nowrap}
+  .view-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .view-tab:hover:not(.active){background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+
+  /* ── Leg dot ── */
+  .leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+  .btn-run{border-radius:.875rem;padding:.65rem 1.75rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;color:#fff;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Back + title -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'reports_dashboard' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Reports
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">Student List Report</h5>
+    <p class="text-muted small mb-0">
+      By gender · By grade · Contact details · Exportable
+    </p>
+  </div>
+  {% if students %}
+  <div class="d-flex gap-2 ms-auto">
+    <a href="{% url 'download_pdf' 'student_list' %}?{{ request.GET.urlencode }}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-download me-1"></i>PDF
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filter form -->
+<div class="filter-bar">
+  <form method="get">
+
+    <!-- Include fields -->
+    <div class="mb-3">
+      <label>Information to Include</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for val, lbl in form.include_fields.field.choices %}
+        <div class="field-btn
+          {% if form.include_fields.value == val or not form.include_fields.value and val == 'basic' %}selected{% endif %}"
+             data-value="{{ val }}"
+             onclick="pickFields('{{ val }}',this)">
+          {% if val == 'basic'   %}📋 {{ lbl }}
+          {% elif val == 'contact' %}📞 {{ lbl }}
+          {% else %}🗂️ {{ lbl }}{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:none">{{ form.include_fields }}</div>
+    </div>
+
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label>Academic Year</label>
+        {{ form.academic_year }}
+      </div>
+      <div class="col-md-2">
+        <label>Grade</label>
+        {{ form.grade }}
+      </div>
+      <div class="col-md-2">
+        <label>Section</label>
+        {{ form.section }}
+      </div>
+      <div class="col-md-2">
+        <label>Format</label>
+        {{ form.format }}
+      </div>
+      <div class="col-md-3 d-flex gap-2 align-self-end">
+        <button type="submit" class="btn-run flex-grow-1">
+          <i class="bi bi-people me-1"></i>Generate
+        </button>
+        {% if request.GET %}
+        <a href="{% url 'student_list_report' %}"
+           class="btn btn-outline-secondary rounded-pill px-3">
+          <i class="bi bi-x"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if students %}
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-people text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ total }}</div>
+        <div class="stat-lbl">Total Students</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-gender-male text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary" id="cntMale">—</div>
+        <div class="stat-lbl">Male</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fdf2f8">
+        <i class="bi bi-gender-female" style="color:#be185d"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#be185d" id="cntFemale">—</div>
+        <div class="stat-lbl">Female</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-building text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntGrades">—</div>
+        <div class="stat-lbl">Grades</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="row g-4 mb-4">
+
+  <!-- Doughnut: by gender -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-pie-chart"></i>Gender Distribution
+      </div>
+      <canvas id="pieGender" height="220"></canvas>
+      <div class="mt-3 d-flex flex-column gap-2" id="genderLegend"></div>
+    </div>
+  </div>
+
+  <!-- Bar: by grade -->
+  <div class="col-md-8">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart"></i>Students per Grade
+      </div>
+      <canvas id="barGrade" height="220"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Student table -->
+<div class="info-card card p-4">
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div class="sec-head mb-0">
+      <i class="bi bi-table me-2"></i>Student List
+      <span class="text-muted fw-normal ms-1">({{ students.paginator.count }})</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <!-- Gender filter -->
+      <span class="view-tab active" onclick="filterGender('all',this)">All</span>
+      <span class="view-tab" onclick="filterGender('male',this)">
+        <i class="bi bi-gender-male me-1"></i>Male
+      </span>
+      <span class="view-tab" onclick="filterGender('female',this)">
+        <i class="bi bi-gender-female me-1"></i>Female
+      </span>
+      <!-- Search -->
+      <div class="search-wrap">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="searchInp"
+               class="search-pill"
+               placeholder="Search student…"
+               oninput="searchStudents(this.value)">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table rep-table mb-0" id="stuTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>ID</th>
+          <th>Grade</th>
+          <th>Section</th>
+          <th>Gender</th>
+          <th>Date of Birth</th>
+          <!-- Contact fields (shown for contact/full) -->
+          <th class="contact-col">Phone</th>
+          <th class="contact-col">Parent</th>
+          <!-- Full fields -->
+          <th class="full-col">Address</th>
+          <th class="full-col">Enrolled</th>
+        </tr>
+      </thead>
+      <tbody id="stuBody">
+        {% with prev_grade="" %}
+        {% for stu in students %}
+
+        {% if stu.current_section.grade.name != prev_grade %}
+        <tr class="grade-group-row">
+          <td colspan="11">
+            <i class="bi bi-mortarboard me-2"></i>
+            Grade {{ stu.current_section.grade.name }}
+          </td>
+        </tr>
+        {% endif %}
+
+        <tr data-gender="{{ stu.gender|lower }}"
+            data-search="{{ stu.user.get_full_name|lower }} {{ stu.student_id|lower }}">
+          <td class="text-muted small">
+            {{ forloop.counter0|add:students.start_index }}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="stu-avatar
+                {% if stu.gender == 'female' %}girl{% endif %}">
+                {{ stu.user.first_name|first|upper }}{{ stu.user.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-semibold small">
+                  {{ stu.user.get_full_name }}
+                </div>
+                <div class="text-muted" style="font-size:.7rem">
+                  {{ stu.user.email|default:"" }}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="small font-monospace text-muted">
+            {{ stu.student_id }}
+          </td>
+          <td>
+            <span class="grade-chip">
+              {{ stu.current_section.grade|default:"—" }}
+            </span>
+          </td>
+          <td class="small text-muted">
+            {{ stu.current_section.name|default:"—" }}
+          </td>
+          <td>
+            {% if stu.gender == 'male' %}
+            <span class="g-male"><i class="bi bi-gender-male me-1"></i>Male</span>
+            {% elif stu.gender == 'female' %}
+            <span class="g-female"><i class="bi bi-gender-female me-1"></i>Female</span>
+            {% else %}
+            <span class="g-other">{{ stu.gender|title|default:"—" }}</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted">
+            {{ stu.date_of_birth|date:"M d, Y"|default:"—" }}
+          </td>
+          <!-- Contact -->
+          <td class="small contact-col">
+            {{ stu.user.phone_number|default:"—" }}
+          </td>
+          <td class="small contact-col">
+            {{ stu.parent_name|default:"—" }}
+          </td>
+          <!-- Full -->
+          <td class="small full-col text-muted">
+            {{ stu.address|default:"—"|truncatechars:25 }}
+          </td>
+          <td class="small full-col text-muted">
+            {{ stu.enrollment_date|date:"M d, Y"|default:"—" }}
+          </td>
+        </tr>
+
+        {% endfor %}
+        {% endwith %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if students.has_other_pages %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center gap-1 mb-0">
+      {% if students.has_previous %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ students.previous_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+      </li>
+      {% endif %}
+      {% for num in students.paginator.page_range %}
+      <li class="page-item {% if students.number == num %}active{% endif %}">
+        <a class="page-link rounded-3"
+           href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+      </li>
+      {% endfor %}
+      {% if students.has_next %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ students.next_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const GEN_LABELS  = {{ gender_labels|safe }};
+const GEN_DATA    = {{ gender_data|safe }};
+const GEN_COLORS  = {{ gender_colors|safe }};
+const GRD_LABELS  = {{ grade_labels|safe }};
+const GRD_DATA    = {{ grade_data|safe }};
+
+// ── Doughnut: gender ──────────────────────────
+new Chart(document.getElementById('pieGender'), {
+  type: 'doughnut',
+  data: {
+    labels:   GEN_LABELS,
+    datasets: [{
+      data:            GEN_DATA,
+      backgroundColor: GEN_COLORS,
+      borderWidth:     3,
+      borderColor:     '#fff',
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } }
+    },
+    cutout: '65%',
+  }
+});
+
+// Custom legend
+const legEl = document.getElementById('genderLegend');
+const totl  = GEN_DATA.reduce((a,b) => a+b, 0);
+GEN_LABELS.forEach((lbl, i) => {
+  const pct = totl ? ((GEN_DATA[i]/totl)*100).toFixed(1) : 0;
+  legEl.innerHTML += `
+    <div class="d-flex align-items-center gap-2 justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <div class="leg-dot" style="background:${GEN_COLORS[i]}"></div>
+        <span style="font-size:.78rem;font-weight:600">${lbl}</span>
+      </div>
+      <div>
+        <span style="font-family:monospace;font-weight:700;font-size:.82rem">${GEN_DATA[i]}</span>
+        <span style="font-size:.68rem;color:#9ca3af;margin-left:.25rem">${pct}%</span>
+      </div>
+    </div>`;
+});
+
+// ── Bar: by grade ─────────────────────────────
+new Chart(document.getElementById('barGrade'), {
+  type: 'bar',
+  data: {
+    labels: GRD_LABELS,
+    datasets: [{
+      label:           'Students',
+      data:            GRD_DATA,
+      backgroundColor: GRD_DATA.map((_,i) =>
+        ['#1a3c72','#0ea5a0','#22c55e','#f59e0b',
+         '#8b5cf6','#ef4444','#f97316','#06b6d4'][i % 8]
+      ),
+      borderRadius:    6,
+      borderSkipped:   false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} students` } }
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f1f5f9' },
+           ticks: { font: { size: 11 }, precision: 0 } },
+      x: { grid: { display: false },
+           ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+// ── Stats ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const rows   = document.querySelectorAll('#stuBody tr[data-gender]');
+  let male = 0, female = 0, grades = new Set();
+  rows.forEach(r => {
+    if(r.dataset.gender === 'male')   male++;
+    if(r.dataset.gender === 'female') female++;
+    const gradeCell = r.querySelectorAll('td')[3];
+    if(gradeCell) grades.add(gradeCell.textContent.trim());
+  });
+  const s = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  s('cntMale',   male);
+  s('cntFemale', female);
+  s('cntGrades', grades.size);
+});
+
+// ── Include fields visibility ─────────────────
+const INCLUDE = '{{ form.include_fields.value|default:"basic" }}';
+function applyFieldVisibility(val){
+  const contactCols = document.querySelectorAll('.contact-col');
+  const fullCols    = document.querySelectorAll('.full-col');
+  contactCols.forEach(c => c.style.display = (val === 'basic') ? 'none' : '');
+  fullCols.forEach(c    => c.style.display = (val === 'full')  ? '' : 'none');
+}
+applyFieldVisibility(INCLUDE);
+
+function pickFields(val, el){
+  document.querySelectorAll('.field-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="include_fields"]').value = val;
+  applyFieldVisibility(val);
+}
+
+// ── Gender filter ─────────────────────────────
+function filterGender(gender, el){
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#stuBody tr[data-gender]').forEach(row => {
+    row.style.display = (gender === 'all' || row.dataset.gender === gender) ? '' : 'none';
+  });
+  // keep grade group rows visible
+  document.querySelectorAll('.grade-group-row').forEach(r => r.style.display = '');
+}
+
+// ── Search ────────────────────────────────────
+function searchStudents(q){
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll('#stuBody tr[data-search]').forEach(row => {
+    row.style.display = (!term || row.dataset.search.includes(term)) ? '' : 'none';
+  });
+  document.querySelectorAll('.grade-group-row').forEach(r => r.style.display = '');
+}
+</script>
+
+{% else %}
+<div class="info-card card">
+  <div class="empty-state">
+    <i class="bi bi-people fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">Select filters and click Generate</h6>
+    <p class="small text-muted mb-0">
+      Choose academic year and optional grade/section to generate the student list.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

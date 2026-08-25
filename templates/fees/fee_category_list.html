@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}Fee Categories{% endblock %}
+{% block page_title %}Fee Categories{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;color:inherit;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .cat-icon{width:42px;height:42px;border-radius:.875rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem;text-align:center}
+  .stat-num{font-size:1.8rem;font-weight:800;line-height:1;margin-bottom:.25rem}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Fee Categories</h5>
+    <p class="text-muted small mb-0">
+      {{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }} configured
+    </p>
+  </div>
+  <a href="{% url 'fee_category_create' %}" class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Add Category
+  </a>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-num text-primary">{{ categories|length }}</div>
+      <div class="text-muted small">Total Categories</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-num text-success" id="mandatoryCount">—</div>
+      <div class="text-muted small">Mandatory</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-num text-warning" id="optionalCount">—</div>
+      <div class="text-muted small">Optional</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-num text-info" id="structureCount">—</div>
+      <div class="text-muted small">Fee Structures</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tip -->
+<div class="tip-box mb-4">
+  <i class="bi bi-lightbulb me-2"></i>
+  <strong>Tip:</strong> Fee categories define the <em>types</em> of fees
+  (e.g. Tuition, Library, Transport). After creating categories, go to
+  <a href="{% url 'fee_structure_list' %}" class="fw-semibold">Fee Structures</a>
+  to set the amount per grade per academic year.
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="catTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Type</th>
+          <th>Fee Structures</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categories %}
+        <tr data-mandatory="{{ cat.is_mandatory|yesno:'1,0' }}"
+            data-structures="{{ cat.structure_count }}">
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Category name -->
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div class="cat-icon">
+                <i class="bi bi-cash-coin"></i>
+              </div>
+              <span class="fw-bold">{{ cat.name }}</span>
+            </div>
+          </td>
+
+          <!-- Description -->
+          <td class="small text-muted">
+            {{ cat.description|default:"—"|truncatechars:60 }}
+          </td>
+
+          <!-- Mandatory / Optional -->
+          <td>
+            {% if cat.is_mandatory %}
+            <span class="badge rounded-pill bg-success-subtle text-success px-3">
+              <i class="bi bi-check-circle me-1"></i>Mandatory
+            </span>
+            {% else %}
+            <span class="badge rounded-pill bg-warning-subtle text-warning px-3">
+              <i class="bi bi-dash-circle me-1"></i>Optional
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- Structure count -->
+          <td>
+            {% if cat.structure_count %}
+            <a href="{% url 'fee_structure_list' %}?category={{ cat.pk }}"
+               class="badge rounded-pill bg-primary-subtle text-primary px-3 text-decoration-none">
+              <i class="bi bi-list-check me-1"></i>
+              {{ cat.structure_count }} structure{{ cat.structure_count|pluralize }}
+            </a>
+            {% else %}
+            <span class="text-muted small">No structures yet</span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'fee_category_edit' cat.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'fee_category_delete' cat.pk %}"
+                 class="action-icon text-danger" title="Delete"
+                 onclick="return confirm('Delete category {{ cat.name }}?')">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="bi bi-cash-coin fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No fee categories yet</h6>
+              <p class="small mb-3">
+                Start by creating categories like Tuition Fee,
+                Library Fee, Transport Fee.
+              </p>
+              <a href="{% url 'fee_category_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add First Category
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Quick setup guide (shown only when no categories) -->
+{% if not categories %}
+<div class="card mt-4 p-4" style="border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+  <h6 class="fw-bold mb-3">
+    <i class="bi bi-signpost me-2 text-primary"></i>Setup Guide
+  </h6>
+  <div class="row g-3">
+   
+    <div class="col-md-3 text-center">
+      <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto .75rem">1</div>
+      <div class="fw-semibold small">Create Fee Categories</div>
+      <div class="text-muted" style="font-size:.75rem">Tuition, Library, etc.</div>
+    </div>
+    <div class="col-md-3 text-center">
+      <div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;color:#64748b;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto .75rem">2</div>
+      <div class="fw-semibold small">Set Fee Structures</div>
+      <div class="text-muted" style="font-size:.75rem">Amount per grade per year</div>
+    </div>
+    <div class="col-md-3 text-center">
+      <div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;color:#64748b;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto .75rem">3</div>
+      <div class="fw-semibold small">Assign to Students</div>
+      <div class="text-muted" style="font-size:.75rem">Bulk assign by grade</div>
+    </div>
+    <div class="col-md-3 text-center">
+      <div style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;color:#64748b;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto .75rem">4</div>
+      <div class="fw-semibold small">Collect Payments</div>
+      <div class="text-muted" style="font-size:.75rem">Record receipts & track balance</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows       = document.querySelectorAll('#catTable tbody tr[data-mandatory]');
+  let mandatory    = 0, optional = 0, structures = 0;
+  rows.forEach(r => {
+    if(r.dataset.mandatory === '1') mandatory++; else optional++;
+    structures += parseInt(r.dataset.structures || 0);
+  });
+  const s = id => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('mandatoryCount',  mandatory   || '0');
+  set('optionalCount',   optional    || '0');
+  set('structureCount',  structures  || '0');
+});
+</script>
+
+{% endblock %}

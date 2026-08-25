@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Summary card ── */
+  .summary-card{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1rem 1.25rem}
+  .sum-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f1f5f9;font-size:.83rem}
+  .sum-row:last-child{border-bottom:none}
+  .sum-label{color:#9ca3af;font-weight:500}
+  .sum-val{font-weight:600;color:#1e293b;text-align:right;max-width:200px;font-size:.82rem}
+
+  /* ── Route capacity indicator ── */
+  .cap-indicator{border-radius:.75rem;padding:.85rem 1.1rem;font-size:.82rem;display:flex;align-items:center;gap:.6rem;transition:all .3s}
+  .cap-ok  {background:#f0fdf4;border:1.5px solid #86efac;color:#15803d}
+  .cap-warn{background:#fff7ed;border:1.5px solid #fed7aa;color:#92400e}
+  .cap-full{background:#fff1f2;border:1.5px solid #fecaca;color:#dc2626}
+  .cap-none{background:#f8f9fb;border:1.5px solid #e2e8f0;color:#9ca3af}
+
+  /* ── Fee preview ── */
+  .fee-pill{background:#f0fdf4;border:1.5px solid #86efac;border-radius:.75rem;padding:.85rem 1.1rem;font-size:.85rem;color:#15803d;display:flex;align-items:center;gap:.5rem}
+  .fee-amount{font-family:monospace;font-weight:800;font-size:1.1rem}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'student_transport_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if assignment %}Update transport assignment
+          {% else %}Assign a student to a transport route{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate id="assignForm">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Student -->
+        <div class="section-head">
+          <i class="bi bi-person me-2"></i>Student
+        </div>
+        <div class="mb-4">
+          <label>Select Student <span class="req">*</span></label>
+          {{ form.student }}
+          {% if form.student.errors %}
+          <small class="text-danger d-block mt-1">{{ form.student.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Route -->
+        <div class="section-head">
+          <i class="bi bi-signpost-split me-2"></i>Route & Stop
+        </div>
+        <div class="mb-3">
+          <label>Route <span class="req">*</span></label>
+          {{ form.route }}
+          {% if form.route.errors %}
+          <small class="text-danger d-block mt-1">{{ form.route.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">Only active routes are shown</small>
+        </div>
+
+        <!-- Capacity indicator -->
+        <div class="cap-indicator cap-none mb-3" id="capIndicator">
+          <i class="bi bi-info-circle" id="capIcon"></i>
+          <span id="capText">Select a route to see capacity</span>
+        </div>
+
+        <!-- Stop (filtered by route via AJAX) -->
+        <div class="mb-4">
+          <label>Pickup / Drop-off Stop</label>
+          <select name="stop" id="stopSelect" class="form-select">
+            <option value="">— Select a stop —</option>
+            {% if form.stop.field.queryset %}
+            {% for stop in form.stop.field.queryset %}
+            <option value="{{ stop.pk }}"
+              {% if form.stop.value == stop.pk|stringformat:"s" %}selected{% endif %}>
+              {{ stop.stop_order }}. {{ stop.stop_name }}
+              {% if stop.pickup_time %}({{ stop.pickup_time|time:"H:i" }}){% endif %}
+            </option>
+            {% endfor %}
+            {% endif %}
+          </select>
+          {% if form.stop.errors %}
+          <small class="text-danger d-block mt-1">{{ form.stop.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            Optional — student's specific pickup/drop-off stop
+          </small>
+        </div>
+
+        <!-- Fee preview -->
+        <div class="fee-pill mb-4" id="feePill" style="display:none">
+          <i class="bi bi-cash-coin"></i>
+          <div>
+            Monthly transport fee:
+            <span class="fee-amount" id="feeAmt">ETB 0</span>
+            &nbsp;·&nbsp;
+            Annual: <span id="feeAnnual">ETB 0</span>
+          </div>
+        </div>
+
+        <!-- Year & date -->
+        <div class="section-head">
+          <i class="bi bi-calendar me-2"></i>Period
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Academic Year <span class="req">*</span></label>
+            {{ form.academic_year }}
+            {% if form.academic_year.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.academic_year.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Start Date <span class="req">*</span></label>
+            {{ form.start_date }}
+            {% if form.start_date.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.start_date.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-4">
+          <label>Notes <span class="text-muted fw-normal">(optional)</span></label>
+          {{ form.notes }}
+        </div>
+
+        <!-- Assignment summary -->
+        <div class="summary-card mb-4">
+          <div class="fw-semibold small mb-2">
+            <i class="bi bi-receipt me-2 text-primary"></i>Assignment Summary
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Student</span>
+            <span class="sum-val" id="sumStudent">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Route</span>
+            <span class="sum-val" id="sumRoute">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Stop</span>
+            <span class="sum-val" id="sumStop">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Academic Year</span>
+            <span class="sum-val" id="sumYear">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Start Date</span>
+            <span class="sum-val" id="sumDate">—</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'student_transport_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if assignment %}Save Changes{% else %}Assign Student{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<!-- Route data for JS -->
+<script>
+const ROUTE_DATA = {
+  {% for route in form.route.field.queryset %}
+  "{{ route.pk }}": {
+    name:      "{{ route.name|escapejs }}",
+    start:     "{{ route.start_point|escapejs }}",
+    end:       "{{ route.end_point|escapejs }}",
+    fee:       {{ route.monthly_fee }},
+    capacity:  {% if route.vehicle %}{{ route.vehicle.capacity }}{% else %}null{% endif %},
+    assigned:  {{ route.student_count }},
+  },
+  {% endfor %}
+};
+
+const STUDENT_DATA = {
+  {% for student in form.student.field.queryset %}
+  "{{ student.pk }}": "{{ student.user.get_full_name|escapejs }}",
+  {% endfor %}
+};
+
+const routeSel  = document.querySelector('[name="route"]');
+const studSel   = document.querySelector('[name="student"]');
+const yearSel   = document.querySelector('[name="academic_year"]');
+const dateInp   = document.querySelector('[name="start_date"]');
+const stopSel   = document.getElementById('stopSelect');
+const capEl     = document.getElementById('capIndicator');
+const capIcon   = document.getElementById('capIcon');
+const capText   = document.getElementById('capText');
+const feePill   = document.getElementById('feePill');
+
+// ── Route change: load stops via AJAX + update capacity ──
+routeSel?.addEventListener('change', function(){
+  const pk   = this.value;
+  const data = ROUTE_DATA[pk];
+
+  // Reset stop dropdown
+  stopSel.innerHTML = '<option value="">— Select a stop —</option>';
+
+  if(!pk || !data){
+    capEl.className = 'cap-indicator cap-none mb-3';
+    capText.textContent = 'Select a route to see capacity';
+    feePill.style.display = 'none';
+    updateSummary();
+    return;
+  }
+
+  // Fetch stops
+  fetch(`/transport/ajax/stops/?route_id=${pk}`)
+    .then(r => r.json())
+    .then(d => {
+      d.stops.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.stop_order}. ${s.stop_name}`;
+        stopSel.appendChild(opt);
+      });
+    })
+    .catch(() => {});
+
+  // Capacity indicator
+  if(data.capacity !== null){
+    const free = data.capacity - data.assigned;
+    const pct  = Math.round((data.assigned / data.capacity) * 100);
+    if(free <= 0){
+      capEl.className = 'cap-indicator cap-full mb-3';
+      capIcon.className = 'bi bi-exclamation-circle';
+      capText.innerHTML = `<strong>Route is full</strong> — ${data.assigned}/${data.capacity} seats taken. Cannot assign more students.`;
+    } else if(pct >= 80){
+      capEl.className = 'cap-indicator cap-warn mb-3';
+      capIcon.className = 'bi bi-exclamation-triangle';
+      capText.innerHTML = `<strong>Almost full</strong> — ${free} seat${free !== 1 ? 's' : ''} remaining (${data.assigned}/${data.capacity})`;
+    } else {
+      capEl.className = 'cap-indicator cap-ok mb-3';
+      capIcon.className = 'bi bi-check-circle';
+      capText.innerHTML = `${free} seat${free !== 1 ? 's' : ''} available — ${data.assigned}/${data.capacity} assigned`;
+    }
+  } else {
+    capEl.className = 'cap-indicator cap-warn mb-3';
+    capIcon.className = 'bi bi-exclamation-circle';
+    capText.textContent = 'No vehicle assigned to this route';
+  }
+
+  // Fee preview
+  if(data.fee > 0){
+    feePill.style.display = 'flex';
+    document.getElementById('feeAmt').textContent    = `ETB ${data.fee.toFixed(0)}`;
+    document.getElementById('feeAnnual').textContent = `ETB ${(data.fee * 10).toFixed(0)}`;
+  } else {
+    feePill.style.display = 'none';
+  }
+
+  updateSummary();
+});
+
+// ── Summary update ──
+function updateSummary(){
+  const rpk  = routeSel?.value;
+  const spk  = studSel?.value;
+  const route = ROUTE_DATA[rpk];
+  const student = STUDENT_DATA[spk];
+  const stop = stopSel?.options[stopSel.selectedIndex]?.text || '—';
+  const year = yearSel?.options[yearSel.selectedIndex]?.text || '—';
+  const date = dateInp?.value || '—';
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('sumStudent', student || '—');
+  set('sumRoute',   route ? `${route.name} (${route.start} → ${route.end})` : '—');
+  set('sumStop',    stopSel?.value ? stop : '—');
+  set('sumYear',    year);
+  set('sumDate',    date);
+}
+
+studSel?.addEventListener('change', updateSummary);
+stopSel?.addEventListener('change', updateSummary);
+yearSel?.addEventListener('change', updateSummary);
+dateInp?.addEventListener('change', updateSummary);
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Trigger route change on load if editing
+  if(routeSel?.value) routeSel.dispatchEvent(new Event('change'));
+  updateSummary();
+});
+</script>
+
+{% endblock %}

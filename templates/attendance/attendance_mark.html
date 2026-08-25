@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load attendance_extras %}
+{% block title %}Mark Attendance — {{ section }}{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block content %}
+<style>
+  .mark-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .form-select{border-radius:.65rem;border:1.5px solid #e2e8f0;padding:.45rem .85rem;font-size:.85rem;transition:border-color .2s}
+  .form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .form-control{border-radius:.65rem;border:1.5px solid #e2e8f0;padding:.45rem .85rem;font-size:.82rem;transition:border-color .2s}
+  .form-control:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .att-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.5rem}
+  .att-banner .meta{opacity:.75;font-size:.82rem}
+  .stat-pill{background:rgba(255,255,255,.15);border-radius:.6rem;padding:.5rem 1rem;text-align:center;min-width:80px}
+  .stat-pill .num{font-size:1.3rem;font-weight:800;line-height:1}
+  .stat-pill .lbl{font-size:.65rem;opacity:.8;text-transform:uppercase;letter-spacing:.06em}
+  .already-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.2rem .85rem;font-size:.72rem;font-weight:600}
+  .att-table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.75rem 1rem;font-weight:700}
+  .att-table tbody td{padding:.7rem 1rem;vertical-align:middle;border-color:#f8f9fb}
+  .att-table tbody tr{transition:background .15s}
+  .avatar-xs{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.75rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .row-present{background:#f0fdf4!important}
+  .row-absent {background:#fff1f2!important}
+  .row-late   {background:#fffbeb!important}
+  .row-excused{background:#f0f9ff!important}
+  .status-present{border-color:#22c55e!important;color:#15803d!important}
+  .status-absent {border-color:#ef4444!important;color:#dc2626!important}
+  .status-late   {border-color:#f59e0b!important;color:#d97706!important}
+  .status-excused{border-color:#0ea5a0!important;color:#0e7490!important}
+  .mark-all-btn{border:1.5px solid #e2e8f0;border-radius:.65rem;padding:.4rem .9rem;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s;background:#fff}
+  .mark-all-btn:hover{background:#f8faff}
+  .mark-all-btn.present{border-color:#22c55e;color:#15803d}
+  .mark-all-btn.absent {border-color:#ef4444;color:#dc2626}
+  .mark-all-btn.late   {border-color:#f59e0b;color:#d97706}
+  .mark-all-btn.excused{border-color:#0ea5a0;color:#0e7490}
+  .save-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #e9ecef;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;z-index:100;border-radius:0 0 1rem 1rem}
+  .btn-save{border-radius:.875rem;padding:.75rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .adm-no{font-family:monospace;font-size:.72rem;color:#94a3b8}
+</style>
+
+<!-- Pass existing data to JS as JSON — NO template filters needed -->
+<script>
+  const EXISTING_STATUSES = {
+    {% for sid, status in existing_statuses.items %}"{{ sid }}":"{{ status }}",{% endfor %}
+  };
+  const EXISTING_NOTES = {
+    {% for sid, note in existing_notes.items %}"{{ sid }}":"{{ note|escapejs }}",{% endfor %}
+  };
+</script>
+
+<!-- Header banner -->
+<div class="att-banner">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+      <div class="meta mb-1">
+        <i class="bi bi-check2-square me-1"></i>
+        Attendance — {{ mark_date|date:"l, M d, Y" }}
+      </div>
+      <h5 class="fw-bold mb-0 text-white">
+        {{ section.grade }} — Section {{ section.name }}
+      </h5>
+      <div class="meta mt-1">
+        {% if section.class_teacher %}
+        <i class="bi bi-person me-1"></i>{{ section.class_teacher.get_full_name }}
+        {% endif %}
+        &bull; {{ current_year }}
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="stat-pill">
+        <div class="num" id="cntPresent">0</div>
+        <div class="lbl">Present</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num" id="cntAbsent">0</div>
+        <div class="lbl">Absent</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num" id="cntLate">0</div>
+        <div class="lbl">Late</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num" id="cntExcused">0</div>
+        <div class="lbl">Excused</div>
+      </div>
+    </div>
+    {% if already_marked %}
+    <span class="already-badge">
+      <i class="bi bi-pencil me-1"></i>Editing — already marked
+    </span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Back + quick-mark all -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+  <a href="{% url 'attendance_select' %}"
+     class="btn btn-outline-secondary rounded-pill px-3 btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Change Section / Date
+  </a>
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <span class="text-muted small fw-semibold">Mark all as:</span>
+    <button type="button" class="mark-all-btn present" onclick="markAll('present')">
+      <i class="bi bi-check-circle me-1"></i>Present
+    </button>
+    <button type="button" class="mark-all-btn absent" onclick="markAll('absent')">
+      <i class="bi bi-x-circle me-1"></i>Absent
+    </button>
+    <button type="button" class="mark-all-btn late" onclick="markAll('late')">
+      <i class="bi bi-clock me-1"></i>Late
+    </button>
+    <button type="button" class="mark-all-btn excused" onclick="markAll('excused')">
+      <i class="bi bi-shield-check me-1"></i>Excused
+    </button>
+  </div>
+</div>
+
+<!-- Form -->
+<form method="POST" id="attendanceForm">
+  {% csrf_token %}
+
+  <div class="mark-card card">
+    <div class="table-responsive">
+      <table class="table att-table mb-0">
+        <thead>
+          <tr>
+            <th style="width:44px">#</th>
+            <th>Student</th>
+            <th>Admission No</th>
+            <th style="width:160px">Status</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enr in enrollments %}
+          {% with student=enr.student %}
+          <tr class="att-row" id="row-{{ student.pk }}">
+
+            <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                {% if student.photo %}
+                <img src="{{ student.photo.url }}" class="avatar-xs" style="object-fit:cover" alt="">
+                {% else %}
+                <div class="avatar-xs">
+                  {{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}
+                </div>
+                {% endif %}
+                <div>
+                  <div class="fw-semibold small">{{ student.user.get_full_name }}</div>
+                  <div class="text-muted" style="font-size:.72rem">{{ student.user.email|default:"" }}</div>
+                </div>
+              </div>
+            </td>
+
+            <td><span class="adm-no">{{ student.admission_number }}</span></td>
+
+            <!-- Status — default present, JS will override if existing -->
+            <td>
+              <select name="status_{{ student.pk }}"
+                      class="form-select status-select"
+                      data-student="{{ student.pk }}"
+                      onchange="onStatusChange(this)">
+                <option value="present">Present</option>
+                <option value="absent">Absent</option>
+                <option value="late">Late</option>
+                <option value="excused">Excused</option>
+              </select>
+            </td>
+
+            <!-- Note — JS fills value if existing -->
+            <td>
+              <input type="text"
+                     name="note_{{ student.pk }}"
+                     id="note_{{ student.pk }}"
+                     class="form-control"
+                     placeholder="Optional note…">
+            </td>
+
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sticky save bar -->
+    <div class="save-bar">
+      <div class="text-muted small">
+        <i class="bi bi-people me-1"></i>
+        <strong>{{ enrollments|length }}</strong>
+        student{{ enrollments|length|pluralize }}
+        &bull;
+        <span id="saveBarSummary">—</span>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'attendance_list' %}"
+           class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+        <button type="submit" class="btn btn-save text-white">
+          <i class="bi bi-check2-all me-2"></i>
+          {% if already_marked %}Update Attendance{% else %}Save Attendance{% endif %}
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+// ── Apply row colour ──────────────────────
+function applyRowColor(row, status){
+  row.classList.remove('row-present','row-absent','row-late','row-excused');
+  row.classList.add('row-' + status);
+  const sel = row.querySelector('.status-select');
+  sel.className = sel.className.replace(/status-\w+/g, '');
+  sel.classList.add('status-' + status);
+}
+
+// ── Single status change ──────────────────
+function onStatusChange(sel){
+  applyRowColor(sel.closest('tr'), sel.value);
+  updateStats();
+}
+
+// ── Mark all ─────────────────────────────
+function markAll(status){
+  document.querySelectorAll('.status-select').forEach(sel => {
+    sel.value = status;
+    applyRowColor(sel.closest('tr'), status);
+  });
+  updateStats();
+}
+
+// ── Live counter ──────────────────────────
+function updateStats(){
+  const counts = {present:0, absent:0, late:0, excused:0};
+  document.querySelectorAll('.status-select').forEach(sel => {
+    counts[sel.value] = (counts[sel.value] || 0) + 1;
+  });
+  document.getElementById('cntPresent').textContent = counts.present  || 0;
+  document.getElementById('cntAbsent').textContent  = counts.absent   || 0;
+  document.getElementById('cntLate').textContent    = counts.late     || 0;
+  document.getElementById('cntExcused').textContent = counts.excused  || 0;
+
+  const parts = [];
+  if(counts.present)  parts.push(counts.present  + ' Present');
+  if(counts.absent)   parts.push(counts.absent   + ' Absent');
+  if(counts.late)     parts.push(counts.late     + ' Late');
+  if(counts.excused)  parts.push(counts.excused  + ' Excused');
+  document.getElementById('saveBarSummary').textContent = parts.join(' · ') || '—';
+}
+
+// ── Init: pre-fill existing data from JSON ─
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.status-select').forEach(sel => {
+    const sid = sel.dataset.student;
+
+    // Set status from existing data
+    if(EXISTING_STATUSES[sid]){
+      sel.value = EXISTING_STATUSES[sid];
+    }
+
+    // Set note from existing data
+    const noteInput = document.getElementById('note_' + sid);
+    if(noteInput && EXISTING_NOTES[sid]){
+      noteInput.value = EXISTING_NOTES[sid];
+    }
+
+    // Apply row colour
+    applyRowColor(sel.closest('tr'), sel.value);
+  });
+
+  updateStats();
+});
+</script>
+
+{% endblock %}

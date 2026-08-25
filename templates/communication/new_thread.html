@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}New Message{% endblock %}
+{% block page_title %}New Message{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  textarea.form-control{resize:vertical;min-height:130px}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Recipient search ── */
+  .recipient-search{position:relative}
+  .recipient-search input{padding-right:2.5rem}
+  .recipient-dropdown{display:none;position:absolute;top:100%;left:0;right:0;z-index:999;background:#fff;border:1.5px solid #e2e8f0;border-radius:.875rem;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;margin-top:.25rem}
+  .recipient-dropdown.open{display:block}
+  .recipient-option{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;cursor:pointer;transition:background .15s;border-bottom:1px solid #f1f5f9}
+  .recipient-option:last-child{border-bottom:none}
+  .recipient-option:hover{background:#f8faff}
+  .r-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.7rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .r-role{font-size:.68rem;color:#9ca3af}
+
+  /* ── Selected recipient chips ── */
+  .selected-chips{display:flex;flex-wrap:wrap;gap:.5rem;min-height:38px;margin-bottom:.5rem}
+  .chip{background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.3rem .85rem;font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:.4rem}
+  .chip-remove{cursor:pointer;opacity:.6;transition:opacity .15s;background:none;border:none;color:inherit;font-size:.85rem;padding:0;line-height:1}
+  .chip-remove:hover{opacity:1}
+
+  /* ── Message preview ── */
+  .preview-card{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .preview-card::before{content:"";position:absolute;top:-25px;right:-25px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .preview-subject{font-weight:700;font-size:.95rem;margin-bottom:.35rem;min-height:1.2rem}
+  .preview-body{opacity:.8;font-size:.8rem;line-height:1.5;max-height:60px;overflow:hidden}
+
+  /* ── Char counter ── */
+  .char-counter{font-size:.72rem;color:#9ca3af;text-align:right;margin-top:.25rem}
+  .char-counter.warn{color:#f59e0b}
+
+  /* ── Quick recipient groups ── */
+  .group-btn{border:1.5px solid #e2e8f0;border-radius:999px;padding:.3rem .85rem;font-size:.78rem;font-weight:600;cursor:pointer;background:#fff;transition:all .2s;white-space:nowrap;color:#374151}
+  .group-btn:hover{background:#eff6ff;border-color:#1a3c72;color:#1a3c72}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'inbox' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Inbox
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">New Message</h5>
+        <p class="text-muted small mb-0">
+          Start a new conversation
+        </p>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-card">
+      <div style="position:relative;z-index:1">
+        <div style="opacity:.7;font-size:.72rem;margin-bottom:.3rem">
+          <i class="bi bi-envelope me-1"></i>Message Preview
+        </div>
+        <div class="preview-subject" id="prevSubject">
+          (No subject)
+        </div>
+        <div class="preview-body" id="prevBody">
+          Your message body will appear here…
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate id="newThreadForm">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Recipients -->
+        <div class="section-head">
+          <i class="bi bi-people me-2"></i>To
+        </div>
+
+        <!-- Selected chips -->
+        <div class="selected-chips" id="selectedChips">
+          <span class="text-muted small" id="noRecipientsHint"
+                style="padding:.35rem 0">
+            Search and add recipients below…
+          </span>
+        </div>
+
+        <!-- Quick group buttons -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="text-muted small fw-semibold">Quick add:</span>
+          <button type="button" class="group-btn"
+                  onclick="addGroup('teacher')">
+            <i class="bi bi-person-badge me-1"></i>My Teachers
+          </button>
+          <button type="button" class="group-btn"
+                  onclick="addGroup('admin')">
+            <i class="bi bi-shield-check me-1"></i>Admin
+          </button>
+        </div>
+
+        <!-- Recipient search -->
+        <div class="recipient-search mb-4">
+          <input type="text" id="recipientSearch"
+                 class="form-control"
+                 placeholder="Search by name or role…"
+                 autocomplete="off">
+          <div class="recipient-dropdown" id="recipientDropdown"></div>
+        </div>
+
+        <!-- Hidden multi-select (submitted) -->
+        <div style="display:none">{{ form.recipients }}</div>
+        {% if form.recipients.errors %}
+        <small class="text-danger d-block mb-3">
+          {{ form.recipients.errors.0 }}
+        </small>
+        {% endif %}
+
+        <!-- Subject -->
+        <div class="section-head">
+          <i class="bi bi-chat-text me-2"></i>Message
+        </div>
+        <div class="mb-3">
+          <label>Subject <span class="text-muted fw-normal">(optional)</span></label>
+          {{ form.subject }}
+        </div>
+
+        <!-- Body -->
+        <div class="mb-4">
+          <label>Message <span class="req">*</span></label>
+          {{ form.body }}
+          {% if form.body.errors %}
+          <small class="text-danger d-block mt-1">{{ form.body.errors.0 }}</small>
+          {% endif %}
+          <div class="char-counter" id="charCounter">0 characters</div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'inbox' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-send me-2"></i>Send Message
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<!-- Recipient data from form queryset -->
+<script>
+const ALL_RECIPIENTS = [
+  {% for user in form.recipients.field.queryset %}
+  {
+    id:    {{ user.pk }},
+    name:  "{{ user.get_full_name|escapejs }}",
+    role:  "{{ user.get_role_display|default:user.role|escapejs }}",
+    init:  "{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}",
+  },
+  {% endfor %}
+];
+
+const selected    = new Set();   // set of user IDs
+const chipsEl     = document.getElementById('selectedChips');
+const hintEl      = document.getElementById('noRecipientsHint');
+const hiddenSel   = document.querySelector('[name="recipients"]');
+const searchInp   = document.getElementById('recipientSearch');
+const dropdown    = document.getElementById('recipientDropdown');
+
+// ── Render chips ──────────────────────────────
+function renderChips(){
+  // Remove old chips (keep hint)
+  chipsEl.querySelectorAll('.chip').forEach(c => c.remove());
+  hintEl.style.display = selected.size === 0 ? 'inline' : 'none';
+
+  selected.forEach(id => {
+    const u = ALL_RECIPIENTS.find(r => r.id === id);
+    if(!u) return;
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `
+      <span class="r-avatar" style="width:22px;height:22px;font-size:.6rem;
+            background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;
+            border-radius:50%;display:inline-flex;align-items:center;
+            justify-content:center;font-weight:700;flex-shrink:0">
+        ${u.init}
+      </span>
+      ${u.name}
+      <button type="button" class="chip-remove"
+              onclick="removeRecipient(${id})">
+        <i class="bi bi-x-lg"></i>
+      </button>`;
+    chipsEl.insertBefore(chip, hintEl);
+  });
+
+  // Sync hidden select
+  Array.from(hiddenSel.options).forEach(o => {
+    o.selected = selected.has(parseInt(o.value));
+  });
+}
+
+function addRecipient(id){
+  selected.add(id);
+  renderChips();
+  searchInp.value = '';
+  dropdown.classList.remove('open');
+}
+
+function removeRecipient(id){
+  selected.delete(id);
+  renderChips();
+}
+
+// ── Search dropdown ───────────────────────────
+searchInp.addEventListener('input', function(){
+  const q   = this.value.toLowerCase().trim();
+  const res = !q ? [] : ALL_RECIPIENTS.filter(
+    u => !selected.has(u.id) && (
+      u.name.toLowerCase().includes(q) ||
+      u.role.toLowerCase().includes(q)
+    )
+  ).slice(0, 10);
+
+  if(res.length === 0){
+    dropdown.classList.remove('open');
+    dropdown.innerHTML = '';
+    return;
+  }
+
+  dropdown.innerHTML = res.map(u => `
+    <div class="recipient-option" onclick="addRecipient(${u.id})">
+      <div class="r-avatar">${u.init}</div>
+      <div>
+        <div class="fw-semibold small">${u.name}</div>
+        <div class="r-role">${u.role}</div>
+      </div>
+    </div>
+  `).join('');
+  dropdown.classList.add('open');
+});
+
+// Close dropdown on outside click
+document.addEventListener('click', e => {
+  if(!e.target.closest('.recipient-search'))
+    dropdown.classList.remove('open');
+});
+
+// ── Quick group add ───────────────────────────
+function addGroup(role){
+  ALL_RECIPIENTS.filter(u => u.role.toLowerCase().includes(role)).forEach(u => {
+    selected.add(u.id);
+  });
+  renderChips();
+}
+
+// ── Live preview ──────────────────────────────
+function updatePreview(){
+  const subject = document.querySelector('[name="subject"]')?.value.trim() || '(No subject)';
+  const body    = document.querySelector('[name="body"]')?.value.trim()    || 'Your message body will appear here…';
+  document.getElementById('prevSubject').textContent = subject;
+  document.getElementById('prevBody').textContent    = body.slice(0,120) + (body.length > 120 ? '…' : '');
+}
+
+// ── Char counter ──────────────────────────────
+document.querySelector('[name="body"]')?.addEventListener('input', function(){
+  const len = this.value.length;
+  const el  = document.getElementById('charCounter');
+  if(el){
+    el.textContent  = `${len} character${len !== 1 ? 's' : ''}`;
+    el.className    = 'char-counter' + (len > 1500 ? ' warn' : '');
+  }
+  updatePreview();
+});
+document.querySelector('[name="subject"]')?.addEventListener('input', updatePreview);
+
+// ── Ctrl+Enter to send ────────────────────────
+document.querySelector('[name="body"]')?.addEventListener('keydown', e => {
+  if(e.ctrlKey && e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('newThreadForm')?.submit();
+  }
+});
+
+// Init
+renderChips();
+</script>
+
+{% endblock %}

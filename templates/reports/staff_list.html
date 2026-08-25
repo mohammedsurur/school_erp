@@ -1,0 +1,531 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Staff List{% endblock %}
+{% block page_title %}Staff List Report{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.82rem;color:#374151;margin-bottom:.3rem;display:block}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+  .stat-sub{font-size:.72rem;margin-top:.2rem}
+
+  /* ── Chart cards ── */
+  .chart-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;height:100%}
+  .chart-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+
+  /* ── Department selector ── */
+  .dept-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.55rem 1.1rem;cursor:pointer;transition:all .2s;background:#fff;font-size:.82rem;font-weight:600;color:#374151;text-align:center;flex:1}
+  .dept-btn:hover{border-color:#1a3c72;color:#1a3c72}
+  .dept-btn.selected{border-color:#1a3c72;background:#eff6ff;color:#1a3c72}
+
+  /* ── Staff avatar ── */
+  .staff-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#fff;flex-shrink:0}
+
+  /* ── Role badge ── */
+  .rb-super_admin  {background:#fee2e2;color:#dc2626}
+  .rb-principal    {background:#fef9c3;color:#854d0e}
+  .rb-admin_staff  {background:#eff6ff;color:#1d4ed8}
+  .rb-teacher      {background:#f0fdf4;color:#15803d}
+  .rb-accountant   {background:#faf5ff;color:#7c3aed}
+  .rb-librarian    {background:#fff7ed;color:#c2410c}
+  .rb-other        {background:#f1f5f9;color:#64748b}
+  .role-badge{border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700;white-space:nowrap}
+
+  /* ── Table ── */
+  .rep-table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .rep-table tbody td{padding:.75rem 1rem;vertical-align:middle;border-color:#f1f5f9;font-size:.85rem}
+  .rep-table tbody tr{transition:background .15s}
+  .rep-table tbody tr:hover{background:#f8faff}
+
+  /* ── Role group header ── */
+  .role-group-row td{background:linear-gradient(135deg,#f8faff,#eff6ff);font-weight:700;color:#1a3c72;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;padding:.6rem 1rem !important;border-top:2px solid #bfdbfe}
+
+  /* ── Horizontal role bar ── */
+  .role-bar-wrap{display:flex;align-items:center;gap:.75rem;padding:.55rem 0;border-bottom:1px solid #f1f5f9}
+  .role-bar-wrap:last-child{border-bottom:none}
+  .role-bar-name{font-size:.78rem;font-weight:600;min-width:110px;color:#374151}
+  .role-bar-track{flex:1;height:10px;border-radius:999px;background:#f1f5f9;overflow:hidden}
+  .role-bar-fill{height:100%;border-radius:999px}
+  .role-bar-count{font-size:.75rem;font-family:monospace;font-weight:700;min-width:24px;text-align:right}
+
+  /* ── Search pill ── */
+  .search-wrap{position:relative}
+  .search-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:.85rem}
+  .search-pill{border:1.5px solid #e2e8f0;border-radius:999px;padding:.55rem 1rem .55rem 2.5rem;font-size:.85rem;transition:border-color .2s;width:100%}
+  .search-pill:focus{border-color:#1a3c72;outline:none;box-shadow:0 0 0 .2rem rgba(26,60,114,.1)}
+
+  /* ── View tabs ── */
+  .view-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.8rem;font-weight:600;cursor:pointer;color:#374151;transition:all .2s;white-space:nowrap}
+  .view-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .view-tab:hover:not(.active){background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+
+  /* ── Contact chip ── */
+  .phone-chip{font-family:monospace;font-size:.78rem;color:#1a3c72}
+
+  /* ── Leg dot ── */
+  .leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;display:inline-block}
+
+  .btn-run{border-radius:.875rem;padding:.65rem 1.75rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;color:#fff;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+
+  /* ── Avatar colours per role ── */
+  .av-super_admin{background:linear-gradient(135deg,#7f1d1d,#dc2626)}
+  .av-principal  {background:linear-gradient(135deg,#78350f,#f59e0b)}
+  .av-admin_staff{background:linear-gradient(135deg,#1e3a5f,#1a3c72)}
+  .av-teacher    {background:linear-gradient(135deg,#14532d,#22c55e)}
+  .av-accountant {background:linear-gradient(135deg,#4c1d95,#8b5cf6)}
+  .av-librarian  {background:linear-gradient(135deg,#7c2d12,#f97316)}
+  .av-other      {background:linear-gradient(135deg,#374151,#6b7280)}
+</style>
+
+<!-- Back + title -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'reports_dashboard' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Reports
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">Staff List Report</h5>
+    <p class="text-muted small mb-0">
+      By role · Department · Contact details
+    </p>
+  </div>
+  {% if staff %}
+  <a href="{% url 'download_pdf' 'staff_list' %}?{{ request.GET.urlencode }}"
+     class="btn btn-outline-primary rounded-pill px-3 ms-auto">
+    <i class="bi bi-download me-1"></i>PDF
+  </a>
+  {% endif %}
+</div>
+
+<!-- Filter form -->
+<div class="filter-bar">
+  <form method="get">
+
+    <!-- Department selector -->
+    <div class="mb-3">
+      <label>Department</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for val, lbl in form.department.field.choices %}
+        <div class="dept-btn
+          {% if form.department.value == val or not form.department.value and val == '' %}selected{% endif %}"
+             data-value="{{ val }}"
+             onclick="pickDept('{{ val }}',this)">
+          {% if val == '' %}🏫 All
+          {% elif val == 'teaching' %}📚 Teaching
+          {% elif val == 'admin'    %}🏢 Admin
+          {% else %}🔧 Support{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:none">{{ form.department }}</div>
+    </div>
+
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3 d-flex align-items-end pb-2">
+        <div class="form-check">
+          {{ form.include_contact }}
+          <label class="form-check-label small fw-semibold"
+                 for="{{ form.include_contact.id_for_label }}">
+            Include contact details
+          </label>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <label>Format</label>
+        {{ form.format }}
+      </div>
+      <div class="col-md-3 d-flex gap-2 align-self-end">
+        <button type="submit" class="btn-run flex-grow-1">
+          <i class="bi bi-person-badge me-1"></i>Generate
+        </button>
+        {% if request.GET %}
+        <a href="{% url 'staff_list_report' %}"
+           class="btn btn-outline-secondary rounded-pill px-3">
+          <i class="bi bi-x"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if staff %}
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-person-badge text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ total }}</div>
+        <div class="stat-lbl">Total Staff</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-mortarboard text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntTeachers">—</div>
+        <div class="stat-lbl">Teachers</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#faf5ff">
+        <i class="bi bi-shield-check" style="color:#7c3aed"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#7c3aed" id="cntAdmin">—</div>
+        <div class="stat-lbl">Admin Staff</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f1f5f9">
+        <i class="bi bi-people text-secondary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-secondary" id="cntOther">—</div>
+        <div class="stat-lbl">Other Roles</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="row g-4 mb-4">
+
+  <!-- Doughnut: by role -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-pie-chart"></i>Staff by Role
+      </div>
+      <canvas id="pieRole" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Horizontal bar: role breakdown -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart-horizontal"></i>Role Breakdown
+      </div>
+      <div id="roleBarChart" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- Bar: polar area — role distribution -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-record-circle"></i>Distribution (Polar)
+      </div>
+      <canvas id="polarRole" height="200"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Staff table -->
+<div class="info-card card p-4">
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div class="sec-head mb-0">
+      <i class="bi bi-table me-2"></i>Staff Directory
+      <span class="text-muted fw-normal ms-1">({{ staff.paginator.count }})</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+      <!-- Role filter tabs -->
+      <span class="view-tab active" onclick="filterRole('all',this)">All</span>
+      <span class="view-tab" onclick="filterRole('teacher',this)">Teachers</span>
+      <span class="view-tab" onclick="filterRole('admin_staff',this)">Admin</span>
+      <span class="view-tab" onclick="filterRole('accountant',this)">Accounts</span>
+      <span class="view-tab" onclick="filterRole('librarian',this)">Library</span>
+      <!-- Search -->
+      <div class="search-wrap">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" id="searchInp"
+               class="search-pill"
+               placeholder="Search staff…"
+               oninput="searchStaff(this.value)">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table rep-table mb-0" id="staffTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Staff Member</th>
+          <th>Staff ID</th>
+          <th>Role</th>
+          <th>Department</th>
+          <th>Qualification</th>
+          <th class="contact-col">Phone</th>
+          <th class="contact-col">Email</th>
+          <th>Joined</th>
+        </tr>
+      </thead>
+      <tbody id="staffBody">
+        {% with prev_role="" %}
+        {% for s in staff %}
+
+        {% if s.user.role != prev_role %}
+        <tr class="role-group-row">
+          <td colspan="9">
+            <i class="bi bi-person-badge me-2"></i>
+            {{ s.user.get_role_display|default:s.user.role|title }}
+          </td>
+        </tr>
+        {% endif %}
+
+        <tr data-role="{{ s.user.role }}"
+            data-search="{{ s.user.get_full_name|lower }} {{ s.staff_id|lower|default:'' }}">
+          <td class="text-muted small">
+            {{ forloop.counter0|add:staff.start_index }}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="staff-avatar av-{{ s.user.role|default:'other' }}">
+                {{ s.user.first_name|first|upper }}{{ s.user.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-semibold small">{{ s.user.get_full_name }}</div>
+                <div class="text-muted" style="font-size:.7rem">
+                  {{ s.user.email|default:"" }}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="small font-monospace text-muted">
+            {{ s.staff_id|default:"—" }}
+          </td>
+          <td>
+            <span class="role-badge rb-{{ s.user.role|default:'other' }}">
+              {{ s.user.get_role_display|default:s.user.role|title }}
+            </span>
+          </td>
+          <td class="small text-muted">
+            {{ s.department|title|default:"—" }}
+          </td>
+          <td class="small text-muted">
+            {{ s.qualification|default:"—"|truncatechars:25 }}
+          </td>
+          <td class="contact-col">
+            {% if s.user.phone_number %}
+            <a href="tel:{{ s.user.phone_number }}"
+               class="phone-chip text-decoration-none">
+              <i class="bi bi-telephone me-1"></i>{{ s.user.phone_number }}
+            </a>
+            {% else %}—{% endif %}
+          </td>
+          <td class="contact-col small">
+            {% if s.user.email %}
+            <a href="mailto:{{ s.user.email }}"
+               class="text-primary text-decoration-none">
+              {{ s.user.email|truncatechars:22 }}
+            </a>
+            {% else %}—{% endif %}
+          </td>
+          <td class="small text-muted">
+            {{ s.date_joined|date:"M d, Y"|default:"—" }}
+          </td>
+        </tr>
+
+        {% endfor %}
+        {% endwith %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if staff.has_other_pages %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center gap-1 mb-0">
+      {% if staff.has_previous %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ staff.previous_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+      </li>
+      {% endif %}
+      {% for num in staff.paginator.page_range %}
+      <li class="page-item {% if staff.number == num %}active{% endif %}">
+        <a class="page-link rounded-3"
+           href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+      </li>
+      {% endfor %}
+      {% if staff.has_next %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ staff.next_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const ROLE_LABELS = {{ role_labels|safe }};
+const ROLE_DATA   = {{ role_data|safe }};
+const ROLE_COLORS = {{ role_colors|safe }};
+
+// ── Doughnut: by role ─────────────────────────
+new Chart(document.getElementById('pieRole'), {
+  type: 'doughnut',
+  data: {
+    labels:   ROLE_LABELS,
+    datasets: [{
+      data:            ROLE_DATA,
+      backgroundColor: ROLE_COLORS,
+      borderWidth:     3,
+      borderColor:     '#fff',
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } }
+    },
+    cutout: '62%',
+  }
+});
+
+// ── Polar area: role distribution ─────────────
+new Chart(document.getElementById('polarRole'), {
+  type: 'polarArea',
+  data: {
+    labels:   ROLE_LABELS,
+    datasets: [{
+      data:            ROLE_DATA,
+      backgroundColor: ROLE_COLORS.map(c => c + 'cc'),
+      borderColor:     ROLE_COLORS,
+      borderWidth:     2,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.r}` } }
+    },
+    scales: {
+      r: { ticks: { display: false }, grid: { color: '#f1f5f9' } }
+    }
+  }
+});
+
+// ── Custom horizontal role bar chart ─────────
+const roleBarEl = document.getElementById('roleBarChart');
+const maxVal    = Math.max(...ROLE_DATA);
+const ROLE_NICE = {
+  super_admin: 'Super Admin', principal: 'Principal',
+  admin_staff: 'Admin Staff', teacher: 'Teacher',
+  accountant: 'Accountant', librarian: 'Librarian',
+};
+ROLE_LABELS.forEach((lbl, i) => {
+  const pct  = maxVal ? ((ROLE_DATA[i] / maxVal) * 100).toFixed(0) : 0;
+  const nice = ROLE_NICE[lbl] || lbl.replace('_',' ');
+  roleBarEl.innerHTML += `
+    <div class="role-bar-wrap">
+      <div class="role-bar-name">${nice}</div>
+      <div class="role-bar-track">
+        <div class="role-bar-fill"
+             style="width:${pct}%;background:${ROLE_COLORS[i]}">
+        </div>
+      </div>
+      <div class="role-bar-count" style="color:${ROLE_COLORS[i]}">
+        ${ROLE_DATA[i]}
+      </div>
+    </div>`;
+});
+
+// ── Stats ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#staffBody tr[data-role]');
+  let teachers = 0, admin = 0, other = 0;
+  rows.forEach(r => {
+    if(r.dataset.role === 'teacher')    teachers++;
+    else if(['admin_staff','principal','super_admin'].includes(r.dataset.role)) admin++;
+    else other++;
+  });
+  const s = (id,v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  s('cntTeachers', teachers);
+  s('cntAdmin',    admin);
+  s('cntOther',    other);
+
+  // Contact cols visibility
+  const show = '{{ form.include_contact.value }}' !== 'False';
+  document.querySelectorAll('.contact-col').forEach(c => {
+    c.style.display = show ? '' : 'none';
+  });
+});
+
+// ── Role filter tabs ──────────────────────────
+function filterRole(role, el){
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#staffBody tr[data-role]').forEach(row => {
+    row.style.display = (role === 'all' || row.dataset.role === role) ? '' : 'none';
+  });
+  document.querySelectorAll('.role-group-row').forEach(r => r.style.display = '');
+}
+
+// ── Search ────────────────────────────────────
+function searchStaff(q){
+  const term = q.toLowerCase().trim();
+  document.querySelectorAll('#staffBody tr[data-search]').forEach(row => {
+    row.style.display = (!term || row.dataset.search.includes(term)) ? '' : 'none';
+  });
+  document.querySelectorAll('.role-group-row').forEach(r => r.style.display = '');
+}
+
+// ── Department selector ───────────────────────
+function pickDept(val, el){
+  document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="department"]').value = val;
+}
+</script>
+
+{% else %}
+<div class="info-card card">
+  <div class="empty-state">
+    <i class="bi bi-person-badge fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">Select filters and click Generate</h6>
+    <p class="small text-muted mb-0">
+      Choose department and click Generate to view the staff list.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

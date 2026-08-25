@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Sections{% endblock %}
+{% block page_title %}Sections{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;color:inherit;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover,.filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .section-badge{width:38px;height:38px;border-radius:.75rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .capacity-bar{height:5px;background:#e9ecef;border-radius:999px;overflow:hidden;margin-top:.3rem}
+  .capacity-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1a3c72,#0ea5a0)}
+  .avatar-xs{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#0ea5a0);color:#fff;font-weight:700;font-size:.68rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Sections</h5>
+    <p class="text-muted small mb-0">
+      {{ sections|length }} section{{ sections|length|pluralize }}
+      {% if year_id %}in selected year{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'section_create' %}" class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Add Section
+  </a>
+</div>
+
+<!-- Year filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  {% for year in years %}
+  <a href="?year={{ year.pk }}{% if grade_id %}&grade={{ grade_id }}{% endif %}"
+     class="filter-tab {% if year_id == year.pk|stringformat:'s' %}active{% endif %}">
+    {{ year.name }}
+    {% if year.is_current %}
+    <i class="bi bi-check-circle-fill ms-1" style="font-size:.7rem"></i>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Grade filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="?{% if year_id %}year={{ year_id }}{% endif %}"
+     class="filter-tab {% if not grade_id %}active{% endif %}">
+    All Grades
+  </a>
+  {% for grade in grades %}
+  <a href="?{% if year_id %}year={{ year_id }}&{% endif %}grade={{ grade.pk }}"
+     class="filter-tab {% if grade_id == grade.pk|stringformat:'s' %}active{% endif %}">
+    {{ grade.name }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Section</th>
+          <th>Grade</th>
+          <th>Academic Year</th>
+          <th>Class Teacher</th>
+          <th>Students / Capacity</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for section in sections %}
+        <tr>
+          <td class="text-muted small fw-semibold">
+            {{ forloop.counter }}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="section-badge">{{ section.name }}</div>
+              <span class="fw-semibold">{{ section.grade }} — {{ section.name }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-3">
+              {{ section.grade }}
+            </span>
+          </td>
+          <td class="small text-muted">{{ section.academic_year }}</td>
+          <td>
+            {% if section.class_teacher %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ section.class_teacher.first_name|first|upper }}
+              </div>
+              <span class="small">{{ section.class_teacher.get_full_name }}</span>
+            </div>
+            {% else %}
+            <span class="text-muted small">— Not assigned</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="fw-semibold small">
+              {{ section.student_count }} / {{ section.capacity }}
+            </div>
+            <div class="capacity-bar" style="width:100px">
+              <div class="capacity-fill"
+                   style="width:{% widthratio section.student_count section.capacity 100 %}%">
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'section_edit' section.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'section_delete' section.pk %}"
+                 class="action-icon text-danger" title="Delete"
+                 onclick="return confirm('Delete section {{ section.grade }} — {{ section.name }}?')">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-diagram-3 fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No sections found</h6>
+              <p class="small mb-3">
+                {% if grade_id %}
+                No sections for this grade yet.
+                {% else %}
+                No sections configured for this academic year.
+                {% endif %}
+              </p>
+              <a href="{% url 'section_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add Section
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

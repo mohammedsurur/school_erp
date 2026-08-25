@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Edit Profile{% endblock %}
+{% block page_title %}Edit Profile{% endblock %}
+{% block content %}
+
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .avatar-preview{width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #e2e8f0}
+  .avatar-placeholder{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;border:3px solid #e2e8f0}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9 col-xl-8">
+    <div class="form-card card p-4">
+
+      <!-- Header -->
+      <div class="d-flex align-items-center gap-3 mb-4">
+        {% if request.user.profile_image %}
+        <img src="{{ request.user.profile_image.url }}" class="avatar-preview" id="avatarImg" alt="Avatar">
+        {% else %}
+        <div class="avatar-placeholder" id="avatarPlaceholder">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
+        <img class="avatar-preview d-none" id="avatarImg" alt="Avatar">
+        {% endif %}
+        <div>
+          <h5 class="fw-bold mb-1">{{ request.user.get_full_name|default:request.user.username }}</h5>
+          <p class="text-muted small mb-0">Update your personal information and profile picture</p>
+        </div>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Personal Info -->
+        <div class="section-head"><i class="bi bi-person me-2"></i>Personal Information</div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>First Name</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<small class="text-danger">{{ form.first_name.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Last Name</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<small class="text-danger">{{ form.last_name.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Gender</label>
+            {{ form.gender }}
+            {% if form.gender.errors %}<small class="text-danger">{{ form.gender.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Date of Birth</label>
+            {{ form.date_of_birth }}
+            {% if form.date_of_birth.errors %}<small class="text-danger">{{ form.date_of_birth.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-12">
+            <label>Address</label>
+            {{ form.address }}
+            {% if form.address.errors %}<small class="text-danger">{{ form.address.errors.0 }}</small>{% endif %}
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="section-head"><i class="bi bi-telephone me-2"></i>Contact Information</div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Email Address</label>
+            {{ form.email }}
+            {% if form.email.errors %}<small class="text-danger">{{ form.email.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Phone Number</label>
+            {{ form.phone }}
+            {% if form.phone.errors %}<small class="text-danger">{{ form.phone.errors.0 }}</small>{% endif %}
+          </div>
+        </div>
+
+        <!-- Profile Picture -->
+        <div class="section-head"><i class="bi bi-image me-2"></i>Profile Picture</div>
+        <div class="mb-4">
+          <label>Upload New Photo</label>
+          {{ form.profile_image }}
+          <div class="text-muted mt-1" style="font-size:.78rem">JPG, PNG or GIF — max 5MB</div>
+          {% if form.profile_image.errors %}<small class="text-danger">{{ form.profile_image.errors.0 }}</small>{% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'profile' %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white"><i class="bi bi-check-circle me-2"></i>Save Changes</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Live profile image preview
+document.querySelector('input[type=file]')?.addEventListener('change', function(){
+  if(this.files && this.files[0]){
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('avatarImg');
+      const ph  = document.getElementById('avatarPlaceholder');
+      img.src = e.target.result;
+      img.classList.remove('d-none');
+      if(ph) ph.classList.add('d-none');
+    };
+    reader.readAsDataURL(this.files[0]);
+  }
+});
+</script>
+
+{% endblock %}

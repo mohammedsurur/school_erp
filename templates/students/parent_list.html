@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Parents{% endblock %}
+{% block page_title %}Parents{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .avatar-ph{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;font-weight:700;font-size:.82rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .child-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.65rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Parents / Guardians</h5>
+    <p class="text-muted small mb-0">
+      {{ parents.paginator.count }} parent{{ parents.paginator.count|pluralize }} registered
+    </p>
+  </div>
+</div>
+
+<!-- Search -->
+<form method="get" class="d-flex gap-2 mb-4 flex-wrap align-items-center">
+  <input type="text" name="q" value="{{ q }}"
+         class="form-control search-bar"
+         placeholder="Search by name, phone or email…"
+         style="max-width:360px">
+  <button type="submit" class="btn btn-outline-primary rounded-pill px-4">
+    <i class="bi bi-search me-1"></i>Search
+  </button>
+  {% if q %}
+  <a href="{% url 'parent_list' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">Clear</a>
+  {% endif %}
+  <span class="ms-auto text-muted small align-self-center">
+    {{ parents.paginator.count }} result{{ parents.paginator.count|pluralize }}
+  </span>
+</form>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Parent / Guardian</th>
+          <th>Relation</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Children</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for parent in parents %}
+        <tr>
+          <td class="text-muted small fw-semibold">
+            {{ parents.start_index|add:forloop.counter0 }}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-ph">
+                {{ parent.user.first_name|first|upper }}{{ parent.user.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-semibold small">{{ parent.user.get_full_name }}</div>
+                <div class="text-muted" style="font-size:.73rem">
+                  @{{ parent.user.username }}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge rounded-pill bg-warning-subtle text-warning px-3">
+              {{ parent.get_relation_display }}
+            </span>
+          </td>
+          <td class="small text-muted">{{ parent.user.phone|default:"—" }}</td>
+          <td class="small text-muted">{{ parent.user.email|default:"—" }}</td>
+          <td>
+            <div class="d-flex flex-wrap gap-1">
+              {% for child in parent.student.all %}
+              <a href="{% url 'student_detail' child.pk %}"
+                 class="d-inline-flex align-items-center gap-1 text-decoration-none"
+                 title="{{ child.user.get_full_name }}">
+                <div class="child-avatar">
+                  {{ child.user.first_name|first|upper }}
+                </div>
+                <span class="small text-muted">{{ child.user.first_name }}</span>
+              </a>
+              {% empty %}
+              <span class="text-muted small">—</span>
+              {% endfor %}
+            </div>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              {% for child in parent.student.all|slice:"1" %}
+              <a href="{% url 'student_detail' child.pk %}"
+                 class="btn btn-sm btn-outline-primary rounded-pill px-2"
+                 style="font-size:.75rem"
+                 title="View Child Profile">
+                <i class="bi bi-eye"></i>
+              </a>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <i class="bi bi-people fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No parents found</h6>
+              <p class="small mb-3">
+                {% if q %}
+                  No results for "{{ q }}"
+                {% else %}
+                  Parents are added through the student profile page.
+                {% endif %}
+              </p>
+              <a href="{% url 'student_list' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-people me-2"></i>Go to Students
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if parents.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if parents.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ parents.previous_page_number }}&q={{ q }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in parents.paginator.page_range %}
+    <li class="page-item {% if parents.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&q={{ q }}">{{ num }}</a>
+    </li>
+    {% endfor %}
+    {% if parents.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ parents.next_page_number }}&q={{ q }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

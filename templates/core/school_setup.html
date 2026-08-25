@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}School Setup{% endblock %}
+{% block page_title %}School Setup{% endblock %}
+{% block content %}
+
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .logo-preview{width:120px;height:120px;border-radius:1rem;object-fit:cover;border:2px solid #e2e8f0}
+  .logo-placeholder{width:120px;height:120px;border-radius:1rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.5rem}
+  .info-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.5rem;color:#fff;margin-bottom:1.5rem}
+</style>
+
+<!-- Info Banner -->
+<div class="info-banner d-flex align-items-center gap-4">
+  {% if school and school.logo %}
+  <img src="{{ school.logo.url }}" class="logo-preview" alt="School Logo">
+  {% else %}
+  <div class="logo-placeholder"><i class="bi bi-building"></i></div>
+  {% endif %}
+  <div>
+    <h5 class="fw-bold mb-1 text-white">{{ school.name|default:"School Name Not Set" }}</h5>
+    <p class="opacity-75 mb-1 small">{{ school.address|default:"Address not set" }}</p>
+    <p class="opacity-75 mb-0 small">
+      {% if school.phone %}<i class="bi bi-telephone me-2"></i>{{ school.phone }}{% endif %}
+      {% if school.email %}&nbsp;&bull;&nbsp;<i class="bi bi-envelope me-2"></i>{{ school.email }}{% endif %}
+    </p>
+  </div>
+</div>
+
+<div class="form-card card p-4">
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Basic Info -->
+    <div class="section-head"><i class="bi bi-building me-2"></i>School Information</div>
+    <div class="row g-3 mb-4">
+      <div class="col-12">
+        <label>School Name <span class="text-danger">*</span></label>
+        {{ form.name }}
+        {% if form.name.errors %}<small class="text-danger">{{ form.name.errors.0 }}</small>{% endif %}
+      </div>
+      <div class="col-md-6">
+        <label>Phone Number</label>
+        {{ form.phone }}
+      </div>
+      <div class="col-md-6">
+        <label>Email Address</label>
+        {{ form.email }}
+      </div>
+      <div class="col-md-6">
+        <label>Website</label>
+        {{ form.website }}
+      </div>
+      <div class="col-md-6">
+        <label>Established Date</label>
+        {{ form.established }}
+      </div>
+      <div class="col-12">
+        <label>Address</label>
+        {{ form.address }}
+      </div>
+      <div class="col-12">
+        <label>School Motto</label>
+        {{ form.motto }}
+      </div>
+    </div>
+
+    <!-- Logo -->
+    <div class="section-head"><i class="bi bi-image me-2"></i>School Logo</div>
+    <div class="mb-4">
+      {% if school and school.logo %}
+      <div class="mb-3">
+        <img src="{{ school.logo.url }}" class="logo-preview" alt="Current Logo" id="logoImg">
+        <small class="d-block text-muted mt-1">Current logo — upload a new one to replace it</small>
+      </div>
+      {% else %}
+      <img class="logo-preview d-none" id="logoImg" alt="Preview">
+      {% endif %}
+      {{ form.logo }}
+      <small class="text-muted d-block mt-1">PNG or JPG — recommended 300×300px</small>
+    </div>
+
+    <div class="d-flex gap-3 justify-content-end">
+      <button type="submit" class="btn btn-save text-white">
+        <i class="bi bi-check-circle me-2"></i>Save School Info
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.querySelector('input[type=file]')?.addEventListener('change', function(){
+  if(this.files && this.files[0]){
+    const img = document.getElementById('logoImg');
+    img.src = URL.createObjectURL(this.files[0]);
+    img.classList.remove('d-none');
+  }
+});
+</script>
+
+{% endblock %}

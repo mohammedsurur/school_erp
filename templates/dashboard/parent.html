@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% block title %}Parent Dashboard{% endblock %}
+{% block page_title %}Parent Dashboard{% endblock %}
+{% block content %}
+
+<style>
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform .2s,box-shadow .2s}
+  .stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+  .stat-icon{width:52px;height:52px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+  .section-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .section-head{padding:1.1rem 1.5rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
+  /* Child switcher */
+  .child-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.45rem 1.1rem;font-size:.84rem;font-weight:500;cursor:pointer;transition:all .2s;text-decoration:none;color:#374151;display:inline-flex;align-items:center;gap:.5rem}
+  .child-tab:hover,.child-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .child-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4)}
+  .child-avatar-ph{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.25);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;color:#fff;border:2px solid rgba(255,255,255,.4)}
+  /* Result rows */
+  .result-row{display:flex;align-items:center;gap:.75rem;padding:.75rem 0;border-bottom:1px solid #f8f9fb}
+  .result-row:last-child{border-bottom:none}
+  .grade-pill{width:42px;height:42px;border-radius:.6rem;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.88rem;flex-shrink:0}
+  /* Attendance */
+  .att-ring{width:90px;height:90px;border-radius:50%;border:7px solid #e9ecef;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;margin:0 auto 1rem}
+  .att-ring.good{border-color:#22c55e;color:#16a34a}
+  .att-ring.warn{border-color:#f59e0b;color:#d97706}
+  .att-ring.bad{border-color:#ef4444;color:#dc2626}
+  /* Timetable */
+  .period-row{display:flex;align-items:center;gap:.75rem;padding:.65rem 0;border-bottom:1px solid #f8f9fb}
+  .period-row:last-child{border-bottom:none}
+  /* Fee rows */
+  .fee-row{display:flex;align-items:center;justify-content:space-between;padding:.7rem 0;border-bottom:1px solid #f8f9fb}
+  .fee-row:last-child{border-bottom:none}
+  /* Notice */
+  .notice-card{background:#f8f9fb;border-radius:.875rem;padding:1rem;border-left:3px solid #1a3c72;height:100%}
+  /* Progress bar */
+  .progress-thin{height:6px;background:#e9ecef;border-radius:999px;overflow:hidden;margin-top:.35rem}
+  .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1a3c72,#0ea5a0)}
+</style>
+
+<!-- Welcome Banner -->
+<div style="background:linear-gradient(135deg,#d97706,#0ea5a0);border-radius:1.25rem;padding:2rem 2.5rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden">
+  <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)"></div>
+  <div style="position:absolute;bottom:-40px;right:80px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
+  <h4 class="fw-bold mb-1">Welcome, {{ request.user.get_full_name|default:request.user.username }}! 👨‍👩‍👧</h4>
+  <p class="opacity-75 mb-3 small">Monitor your child's academic progress, attendance and fees all in one place.</p>
+
+  <!-- Child switcher -->
+  {% if children %}
+  <div class="d-flex flex-wrap gap-2">
+    {% for child in children %}
+    <a href="?child={{ child.id }}" class="child-tab {% if selected_child.id == child.id %}active{% endif %}">
+      {% if child.photo %}
+      <img src="{{ child.photo.url }}" class="child-avatar" alt="">
+      {% else %}
+      <div class="child-avatar-ph">{{ child.user.first_name|first|upper }}</div>
+      {% endif %}
+      {{ child.user.get_full_name|default:child.user.username }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if selected_child %}
+
+<!-- Child Info Card -->
+<div class="section-card card p-4 mb-4">
+  <div class="d-flex flex-wrap align-items-center gap-4">
+    {% if selected_child.photo %}
+    <img src="{{ selected_child.photo.url }}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #e2e8f0;flex-shrink:0" alt="">
+    {% else %}
+    <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:#fff;flex-shrink:0">
+      {{ selected_child.user.first_name|first|upper }}
+    </div>
+    {% endif %}
+    <div class="flex-grow-1">
+      <h5 class="fw-bold mb-1">{{ selected_child.user.get_full_name }}</h5>
+      <div class="d-flex flex-wrap gap-3 text-muted small">
+        <span><i class="bi bi-hash me-1"></i>{{ selected_child.admission_number }}</span>
+        <span><i class="bi bi-building me-1"></i>{{ selected_child.current_section|default:"Not enrolled" }}</span>
+        <span><i class="bi bi-calendar me-1"></i>{{ selected_child.date_of_birth|date:"M d, Y" }}</span>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+      <a href="#" class="btn btn-sm btn-outline-primary rounded-pill px-3"><i class="bi bi-file-earmark-text me-1"></i>Report Card</a>
+    </div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#f0fdf4"><i class="bi bi-check2-circle text-success fs-3"></i></div>
+        <div>
+          <div style="font-size:1.9rem;font-weight:800;line-height:1;color:#16a34a">{{ attendance_percent|default:"0" }}%</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Attendance</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fff7ed"><i class="bi bi-trophy text-warning fs-3"></i></div>
+        <div>
+          <div style="font-size:1.9rem;font-weight:800;line-height:1;color:#d97706">{{ average_marks|default:"0" }}%</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Avg Grade</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fff1f2"><i class="bi bi-cash-coin text-danger fs-3"></i></div>
+        <div>
+          <div style="font-size:1.9rem;font-weight:800;line-height:1;color:#dc2626">${{ fees_due|default:"0" }}</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Fees Due</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#eff6ff"><i class="bi bi-book text-primary fs-3"></i></div>
+        <div>
+          <div style="font-size:1.9rem;font-weight:800;line-height:1;color:#1a3c72">{{ total_subjects|default:"0" }}</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Subjects</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Attendance Summary -->
+  <div class="col-lg-4">
+    <div class="section-card card h-100">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-check2-circle me-2 text-success"></i>Attendance</h6>
+      </div>
+      <div class="p-4 text-center">
+        <div class="att-ring {% if attendance_percent >= 75 %}good{% elif attendance_percent >= 60 %}warn{% else %}bad{% endif %}">
+          {{ attendance_percent|default:"0" }}%
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-4">
+            <div class="fw-bold text-success fs-5">{{ present_days|default:"0" }}</div>
+            <div class="text-muted" style="font-size:.72rem">Present</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold text-danger fs-5">{{ absent_days|default:"0" }}</div>
+            <div class="text-muted" style="font-size:.72rem">Absent</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold text-warning fs-5">{{ late_days|default:"0" }}</div>
+            <div class="text-muted" style="font-size:.72rem">Late</div>
+          </div>
+        </div>
+        {% if attendance_percent < 75 %}
+        <div class="alert alert-danger rounded-3 p-2 mb-0 small">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Attendance is below 75%. Please contact the school.
+        </div>
+        {% elif attendance_percent >= 90 %}
+        <div class="alert alert-success rounded-3 p-2 mb-0 small">
+          <i class="bi bi-star me-1"></i>
+          Excellent attendance! Keep it up.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Exam Results -->
+  <div class="col-lg-8">
+    <div class="section-card card h-100">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-bar-chart me-2 text-primary"></i>Recent Exam Results</h6>
+        <a href="#" class="btn btn-sm btn-outline-primary rounded-pill">All Results</a>
+      </div>
+      <div class="p-4">
+        {% if recent_results %}
+        {% for result in recent_results|slice:"0:6" %}
+        <div class="result-row">
+          <div class="grade-pill
+            {% if result.marks >= 80 %}bg-success-subtle text-success
+            {% elif result.marks >= 60 %}bg-primary-subtle text-primary
+            {% elif result.marks >= 50 %}bg-warning-subtle text-warning
+            {% else %}bg-danger-subtle text-danger{% endif %}">
+            {{ result.grade_letter }}
+          </div>
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold small text-truncate">{{ result.subject.name }}</div>
+            <div class="text-muted" style="font-size:.75rem">{{ result.exam.exam_type.name }} &bull; {{ result.exam.term }}</div>
+            <div class="progress-thin"><div class="progress-fill" style="width:{% widthratio result.marks result.subject.full_marks 100 %}%"></div></div>
+          </div>
+          <div class="text-end flex-shrink-0">
+            <div class="fw-bold small">{{ result.marks }}/{{ result.subject.full_marks }}</div>
+            <div style="font-size:.73rem;color:#9ca3af">{{ result.marks|floatformat:0 }}%</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-bar-chart fs-1 text-muted opacity-25 d-block mb-2"></i>
+          <p class="text-muted small mb-0">No exam results available yet.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Timetable -->
+  <div class="col-lg-5">
+    <div class="section-card card h-100">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-calendar3 me-2 text-success"></i>Today's Timetable</h6>
+        <span class="text-muted small">{% now "l" %}</span>
+      </div>
+      <div class="p-4">
+        {% if todays_timetable %}
+        {% for slot in todays_timetable %}
+        <div class="period-row">
+          <div style="width:36px;height:36px;border-radius:.5rem;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.72rem;color:#1a3c72;flex-shrink:0">P{{ forloop.counter }}</div>
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold small">{{ slot.subject.name }}</div>
+            <div class="text-muted" style="font-size:.73rem">{{ slot.teacher.get_full_name }}</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-semibold small">{{ slot.period.start_time|time:"H:i" }}</div>
+            <div style="font-size:.7rem;color:#9ca3af">{{ slot.period.end_time|time:"H:i" }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-calendar-x fs-1 text-muted opacity-25 d-block mb-2"></i>
+          <p class="text-muted small mb-0">No classes today.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Fee Status -->
+  <div class="col-lg-7">
+    <div class="section-card card h-100">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-cash-coin me-2 text-warning"></i>Fee Status</h6>
+        <a href="#" class="btn btn-sm btn-outline-warning rounded-pill">Pay Now</a>
+      </div>
+      <div class="p-4">
+        {% if fee_status %}
+        {% for fee in fee_status %}
+        <div class="fee-row">
+          <div>
+            <div class="fw-semibold small">{{ fee.fee_structure.fee_type.name }}</div>
+            <div class="text-muted" style="font-size:.75rem">
+              Due: {{ fee.fee_structure.due_date|date:"M d, Y" }}
+              {% if fee.discount %}&bull; Discount: ${{ fee.discount }}{% endif %}
+            </div>
+          </div>
+          <div class="text-end">
+            <div class="fw-bold small">${{ fee.net_amount }}</div>
+            {% if fee.is_paid %}
+            <span class="badge rounded-pill bg-success-subtle text-success" style="font-size:.7rem"><i class="bi bi-check-circle me-1"></i>Paid</span>
+            {% else %}
+            <span class="badge rounded-pill bg-danger-subtle text-danger" style="font-size:.7rem"><i class="bi bi-clock me-1"></i>Unpaid</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-cash-coin fs-1 text-muted opacity-25 d-block mb-2"></i>
+          <p class="text-muted small mb-0">No fee records found.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Notice Board -->
+  <div class="col-12">
+    <div class="section-card card">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-megaphone me-2 text-danger"></i>School Notices</h6>
+        <a href="#" class="btn btn-sm btn-outline-secondary rounded-pill">View All</a>
+      </div>
+      <div class="p-4">
+        {% if notices %}
+        <div class="row g-3">
+          {% for notice in notices|slice:"0:4" %}
+          <div class="col-md-6 col-xl-3">
+            <div class="notice-card">
+              <div class="fw-semibold small mb-1">{{ notice.title }}</div>
+              <div class="text-muted mb-2" style="font-size:.78rem">{{ notice.content|truncatechars:80 }}</div>
+              <div class="d-flex align-items-center justify-content-between">
+                <span class="badge rounded-pill bg-primary-subtle text-primary" style="font-size:.68rem">{{ notice.get_audience_display }}</span>
+                <span class="text-muted" style="font-size:.7rem">{{ notice.published_at|date:"M d" }}</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted small text-center mb-0">No notices posted yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% else %}
+<!-- No child linked -->
+<div class="text-center py-5">
+  <i class="bi bi-people fs-1 text-muted opacity-25 d-block mb-3"></i>
+  <h5 class="fw-bold text-dark">No child linked to your account</h5>
+  <p class="text-muted mb-4">Please contact the school administration to link your child's account.</p>
+  <a href="#" class="btn btn-primary rounded-pill px-4"><i class="bi bi-envelope me-2"></i>Contact School</a>
+</div>
+{% endif %}
+
+{% endblock %}

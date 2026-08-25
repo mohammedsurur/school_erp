@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block page_title %}Message Thread{% endblock %}
+
+{% block content %}
+<style>
+  .form-control{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  textarea.form-control{resize:vertical;min-height:90px}
+
+  /* ── Thread header ── */
+  .thread-header{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .thread-header::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .part-avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.25);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid rgba(255,255,255,.4)}
+  .part-name{font-size:.72rem;opacity:.85;margin-top:.15rem;text-align:center;max-width:50px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* ── Message bubbles ── */
+  .msg-wrap{display:flex;gap:.75rem;margin-bottom:1.25rem;align-items:flex-end}
+  .msg-wrap.mine{flex-direction:row-reverse}
+  .msg-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.7rem;flex-shrink:0;color:#fff}
+  .msg-avatar.theirs{background:linear-gradient(135deg,#1a3c72,#0ea5a0)}
+  .msg-avatar.mine  {background:linear-gradient(135deg,#7c3aed,#a78bfa)}
+
+  .bubble{max-width:70%;border-radius:1.1rem;padding:.85rem 1.1rem;position:relative;word-break:break-word;font-size:.875rem;line-height:1.6}
+  .bubble.theirs{background:#f1f5f9;color:#1e293b;border-bottom-left-radius:.25rem}
+  .bubble.mine  {background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;border-bottom-right-radius:.25rem}
+  .bubble-meta{font-size:.65rem;margin-top:.35rem;display:flex;align-items:center;gap:.5rem}
+  .bubble-meta.theirs{color:#9ca3af}
+  .bubble-meta.mine  {color:rgba(255,255,255,.7);justify-content:flex-end}
+
+  /* ── Date divider ── */
+  .date-divider{text-align:center;margin:1.25rem 0;position:relative}
+  .date-divider::before{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:#e9ecef}
+  .date-divider span{position:relative;background:#fff;padding:0 .85rem;font-size:.72rem;color:#9ca3af;font-weight:600}
+
+  /* ── Reply box ── */
+  .reply-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);position:sticky;bottom:0;background:#fff;z-index:10}
+  .btn-send{border-radius:.875rem;padding:.75rem 2rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-send:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* ── Participants sidebar ── */
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .participant-row{display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid #f1f5f9;font-size:.85rem}
+  .participant-row:last-child{border-bottom:none}
+  .p-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .you-badge{background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.1rem .5rem;font-size:.65rem;font-weight:700}
+
+  /* ── Read receipt ── */
+  .read-tick{font-size:.65rem;color:rgba(255,255,255,.7)}
+
+  .empty-msgs{text-align:center;padding:2rem;color:#9ca3af;font-size:.85rem}
+</style>
+
+<div class="row g-4">
+
+  <!-- LEFT: Messages -->
+  <div class="col-lg-8 d-flex flex-column">
+
+    <!-- Back bar -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'inbox' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Inbox
+      </a>
+      <a href="{% url 'thread_delete' thread.pk %}"
+         class="btn btn-outline-danger rounded-pill px-3 ms-auto"
+         onclick="return confirm('Remove this conversation from your inbox?')">
+        <i class="bi bi-trash me-1"></i>Remove
+      </a>
+    </div>
+
+    <!-- Thread header -->
+    <div class="thread-header">
+      <div style="position:relative;z-index:1">
+        <div style="opacity:.75;font-size:.75rem;margin-bottom:.35rem">
+          <i class="bi bi-envelope me-1"></i>
+          {{ thread.messages.count }} message{{ thread.messages.count|pluralize }}
+          &nbsp;·&nbsp;
+          Started {{ thread.created_at|date:"M d, Y" }}
+        </div>
+        <h5 class="fw-bold text-white mb-2">
+          {{ thread.subject|default:"(No subject)" }}
+        </h5>
+        <!-- Participant avatars -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          {% for p in thread.participants.all %}
+          <div class="text-center">
+            <div class="part-avatar">
+              {{ p.first_name|first|upper }}{{ p.last_name|first|upper }}
+            </div>
+            <div class="part-name">{{ p.first_name }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="flex-grow-1 mb-3" id="messageList"
+         style="max-height:60vh;overflow-y:auto;padding-right:.25rem">
+
+      {% if thread.messages.all %}
+      {% for msg in thread.messages.all %}
+
+      <!-- Date divider between days -->
+      {% ifchanged msg.sent_at|date:"Ymd" %}
+      <div class="date-divider">
+        <span>{{ msg.sent_at|date:"l, M d, Y" }}</span>
+      </div>
+      {% endifchanged %}
+
+      <!-- Bubble -->
+      <div class="msg-wrap {% if msg.sender == user %}mine{% else %}theirs{% endif %}">
+
+        <!-- Avatar -->
+        <div class="msg-avatar {% if msg.sender == user %}mine{% else %}theirs{% endif %}">
+          {{ msg.sender.first_name|first|upper }}{{ msg.sender.last_name|first|upper }}
+        </div>
+
+        <!-- Bubble + meta -->
+        <div>
+          {% if msg.sender != user %}
+          <div class="text-muted mb-1"
+               style="font-size:.72rem;font-weight:600;padding-left:.25rem">
+            {{ msg.sender.get_full_name }}
+          </div>
+          {% endif %}
+
+          <div class="bubble {% if msg.sender == user %}mine{% else %}theirs{% endif %}">
+            {{ msg.body|linebreaksbr }}
+
+            <div class="bubble-meta {% if msg.sender == user %}mine{% else %}theirs{% endif %}">
+              <span>{{ msg.sent_at|time:"H:i" }}</span>
+              {% if msg.sender == user %}
+              <span class="read-tick">
+                {% if msg.read_by.count > 1 %}
+                <i class="bi bi-check-all"></i>
+                {% else %}
+                <i class="bi bi-check"></i>
+                {% endif %}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+      </div>
+      {% endfor %}
+
+      {% else %}
+      <div class="empty-msgs">
+        <i class="bi bi-chat-dots d-block fs-1 mb-2 opacity-25"></i>
+        No messages yet. Send the first one below.
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Reply form -->
+    <div class="reply-card p-3">
+      <form method="POST" novalidate id="replyForm">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-2 py-2 small">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+        <div class="d-flex gap-2 align-items-end">
+          <div class="flex-grow-1">
+            {{ form.body }}
+            {% if form.body.errors %}
+            <small class="text-danger d-block mt-1">{{ form.body.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <button type="submit" class="btn btn-send text-white flex-shrink-0">
+            <i class="bi bi-send me-1"></i>Send
+          </button>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <small class="text-muted">
+            <i class="bi bi-keyboard me-1"></i>
+            Ctrl + Enter to send
+          </small>
+          <small class="text-muted" id="replyCount">0 chars</small>
+        </div>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Participants + info -->
+  <div class="col-lg-4">
+
+    <!-- Participants -->
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-people me-2 text-primary"></i>
+        Participants
+        <span class="badge rounded-pill bg-primary-subtle text-primary ms-1"
+              style="font-size:.7rem">{{ thread.participants.count }}</span>
+      </h6>
+      {% for p in thread.participants.all %}
+      <div class="participant-row">
+        <div class="p-avatar">
+          {{ p.first_name|first|upper }}{{ p.last_name|first|upper }}
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small">{{ p.get_full_name }}</div>
+          <div class="text-muted" style="font-size:.72rem">
+            {{ p.get_role_display|default:p.role }}
+          </div>
+        </div>
+        {% if p == user %}
+        <span class="you-badge">You</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Thread info -->
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Thread Info
+      </h6>
+      <div class="d-flex justify-content-between py-2"
+           style="border-bottom:1px solid #f1f5f9;font-size:.83rem">
+        <span class="text-muted">Started</span>
+        <span class="fw-semibold small">{{ thread.created_at|date:"M d, Y" }}</span>
+      </div>
+      <div class="d-flex justify-content-between py-2"
+           style="border-bottom:1px solid #f1f5f9;font-size:.83rem">
+        <span class="text-muted">Last message</span>
+        <span class="fw-semibold small">
+          {{ thread.updated_at|timesince }} ago
+        </span>
+      </div>
+      <div class="d-flex justify-content-between py-2"
+           style="font-size:.83rem">
+        <span class="text-muted">Messages</span>
+        <span class="fw-semibold small">{{ thread.messages.count }}</span>
+      </div>
+    </div>
+
+    <!-- Reply shortcut hint -->
+    <div class="p-3 rounded-3 text-center"
+         style="background:#f8f9fb;font-size:.78rem;color:#9ca3af">
+      <i class="bi bi-keyboard me-1"></i>
+      Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send your reply quickly
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// Auto-scroll to bottom of message list
+const msgList = document.getElementById('messageList');
+if(msgList) msgList.scrollTop = msgList.scrollHeight;
+
+// Ctrl+Enter to submit
+const textarea = document.querySelector('[name="body"]');
+const form     = document.getElementById('replyForm');
+textarea?.addEventListener('keydown', e => {
+  if(e.ctrlKey && e.key === 'Enter'){
+    e.preventDefault();
+    form?.submit();
+  }
+});
+
+// Char counter
+textarea?.addEventListener('input', () => {
+  const len = textarea.value.length;
+  const el  = document.getElementById('replyCount');
+  if(el) el.textContent = `${len} char${len !== 1 ? 's' : ''}`;
+});
+</script>
+
+{% endblock %}

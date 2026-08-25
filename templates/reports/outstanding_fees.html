@@ -1,0 +1,584 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Outstanding Fees{% endblock %}
+{% block page_title %}Outstanding Fees Report{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.82rem;color:#374151;margin-bottom:.3rem;display:block}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.45rem;font-weight:800;line-height:1;margin-bottom:.15rem;font-family:monospace}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+  .stat-sub{font-size:.72rem;margin-top:.2rem}
+
+  /* ── Chart cards ── */
+  .chart-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;height:100%}
+  .chart-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+
+  /* ── Collection progress ── */
+  .collect-bar{height:20px;border-radius:999px;background:#f1f5f9;overflow:hidden;position:relative}
+  .collect-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#0ea5a0);transition:width 1s ease}
+  .collect-labels{display:flex;justify-content:space-between;font-size:.72rem;margin-top:.4rem}
+
+  /* ── Status badges ── */
+  .s-unpaid  {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-partial {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-overdue {background:#fff1f2;color:#be123c;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700;border:1px solid #fecaca}
+
+  /* ── Balance bar ── */
+  .bal-bar{height:6px;border-radius:999px;background:#e2e8f0;overflow:hidden;min-width:70px}
+  .bal-fill{height:100%;border-radius:999px;background:#ef4444}
+  .paid-fill{height:100%;border-radius:999px;background:#22c55e}
+
+  /* ── Urgency chip ── */
+  .urg-high  {background:#fee2e2;color:#dc2626;border-radius:.4rem;padding:.1rem .45rem;font-size:.68rem;font-weight:700}
+  .urg-medium{background:#fef9c3;color:#854d0e;border-radius:.4rem;padding:.1rem .45rem;font-size:.68rem;font-weight:700}
+  .urg-low   {background:#f1f5f9;color:#64748b;border-radius:.4rem;padding:.1rem .45rem;font-size:.68rem;font-weight:700}
+
+  /* ── Table ── */
+  .rep-table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .rep-table tbody td{padding:.75rem 1rem;vertical-align:middle;border-color:#f1f5f9;font-size:.85rem}
+  .rep-table tbody tr{transition:background .15s}
+  .rep-table tbody tr:hover{background:#fff8f8}
+  .rep-table tbody tr.overdue-row{background:#fff8f8}
+
+  /* ── View tabs ── */
+  .view-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.8rem;font-weight:600;cursor:pointer;color:#374151;transition:all .2s;white-space:nowrap}
+  .view-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .view-tab:hover:not(.active){background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .view-tab.red.active{background:#dc2626;border-color:#dc2626}
+  .view-tab.red{border-color:#fca5a5;color:#dc2626}
+  .view-tab.red:hover:not(.active){background:#fff1f2}
+
+  /* ── Leg dot ── */
+  .leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+  .btn-run{border-radius:.875rem;padding:.65rem 1.75rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;color:#fff;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+  .amount-chip{font-family:monospace;font-weight:700;font-size:.92rem}
+</style>
+
+<!-- Back + title -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'reports_dashboard' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Reports
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">Outstanding Fees Report</h5>
+    <p class="text-muted small mb-0">
+      Collected vs outstanding · By grade · By category
+    </p>
+  </div>
+  {% if fees %}
+  <a href="{% url 'download_pdf' 'outstanding_fees' %}?{{ request.GET.urlencode }}"
+     class="btn btn-outline-primary rounded-pill px-3 ms-auto">
+    <i class="bi bi-download me-1"></i>PDF
+  </a>
+  {% endif %}
+</div>
+
+<!-- Filter form -->
+<div class="filter-bar">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <label>Academic Year</label>
+      {{ form.academic_year }}
+    </div>
+    <div class="col-md-2">
+      <label>Grade</label>
+      {{ form.grade }}
+    </div>
+    <div class="col-md-2">
+      <label>Section</label>
+      {{ form.section }}
+    </div>
+    <div class="col-md-2">
+      <label>Format</label>
+      {{ form.format }}
+    </div>
+    <div class="col-md-1 d-flex align-items-end pb-1">
+      <div class="form-check">
+        {{ form.overdue_only }}
+        <label class="form-check-label small fw-semibold text-danger"
+               for="{{ form.overdue_only.id_for_label }}">
+          Overdue only
+        </label>
+      </div>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit" class="btn-run flex-grow-1">
+        <i class="bi bi-exclamation-circle me-1"></i>Generate
+      </button>
+      {% if request.GET %}
+      <a href="{% url 'outstanding_fees' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+{% if fees %}
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-exclamation-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">
+          ETB {{ total_outstanding|floatformat:0 }}
+        </div>
+        <div class="stat-lbl">Total Outstanding</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-people text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ student_count }}</div>
+        <div class="stat-lbl">Students with Dues</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-cash-coin text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success">
+          ETB {{ pie_data.0|floatformat:0 }}
+        </div>
+        <div class="stat-lbl">Total Collected</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-percent text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning" id="collRate">—</div>
+        <div class="stat-lbl">Collection Rate</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Collection progress bar -->
+<div class="info-card card p-4 mb-4">
+  <div class="sec-head mb-2">
+    <i class="bi bi-bar-chart-line me-2"></i>Overall Collection Progress
+  </div>
+  {% with pie_data|first as collected %}
+  {% with collected|add:total_outstanding as grand_total %}
+  <div class="collect-bar">
+    <div class="collect-fill"
+         id="collectFill"
+         style="width:0%"
+         data-width="{% if grand_total %}{% widthratio collected grand_total 100 %}{% else %}0{% endif %}%">
+    </div>
+  </div>
+  <div class="collect-labels">
+    <span class="text-success fw-semibold">
+      ✔ Collected: ETB {{ collected|floatformat:0 }}
+    </span>
+    <span class="text-muted">
+      Total: ETB {{ grand_total|floatformat:0 }}
+    </span>
+    <span class="text-danger fw-semibold">
+      ✕ Outstanding: ETB {{ total_outstanding|floatformat:0 }}
+    </span>
+  </div>
+  {% endwith %}
+  {% endwith %}
+</div>
+
+<!-- Charts row 1 -->
+<div class="row g-4 mb-4">
+
+  <!-- Doughnut: collected vs outstanding -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-pie-chart"></i>Collected vs Outstanding
+      </div>
+      <canvas id="pieMain" height="220"></canvas>
+      <div class="mt-3 d-flex flex-column gap-2">
+        
+        <div class="d-flex align-items-center gap-2 justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <div class="leg-dot" style="background:#22c55e"></div>
+            <span style="font-size:.78rem">Collected</span>
+          </div>
+          <span class="amount-chip text-success">
+            ETB {% with pie_data|first as c %}{{ c|floatformat:0 }}{% endwith %}
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-2 justify-content-between">
+          <div class="d-flex align-items-center gap-2">
+            <div class="leg-dot" style="background:#ef4444"></div>
+            <span style="font-size:.78rem">Outstanding</span>
+          </div>
+          <span class="amount-chip text-danger">
+            ETB {{ total_outstanding|floatformat:0 }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bar: outstanding by grade -->
+  <div class="col-md-8">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart"></i>Outstanding by Grade (ETB)
+      </div>
+      <canvas id="barGrade" height="220"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Charts row 2: by category horizontal -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart-horizontal"></i>Outstanding by Fee Category (ETB)
+      </div>
+      <canvas id="barCat" height="100"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Outstanding fees table -->
+<div class="info-card card p-4">
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div class="sec-head mb-0">
+      <i class="bi bi-table me-2"></i>Outstanding Fee Details
+      <span class="text-muted fw-normal ms-1">({{ fees.paginator.count }} records)</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <span class="view-tab active" onclick="filterFee('all',this)">All</span>
+      <span class="view-tab red" onclick="filterFee('overdue',this)">
+        <i class="bi bi-exclamation-triangle me-1"></i>Overdue
+      </span>
+      <span class="view-tab" onclick="filterFee('partial',this)">Partial</span>
+      <span class="view-tab" onclick="filterFee('unpaid',this)">Unpaid</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table rep-table mb-0" id="feeTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Grade</th>
+          <th>Category</th>
+          <th>Total Fee</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Paid %</th>
+          <th>Due Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fee in fees %}
+        {% with is_overdue=fee.due_date|date:"Y-m-d" %}
+        <tr data-status="{{ fee.status }}"
+            class="{% if fee.due_date and fee.due_date < today %}overdue-row{% endif %}">
+          <td class="text-muted small">
+            {{ forloop.counter0|add:fees.start_index }}
+          </td>
+          <td>
+            <div class="fw-semibold small">
+              {{ fee.student.user.get_full_name }}
+            </div>
+            <div class="text-muted" style="font-size:.7rem">
+              {{ fee.student.student_id }}
+            </div>
+          </td>
+          <td class="small text-muted">
+            {{ fee.student.current_section.grade|default:"—" }}
+            {% if fee.student.current_section %}
+            <span class="text-muted">/</span>
+            {{ fee.student.current_section.name }}
+            {% endif %}
+          </td>
+          <td class="small">
+            {{ fee.fee_structure.fee_category.name|default:"—" }}
+          </td>
+          <td>
+            <span class="amount-chip text-dark">
+              {{ fee.total_amount|floatformat:2 }}
+            </span>
+          </td>
+          <td>
+            <span class="amount-chip text-success">
+              {{ fee.amount_paid|floatformat:2 }}
+            </span>
+          </td>
+          <td>
+            <span class="amount-chip text-danger">
+              {{ fee.balance|floatformat:2 }}
+            </span>
+          </td>
+          <td style="min-width:90px">
+            <div class="d-flex align-items-center gap-1">
+              <div class="bal-bar flex-grow-1">
+                <div class="paid-fill"
+                     style="width:{% if fee.total_amount %}{% widthratio fee.amount_paid fee.total_amount 100 %}{% else %}0{% endif %}%">
+                </div>
+              </div>
+              <span class="text-muted" style="font-size:.7rem;min-width:28px">
+                {% if fee.total_amount %}
+                {% widthratio fee.amount_paid fee.total_amount 100 %}%
+                {% else %}—{% endif %}
+              </span>
+            </div>
+          </td>
+          <td class="small
+            {% if fee.due_date and fee.due_date < today %}text-danger fw-bold
+            {% else %}text-muted{% endif %}">
+            {{ fee.due_date|date:"M d, Y"|default:"—" }}
+          </td>
+          <td>
+            {% if fee.due_date and fee.due_date < today %}
+            <span class="s-overdue">
+              <i class="bi bi-exclamation-triangle me-1"></i>Overdue
+            </span>
+            {% elif fee.status == 'partial' %}
+            <span class="s-partial">
+              <i class="bi bi-dash-circle me-1"></i>Partial
+            </span>
+            {% else %}
+            <span class="s-unpaid">
+              <i class="bi bi-x-circle me-1"></i>Unpaid
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+      <!-- Total row -->
+      <tfoot>
+        <tr style="background:#f8faff;border-top:2px solid #e2e8f0;font-weight:700">
+          <td colspan="6" class="text-end text-muted small">Total Outstanding:</td>
+          <td>
+            <span class="amount-chip text-danger" style="font-size:1rem">
+              {{ total_outstanding|floatformat:2 }}
+            </span>
+          </td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if fees.has_other_pages %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center gap-1 mb-0">
+      {% if fees.has_previous %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ fees.previous_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+      </li>
+      {% endif %}
+      {% for num in fees.paginator.page_range %}
+      <li class="page-item {% if fees.number == num %}active{% endif %}">
+        <a class="page-link rounded-3"
+           href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+      </li>
+      {% endfor %}
+      {% if fees.has_next %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ fees.next_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const PIE_LABELS  = {{ pie_labels|safe }};
+const PIE_DATA    = {{ pie_data|safe }};
+const PIE_COLORS  = {{ pie_colors|safe }};
+const GRD_LABELS  = {{ grade_labels|safe }};
+const GRD_DATA    = {{ grade_data|safe }};
+const CAT_LABELS  = {{ cat_labels|safe }};
+const CAT_DATA    = {{ cat_data|safe }};
+
+// ── Animate progress bar ──────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const fill = document.getElementById('collectFill');
+  if(fill) setTimeout(() => fill.style.width = fill.dataset.width, 200);
+});
+
+// ── Doughnut: collected vs outstanding ────────
+new Chart(document.getElementById('pieMain'), {
+  type: 'doughnut',
+  data: {
+    labels:   PIE_LABELS,
+    datasets: [{
+      data:            PIE_DATA,
+      backgroundColor: PIE_COLORS,
+      borderWidth:     3,
+      borderColor:     '#fff',
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ETB ${ctx.parsed.toLocaleString()}`
+        }
+      }
+    },
+    cutout: '65%',
+  }
+});
+
+// ── Bar: by grade ─────────────────────────────
+new Chart(document.getElementById('barGrade'), {
+  type: 'bar',
+  data: {
+    labels: GRD_LABELS,
+    datasets: [{
+      label:           'Outstanding (ETB)',
+      data:            GRD_DATA,
+      backgroundColor: GRD_DATA.map((_, i) =>
+        ['#ef4444','#f97316','#f59e0b','#1a3c72','#8b5cf6','#0ea5a0'][i % 6]
+      ),
+      borderRadius:    6,
+      borderSkipped:   false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: ctx => ` ETB ${ctx.parsed.y.toLocaleString()}` }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          font: { size: 11 },
+          callback: v => 'ETB ' + v.toLocaleString()
+        }
+      },
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+// ── Horizontal bar: by category ───────────────
+new Chart(document.getElementById('barCat'), {
+  type: 'bar',
+  data: {
+    labels: CAT_LABELS,
+    datasets: [{
+      label:           'Outstanding (ETB)',
+      data:            CAT_DATA,
+      backgroundColor: '#ef4444',
+      borderRadius:    6,
+      borderSkipped:   false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: ctx => ` ETB ${ctx.parsed.x.toLocaleString()}` }
+      }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          font: { size: 11 },
+          callback: v => 'ETB ' + v.toLocaleString()
+        }
+      },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+
+// Compute collection rate
+const collected = {{ pie_data.0|default:0 }};
+const outstanding = {{ total_outstanding|default:0 }};
+const total = collected + outstanding;
+const rateEl = document.getElementById('collRate');
+if(rateEl && total > 0) rateEl.textContent = Math.round((collected/total)*100) + '%';
+
+// ── Table filter tabs ─────────────────────────
+function filterFee(status, el){
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#feeTable tbody tr').forEach(row => {
+    if(status === 'all'){
+      row.style.display = '';
+    } else if(status === 'overdue'){
+      row.style.display = row.classList.contains('overdue-row') ? '' : 'none';
+    } else {
+      row.style.display = row.dataset.status === status ? '' : 'none';
+    }
+  });
+}
+</script>
+
+{% else %}
+<div class="info-card card">
+  <div class="empty-state">
+    <i class="bi bi-exclamation-circle fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">Select filters and click Generate</h6>
+    <p class="small text-muted mb-0">
+      Choose an academic year and optional grade/section to view outstanding fees.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

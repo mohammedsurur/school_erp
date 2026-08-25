@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ route.name }}{% endblock %}
+{% block page_title %}Route Detail{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Hero banner ── */
+  .route-hero{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .route-hero::before{content:"";position:absolute;top:-35px;right:-35px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .hero-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+
+  /* ── Capacity ring ── */
+  .cap-ring{width:80px;height:80px;border-radius:50%;border:5px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+  .cap-ring .big{font-size:1.4rem;font-weight:800;line-height:1}
+  .cap-ring .sm {font-size:.6rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em;margin-top:.15rem}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;padding:.65rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:130px;flex-shrink:0;padding-top:.1rem}
+
+  /* ── Stop timeline ── */
+  .stop-line{position:relative;padding-left:1.75rem}
+  .stop-line::before{content:"";position:absolute;left:.6rem;top:12px;bottom:12px;width:2px;background:#e2e8f0;border-radius:999px}
+  .stop-item{position:relative;margin-bottom:1rem}
+  .stop-item:last-child{margin-bottom:0}
+  .stop-dot{position:absolute;left:-1.35rem;top:.35rem;width:14px;height:14px;border-radius:50%;border:2px solid #fff;flex-shrink:0}
+  .stop-dot.first{background:#1a3c72;box-shadow:0 0 0 2px #bfdbfe}
+  .stop-dot.mid  {background:#0ea5a0;box-shadow:0 0 0 2px #99f6e4}
+  .stop-dot.last {background:#22c55e;box-shadow:0 0 0 2px #86efac}
+  .stop-order-chip{background:#f1f5f9;color:#64748b;border-radius:.4rem;padding:.12rem .5rem;font-size:.68rem;font-weight:700;font-family:monospace}
+  .stop-time{font-size:.72rem;color:#9ca3af;font-family:monospace}
+  .stop-landmark{font-size:.72rem;color:#94a3b8;font-style:italic}
+
+  /* ── Avatar ── */
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Direction badge ── */
+  .dir-both     {background:rgba(255,255,255,.2);color:#fff;border-radius:999px;padding:.2rem .75rem;font-size:.75rem;font-weight:700}
+  .dir-morning  {background:rgba(255,255,255,.2);color:#fff;border-radius:999px;padding:.2rem .75rem;font-size:.75rem;font-weight:700}
+  .dir-afternoon{background:rgba(255,255,255,.2);color:#fff;border-radius:999px;padding:.2rem .75rem;font-size:.75rem;font-weight:700}
+
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+  .fee-mono{font-family:monospace;font-weight:700;color:#15803d}
+  .plate-no{font-family:monospace;font-weight:700;font-size:.82rem;background:#f1f5f9;padding:.15rem .55rem;border-radius:.4rem}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .empty-state{text-align:center;padding:2rem;color:#9ca3af}
+</style>
+
+<!-- Back bar -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'route_list' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Routes
+  </a>
+  <div class="d-flex gap-2 ms-auto flex-wrap">
+    <a href="{% url 'stop_add' route.pk %}"
+       class="btn btn-outline-success rounded-pill px-3">
+      <i class="bi bi-pin-map me-1"></i>Add Stop
+    </a>
+    <a href="{% url 'student_transport_assign' %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-person-plus me-1"></i>Assign Student
+    </a>
+    <a href="{% url 'transport_attendance_mark' route.pk %}"
+       class="btn btn-outline-info rounded-pill px-3">
+      <i class="bi bi-check2-square me-1"></i>Attendance
+    </a>
+    <a href="{% url 'route_edit' route.pk %}"
+       class="btn btn-primary rounded-pill px-3 fw-semibold">
+      <i class="bi bi-pencil me-1"></i>Edit Route
+    </a>
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="route-hero">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3"
+       style="position:relative;z-index:1">
+
+    <div>
+      <div style="opacity:.75;font-size:.78rem;margin-bottom:.3rem">
+        <i class="bi bi-signpost-split me-1"></i>Transport Route
+      </div>
+      <h4 class="fw-bold text-white mb-1">{{ route.name }}</h4>
+      <div class="hero-meta">
+        <span>
+          <span class="dir-{{ route.direction }}">
+            {% if route.direction == 'both' %}
+            <i class="bi bi-arrow-left-right me-1"></i>Both Directions
+            {% elif route.direction == 'morning' %}
+            <i class="bi bi-sunrise me-1"></i>Morning Only
+            {% else %}
+            <i class="bi bi-sunset me-1"></i>Afternoon Only
+            {% endif %}
+          </span>
+        </span>
+        <span><i class="bi bi-geo-alt me-1"></i>{{ route.start_point }} → {{ route.end_point }}</span>
+        {% if route.departure_time %}
+        <span><i class="bi bi-sunrise me-1"></i>Dep. {{ route.departure_time|time:"H:i" }}</span>
+        {% endif %}
+        {% if route.return_time %}
+        <span><i class="bi bi-sunset me-1"></i>Ret. {{ route.return_time|time:"H:i" }}</span>
+        {% endif %}
+        <span class="fee-mono" style="color:rgba(255,255,255,.9)">
+          <i class="bi bi-cash-coin me-1"></i>
+          ETB {{ route.monthly_fee|floatformat:0 }}/mo
+        </span>
+      </div>
+    </div>
+
+    <!-- Capacity ring -->
+    {% if route.vehicle %}
+    <div class="cap-ring"
+         style="border-color:{% if route.student_count >= route.vehicle.capacity %}#fca5a5{% elif route.student_count >= route.vehicle.capacity|add:'-5' %}#fde68a{% else %}#86efac{% endif %};
+                color:{% if route.student_count >= route.vehicle.capacity %}#fca5a5{% elif route.student_count >= route.vehicle.capacity|add:'-5' %}#fde68a{% else %}#86efac{% endif %}">
+      <span class="big">{{ route.student_count }}</span>
+      <span class="sm">/ {{ route.vehicle.capacity }}</span>
+    </div>
+    {% else %}
+    <div class="cap-ring" style="border-color:rgba(255,255,255,.3);color:rgba(255,255,255,.6)">
+      <span class="big">{{ route.student_count }}</span>
+      <span class="sm">students</span>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Route info + Stops -->
+  <div class="col-lg-4">
+
+    <!-- Route info -->
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Route Info
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Status</span>
+        {% if route.is_active %}
+        <span class="badge bg-success-subtle text-success rounded-pill px-2">Active</span>
+        {% else %}
+        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2">Inactive</span>
+        {% endif %}
+      </div>
+      <div class="info-row">
+        <span class="info-label">Vehicle</span>
+        {% if route.vehicle %}
+        <div>
+          <div class="small fw-semibold">{{ route.vehicle.name }}</div>
+          <span class="plate-no">{{ route.vehicle.plate_number }}</span>
+        </div>
+        {% else %}
+        <span class="text-warning small">
+          <i class="bi bi-exclamation-circle me-1"></i>Not assigned
+        </span>
+        {% endif %}
+      </div>
+      {% if route.vehicle %}
+      <div class="info-row">
+        <span class="info-label">Driver</span>
+        <div>
+          <div class="small fw-semibold">{{ route.vehicle.driver_name|default:"—" }}</div>
+          {% if route.vehicle.driver_phone %}
+          <div class="text-muted" style="font-size:.72rem">
+            <i class="bi bi-telephone me-1"></i>{{ route.vehicle.driver_phone }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Capacity</span>
+        <span class="small">
+          {{ route.student_count }} / {{ route.vehicle.capacity }} students
+        </span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Monthly Fee</span>
+        <span class="fee-mono">ETB {{ route.monthly_fee|floatformat:2 }}</span>
+      </div>
+      {% if route.description %}
+      <div class="mt-3 pt-3 small text-muted"
+           style="border-top:1px solid #f1f5f9;line-height:1.6">
+        {{ route.description }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Stops timeline -->
+    <div class="info-card card p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-pin-map me-2 text-primary"></i>
+          Stops
+          <span class="badge rounded-pill bg-primary-subtle text-primary ms-1"
+                style="font-size:.7rem">{{ stops|length }}</span>
+        </h6>
+        <a href="{% url 'stop_add' route.pk %}"
+           class="btn btn-sm btn-outline-success rounded-pill px-2"
+           style="font-size:.72rem">
+          <i class="bi bi-plus me-1"></i>Add
+        </a>
+      </div>
+
+      {% if stops %}
+      <div class="stop-line">
+        {% for stop in stops %}
+        <div class="stop-item">
+          <div class="stop-dot
+            {% if forloop.first %}first
+            {% elif forloop.last %}last
+            {% else %}mid{% endif %}">
+          </div>
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="stop-order-chip">{{ stop.stop_order }}</span>
+              <span class="fw-semibold small">{{ stop.stop_name }}</span>
+              {% if stop.pickup_time %}
+              <span class="stop-time">{{ stop.pickup_time|time:"H:i" }}</span>
+              {% endif %}
+            </div>
+            {% if stop.landmark %}
+            <div class="stop-landmark">
+              <i class="bi bi-geo me-1"></i>{{ stop.landmark }}
+            </div>
+            {% endif %}
+            <div class="d-flex gap-1 mt-1">
+              <a href="{% url 'stop_edit' stop.pk %}"
+                 class="action-icon text-primary" title="Edit Stop"
+                 style="width:22px;height:22px;font-size:.72rem">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'stop_delete' stop.pk %}"
+                 class="action-icon text-danger" title="Delete Stop"
+                 style="width:22px;height:22px;font-size:.72rem"
+                 onclick="return confirm('Delete stop {{ stop.stop_name }}?')">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state py-3">
+        <i class="bi bi-pin-map d-block fs-2 mb-2 opacity-25"></i>
+        <p class="small mb-0">No stops added yet</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Students -->
+  <div class="col-lg-8">
+    <div class="info-card card">
+      <div class="d-flex align-items-center justify-content-between p-4 pb-2">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-people me-2 text-primary"></i>
+          Assigned Students
+          <span class="badge rounded-pill bg-primary-subtle text-primary ms-1"
+                style="font-size:.72rem">{{ students|length }}</span>
+        </h6>
+        <a href="{% url 'student_transport_assign' %}"
+           class="btn btn-sm btn-outline-primary rounded-pill px-3"
+           style="font-size:.78rem">
+          <i class="bi bi-person-plus me-1"></i>Assign
+        </a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Student</th>
+              <th>Pickup Stop</th>
+              <th>Start Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for st in students %}
+            <tr>
+              <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+              <!-- Student -->
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="avatar-xs">
+                    {{ st.student.user.first_name|first|upper }}{{ st.student.user.last_name|first|upper }}
+                  </div>
+                  <div>
+                    <div class="fw-semibold small">
+                      {{ st.student.user.get_full_name }}
+                    </div>
+                    <span class="adm-no">{{ st.student.admission_number }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Stop -->
+              <td>
+                {% if st.stop %}
+                <div class="small fw-semibold">{{ st.stop.stop_name }}</div>
+                {% if st.stop.pickup_time %}
+                <div class="text-muted" style="font-size:.7rem;font-family:monospace">
+                  {{ st.stop.pickup_time|time:"H:i" }}
+                </div>
+                {% endif %}
+                {% else %}
+                <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Start date -->
+              <td class="small text-muted">
+                {{ st.start_date|date:"M d, Y" }}
+              </td>
+
+              <!-- Actions -->
+              <td>
+                <div class="d-flex gap-1">
+                  <a href="{% url 'student_transport_edit' st.pk %}"
+                     class="action-icon text-primary" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <a href="{% url 'student_transport_remove' st.pk %}"
+                     class="action-icon text-danger" title="Remove"
+                     onclick="return confirm('Remove {{ st.student.user.get_full_name }} from this route?')">
+                    <i class="bi bi-person-dash"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5">
+                <div class="empty-state">
+                  <i class="bi bi-people d-block fs-1 mb-2 opacity-25"></i>
+                  <p class="small mb-0">No students assigned to this route yet</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

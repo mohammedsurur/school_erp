@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .example-chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
+  .example-chip{background:#f1f5f9;border-radius:999px;padding:.25rem .85rem;font-size:.78rem;font-weight:500;color:#475569;cursor:pointer;transition:all .2s;border:1.5px solid transparent}
+  .example-chip:hover{background:#e2e8f0;border-color:#1a3c72;color:#1a3c72}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-xl-5">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'fee_category_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if category %}Edit fee category{% else %}Create a new fee type{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Tip:</strong> Fee categories define the <em>type</em> of fee.
+      After creating a category, go to
+      <a href="{% url 'fee_structure_list' %}" class="fw-semibold">Fee Structures</a>
+      to set the amount per grade per year.
+      <strong>Mandatory</strong> categories are auto-assigned to all students on bulk assign.
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Name -->
+        <div class="section-head">
+          <i class="bi bi-tag me-2"></i>Category Details
+        </div>
+        <div class="mb-3">
+          <label>Category Name <span class="req">*</span></label>
+          {{ form.name }}
+          {% if form.name.errors %}
+          <small class="text-danger d-block mt-1">{{ form.name.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">Must be unique across all categories</small>
+
+          <!-- Quick-fill example names -->
+          {% if not category %}
+          <div class="example-chips mt-2">
+            <span class="text-muted small me-1">Examples:</span>
+           
+            <span class="example-chip" onclick="fillName('Tuition Fee')">Tuition Fee</span>
+            <span class="example-chip" onclick="fillName('Registration Fee')">Registration Fee</span>
+            <span class="example-chip" onclick="fillName('Library Fee')">Library Fee</span>
+            <span class="example-chip" onclick="fillName('Transport Fee')">Transport Fee</span>
+            <span class="example-chip" onclick="fillName('Exam Fee')">Exam Fee</span>
+            <span class="example-chip" onclick="fillName('Laboratory Fee')">Laboratory Fee</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Description -->
+        <div class="mb-4">
+          <label>Description</label>
+          {{ form.description }}
+          {% if form.description.errors %}
+          <small class="text-danger d-block mt-1">{{ form.description.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">Optional — short note about this fee type</small>
+        </div>
+
+        <!-- Mandatory toggle -->
+        <div class="section-head">
+          <i class="bi bi-toggle-on me-2"></i>Fee Type
+        </div>
+        <div class="mb-4 p-3 rounded-3"
+             style="background:#f8f9fb;border:1.5px solid #e2e8f0">
+          <div class="d-flex align-items-center gap-3">
+            {{ form.is_mandatory }}
+            <label class="mb-0" for="{{ form.is_mandatory.id_for_label }}">
+              This is a <strong>Mandatory</strong> fee
+              <div class="text-muted" style="font-size:.78rem;font-weight:400;margin-top:.1rem">
+                Mandatory fees are included in bulk assignments.
+                Optional fees must be assigned individually.
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'fee_category_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if category %}Save Changes{% else %}Create Category{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function fillName(name){
+  const inp = document.querySelector('[name="name"]');
+  if(inp){ inp.value = name; inp.focus(); }
+}
+</script>
+
+{% endblock %}

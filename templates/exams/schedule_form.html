@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .exam-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;position:relative;overflow:hidden}
+  .exam-banner::before{content:"";position:absolute;top:-25px;right:-25px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .exam-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700;display:inline-block;margin-bottom:.35rem}
+  .marks-preview{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1.25rem;margin-top:.5rem}
+  .marks-bar{height:8px;background:#e9ecef;border-radius:999px;overflow:hidden;margin-top:.5rem}
+  .marks-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#ef4444,#1a3c72);transition:width .4s}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'exam_detail' exam.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back to Exam
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          Schedule a subject slot within the exam period
+        </p>
+      </div>
+    </div>
+
+    <!-- Exam context banner -->
+    <div class="exam-banner">
+      <div style="position:relative;z-index:1;flex-grow:1">
+        <div class="exam-badge">
+          <i class="bi bi-file-earmark-text me-1"></i>
+          {{ exam.get_exam_type_display }}
+        </div>
+        <div class="fw-bold text-white">{{ exam.name }}</div>
+        <div class="d-flex flex-wrap gap-3 mt-1" style="opacity:.75;font-size:.78rem">
+          <span><i class="bi bi-building me-1"></i>{{ exam.grade }}</span>
+          <span>
+            <i class="bi bi-calendar me-1"></i>
+            {{ exam.start_date|date:"M d" }} – {{ exam.end_date|date:"M d, Y" }}
+          </span>
+          <span><i class="bi bi-calendar2-range me-1"></i>{{ exam.academic_year }}</span>
+        </div>
+      </div>
+      <i class="bi bi-calendar-week fs-2 opacity-25 flex-shrink-0"></i>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Note:</strong> Exam date must fall within
+      <strong>{{ exam.start_date|date:"M d" }} – {{ exam.end_date|date:"M d, Y" }}</strong>.
+      Full marks are out of <strong>100</strong> (Ethiopian system).
+      Default pass mark is <strong>50</strong>.
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Subject & Section -->
+        <div class="section-head">
+          <i class="bi bi-book me-2"></i>Subject & Section
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <label>Subject <span class="req">*</span></label>
+            {{ form.subject }}
+            {% if form.subject.errors %}
+            <small class="text-danger d-block mt-1">{{ form.subject.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">
+              Only subjects in {{ exam.grade }} are shown
+            </small>
+          </div>
+          <div class="col-12">
+            <label>Section <span class="req">*</span></label>
+            {{ form.section }}
+            {% if form.section.errors %}
+            <small class="text-danger d-block mt-1">{{ form.section.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">
+              Only sections in {{ exam.grade }} — {{ exam.academic_year }} are shown
+            </small>
+          </div>
+        </div>
+
+        <!-- Date & Time -->
+        <div class="section-head">
+          <i class="bi bi-clock me-2"></i>Date & Time
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <label>Exam Date <span class="req">*</span></label>
+            {{ form.exam_date }}
+            {% if form.exam_date.errors %}
+            <small class="text-danger d-block mt-1">{{ form.exam_date.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">
+              Must be between {{ exam.start_date|date:"M d" }}
+              and {{ exam.end_date|date:"M d, Y" }}
+            </small>
+          </div>
+          <div class="col-md-6">
+            <label>Start Time <span class="req">*</span></label>
+            {{ form.start_time }}
+            {% if form.start_time.errors %}
+            <small class="text-danger d-block mt-1">{{ form.start_time.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>End Time <span class="req">*</span></label>
+            {{ form.end_time }}
+            {% if form.end_time.errors %}
+            <small class="text-danger d-block mt-1">{{ form.end_time.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-12">
+            <label>Room / Venue</label>
+            {{ form.room }}
+            {% if form.room.errors %}
+            <small class="text-danger d-block mt-1">{{ form.room.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Marks config -->
+        <div class="section-head">
+          <i class="bi bi-bar-chart me-2"></i>Marks Configuration
+        </div>
+        <div class="row g-3 mb-2">
+          <div class="col-md-6">
+            <label>Full Marks <span class="req">*</span></label>
+            {{ form.full_marks }}
+            {% if form.full_marks.errors %}
+            <small class="text-danger d-block mt-1">{{ form.full_marks.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Max 100 (Ethiopian system)</small>
+          </div>
+          <div class="col-md-6">
+            <label>Pass Mark <span class="req">*</span></label>
+            {{ form.pass_mark }}
+            {% if form.pass_mark.errors %}
+            <small class="text-danger d-block mt-1">{{ form.pass_mark.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Default 50 out of 100</small>
+          </div>
+        </div>
+
+        <!-- Live marks preview -->
+        <div class="marks-preview mb-4">
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">
+              Pass Mark:
+              <strong class="text-danger" id="prevPass">50</strong>
+            </span>
+            <span class="text-muted">
+              Full Marks:
+              <strong class="text-primary" id="prevFull">100</strong>
+            </span>
+          </div>
+          <div class="marks-bar">
+            <div class="marks-fill" id="marksFill" style="width:50%"></div>
+          </div>
+          <div class="d-flex justify-content-between mt-1" style="font-size:.72rem">
+            <span class="text-muted">0</span>
+            <span id="passLabel" class="text-danger fw-bold">Pass → 50%</span>
+            <span class="text-muted" id="prevFullLabel">100</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'exam_detail' exam.pk %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>Add Schedule
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const passInput = document.querySelector('[name="pass_mark"]');
+const fullInput = document.querySelector('[name="full_marks"]');
+
+function updateMarksPreview(){
+  const pass = parseFloat(passInput?.value) || 50;
+  const full = parseFloat(fullInput?.value) || 100;
+  const pct  = full > 0 ? Math.min(100, Math.round(pass / full * 100)) : 0;
+
+  document.getElementById('prevPass').textContent      = pass;
+  document.getElementById('prevFull').textContent      = full;
+  document.getElementById('prevFullLabel').textContent = full;
+  document.getElementById('marksFill').style.width     = pct + '%';
+  document.getElementById('passLabel').textContent     = `Pass → ${pct}%`;
+
+  // Colour warning
+  const fill = document.getElementById('marksFill');
+  if(pct >= 100){
+    fill.style.background = '#ef4444';
+    document.getElementById('passLabel').className = 'text-danger fw-bold';
+  } else if(pct < 40){
+    fill.style.background = '#f59e0b';
+    document.getElementById('passLabel').className = 'text-warning fw-bold';
+  } else {
+    fill.style.background = 'linear-gradient(90deg,#ef4444,#1a3c72)';
+    document.getElementById('passLabel').className = 'text-danger fw-bold';
+  }
+}
+
+passInput?.addEventListener('input', updateMarksPreview);
+fullInput?.addEventListener('input', updateMarksPreview);
+document.addEventListener('DOMContentLoaded', updateMarksPreview);
+</script>
+
+{% endblock %}

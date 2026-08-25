@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Attendance — {{ route.name }}{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* ── Route banner ── */
+  .route-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .route-banner::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .banner-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1.25rem;margin-top:.5rem}
+
+  /* ── Trip selector ── */
+  .trip-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.75rem 1.5rem;text-align:center;cursor:pointer;transition:all .2s;background:#fff;flex:1}
+  .trip-btn:hover{border-color:#1a3c72}
+  .trip-btn.selected{border-color:var(--tc);background:var(--tb)}
+  .trip-btn .trip-icon{font-size:1.4rem;margin-bottom:.3rem}
+  .trip-btn .trip-name{font-size:.85rem;font-weight:700;color:#374151}
+  .trip-btn .trip-hint{font-size:.7rem;color:#9ca3af;margin-top:.1rem}
+
+  /* ── Student attendance row ── */
+  .att-row{border:none;border-radius:.875rem;padding:.9rem 1.1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:1rem;transition:all .2s}
+  .att-row.present{background:#f0fdf4;border:1.5px solid #86efac}
+  .att-row.absent {background:#fff8f8;border:1.5px solid #fecaca}
+  .att-row.default{background:#f8f9fb;border:1.5px solid #e2e8f0}
+
+  /* ── Toggle switch ── */
+  .att-toggle{position:relative;width:80px;height:32px;flex-shrink:0}
+  .att-toggle input{opacity:0;width:0;height:0;position:absolute}
+  .att-slider{position:absolute;inset:0;border-radius:999px;cursor:pointer;transition:.3s;display:flex;align-items:center;justify-content:space-between;padding:0 .5rem;font-size:.65rem;font-weight:700}
+  .att-slider.present-bg{background:#22c55e;color:#fff}
+  .att-slider.absent-bg {background:#f1f5f9;color:#9ca3af}
+  .att-slider::before{content:"";position:absolute;width:24px;height:24px;background:#fff;border-radius:50%;top:4px;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+  .att-toggle input:checked + .att-slider::before{left:calc(100% - 28px)}
+  .att-toggle input:not(:checked) + .att-slider::before{left:4px}
+
+  /* ── Avatar ── */
+  .avatar-xs{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Bulk actions ── */
+  .bulk-btn{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.78rem;font-weight:600;cursor:pointer;background:#fff;transition:all .2s}
+  .bulk-btn:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+
+  /* ── Stats strip ── */
+  .stats-strip{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:.75rem 1.25rem;display:flex;gap:2rem;font-size:.82rem}
+
+  .stop-label{font-size:.68rem;background:#eff6ff;color:#1d4ed8;border-radius:.4rem;padding:.1rem .45rem;font-weight:700}
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Back bar -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'route_detail' route.pk %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>{{ route.name }}
+  </a>
+  <a href="{% url 'transport_attendance_report' route.pk %}"
+     class="btn btn-outline-info rounded-pill px-3 ms-auto">
+    <i class="bi bi-bar-chart me-1"></i>View Report
+  </a>
+</div>
+
+<!-- Route banner -->
+<div class="route-banner">
+  <div style="position:relative;z-index:1">
+    <div style="opacity:.75;font-size:.78rem;margin-bottom:.3rem">
+      <i class="bi bi-check2-square me-1"></i>Transport Attendance
+    </div>
+    <h5 class="fw-bold text-white mb-1">{{ route.name }}</h5>
+    <div class="banner-meta">
+      <span><i class="bi bi-people me-1"></i>{{ students|length }} student{{ students|length|pluralize }}</span>
+      <span><i class="bi bi-geo-alt me-1"></i>{{ route.start_point }} → {{ route.end_point }}</span>
+      {% if route.vehicle %}
+      <span><i class="bi bi-bus-front me-1"></i>{{ route.vehicle.name }}</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if students %}
+<form method="POST" novalidate>
+  {% csrf_token %}
+
+  <!-- Date & Trip -->
+  <div class="form-card card p-4 mb-4">
+    <div class="section-head">
+      <i class="bi bi-calendar me-2"></i>Date & Trip
+    </div>
+    <div class="row g-3 mb-4">
+      <div class="col-md-5">
+        <label>Date <span style="color:#ef4444">*</span></label>
+        {{ form.date }}
+        {% if form.date.errors %}
+        <small class="text-danger d-block mt-1">{{ form.date.errors.0 }}</small>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Trip selector -->
+    <label class="mb-2">Trip <span style="color:#ef4444">*</span></label>
+    <div class="d-flex gap-3 mb-2">
+      <div class="trip-btn {% if not form.trip.value or form.trip.value == 'morning' %}selected{% endif %}"
+           style="--tc:#854d0e;--tb:#fef9c3"
+           onclick="pickTrip('morning', this)">
+        <div class="trip-icon">🌅</div>
+        <div class="trip-name">Morning</div>
+        <div class="trip-hint">
+          Home → School
+          {% if route.departure_time %}· {{ route.departure_time|time:"H:i" }}{% endif %}
+        </div>
+      </div>
+      <div class="trip-btn {% if form.trip.value == 'afternoon' %}selected{% endif %}"
+           style="--tc:#0369a1;--tb:#f0f9ff"
+           onclick="pickTrip('afternoon', this)">
+        <div class="trip-icon">🌇</div>
+        <div class="trip-name">Afternoon</div>
+        <div class="trip-hint">
+          School → Home
+          {% if route.return_time %}· {{ route.return_time|time:"H:i" }}{% endif %}
+        </div>
+      </div>
+    </div>
+    <div style="display:none">{{ form.trip }}</div>
+    {% if form.trip.errors %}
+    <small class="text-danger d-block mt-1">{{ form.trip.errors.0 }}</small>
+    {% endif %}
+  </div>
+
+  <!-- Students attendance -->
+  <div class="form-card card p-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="section-head mb-0">
+        <i class="bi bi-people me-2"></i>
+        Students
+        <span class="badge rounded-pill bg-primary-subtle text-primary ms-1"
+              style="font-size:.7rem">{{ students|length }}</span>
+      </div>
+      <!-- Bulk actions -->
+      <div class="d-flex gap-2">
+        <span class="text-muted small fw-semibold">Mark all:</span>
+        <button type="button" class="bulk-btn"
+                onclick="markAll('present')">
+          ✅ Present
+        </button>
+        <button type="button" class="bulk-btn"
+                onclick="markAll('absent')">
+          ❌ Absent
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats strip -->
+    <div class="stats-strip mb-3">
+      <span>
+        <i class="bi bi-check-circle text-success me-1"></i>
+        Present: <strong id="presentCount">{{ students|length }}</strong>
+      </span>
+      <span>
+        <i class="bi bi-x-circle text-danger me-1"></i>
+        Absent: <strong id="absentCount">0</strong>
+      </span>
+      <span class="text-muted">
+        Total: {{ students|length }}
+      </span>
+    </div>
+
+    <!-- Student rows -->
+    {% for st in students %}
+    <div class="att-row present" id="row_{{ st.pk }}">
+
+      <!-- Avatar + name -->
+      <div class="avatar-xs">
+        {{ st.student.user.first_name|first|upper }}{{ st.student.user.last_name|first|upper }}
+      </div>
+      <div class="flex-grow-1 min-w-0">
+        <div class="fw-semibold small">
+          {{ st.student.user.get_full_name }}
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+          <span class="adm-no">{{ st.student.admission_number }}</span>
+          {% if st.stop %}
+          <span class="stop-label">
+            <i class="bi bi-pin-map me-1"></i>{{ st.stop.stop_name }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Present/Absent label -->
+      <span class="small fw-bold me-2" id="statusLabel_{{ st.pk }}"
+            style="min-width:52px;text-align:right;color:#15803d">
+        Present
+      </span>
+
+      <!-- Toggle -->
+      <label class="att-toggle" title="Toggle presence">
+        <input type="checkbox"
+               id="toggle_{{ st.pk }}"
+               onchange="toggleStatus('{{ st.pk }}')"
+               checked>
+        <span class="att-slider present-bg">
+          <span>✓</span><span></span>
+        </span>
+      </label>
+
+      <!-- Hidden status input -->
+      <input type="hidden"
+             name="status_{{ st.pk }}"
+             id="statusInput_{{ st.pk }}"
+             value="{% if existing.st.pk == 'absent' %}absent{% else %}present{% endif %}">
+
+    </div>
+    {% endfor %}
+
+    <!-- Submit -->
+    <div class="d-flex gap-3 justify-content-end mt-4 pt-3"
+         style="border-top:1px solid #f1f5f9">
+      <a href="{% url 'route_detail' route.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-4">
+        Cancel
+      </a>
+      <button type="submit" class="btn btn-save text-white">
+        <i class="bi bi-check-circle me-2"></i>
+        Save Attendance
+      </button>
+    </div>
+
+  </div>
+
+</form>
+
+{% else %}
+<div class="form-card card">
+  <div class="empty-state">
+    <i class="bi bi-people fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No Students on This Route</h6>
+    <p class="small text-muted mb-3">
+      Assign students to this route before marking attendance.
+    </p>
+    <a href="{% url 'student_transport_assign' %}"
+       class="btn btn-primary rounded-pill px-4">
+      <i class="bi bi-person-plus me-2"></i>Assign Students
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<script>
+// Pre-fill from existing attendance
+const existing = {
+  {% for st_id, status in existing.items %}
+  "{{ st_id }}": "{{ status }}",
+  {% endfor %}
+};
+
+function pickTrip(val, el){
+  document.querySelectorAll('.trip-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="trip"]').value = val;
+}
+
+function toggleStatus(pk){
+  const chk   = document.getElementById(`toggle_${pk}`);
+  const row   = document.getElementById(`row_${pk}`);
+  const label = document.getElementById(`statusLabel_${pk}`);
+  const inp   = document.getElementById(`statusInput_${pk}`);
+  const slider= chk.nextElementSibling;
+
+  if(chk.checked){
+    row.className      = 'att-row present';
+    label.textContent  = 'Present';
+    label.style.color  = '#15803d';
+    slider.className   = 'att-slider present-bg';
+    inp.value          = 'present';
+  } else {
+    row.className      = 'att-row absent';
+    label.textContent  = 'Absent';
+    label.style.color  = '#dc2626';
+    slider.className   = 'att-slider absent-bg';
+    inp.value          = 'absent';
+  }
+  updateCounts();
+}
+
+function markAll(status){
+  document.querySelectorAll('[id^="toggle_"]').forEach(chk => {
+    const pk = chk.id.replace('toggle_', '');
+    chk.checked = status === 'present';
+    toggleStatus(pk);
+  });
+}
+
+function updateCounts(){
+  const present = document.querySelectorAll('.att-row.present').length;
+  const absent  = document.querySelectorAll('.att-row.absent').length;
+  document.getElementById('presentCount').textContent = present;
+  document.getElementById('absentCount').textContent  = absent;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Apply existing attendance
+  Object.entries(existing).forEach(([pk, status]) => {
+    const chk = document.getElementById(`toggle_${pk}`);
+    if(!chk) return;
+    chk.checked = status === 'present';
+    toggleStatus(pk);
+  });
+  updateCounts();
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,502 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ exam.name }}{% endblock %}
+{% block page_title %}Exam Detail{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Banner ── */
+  .exam-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .exam-banner::before{content:"";position:absolute;top:-35px;right:-35px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .banner-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+
+  /* ── Stat pills ── */
+  .stat-pill{background:rgba(255,255,255,.15);border-radius:.75rem;padding:.65rem 1.1rem;text-align:center;min-width:80px}
+  .stat-pill .num{font-size:1.3rem;font-weight:800;line-height:1}
+  .stat-pill .lbl{font-size:.62rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em;margin-top:.15rem}
+
+  /* ── Schedule card ── */
+  .schedule-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;margin-bottom:.85rem;transition:transform .15s,box-shadow .15s}
+  .schedule-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1)}
+  .schedule-header{padding:.9rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;border-bottom:1px solid #f1f5f9}
+  .schedule-body{padding:.75rem 1.25rem;display:flex;flex-wrap:wrap;align-items:center;gap:1rem}
+
+  /* ── Component bar ── */
+  .comp-bar-wrap{flex:1;min-width:180px}
+  .comp-bar{height:8px;background:#e9ecef;border-radius:999px;overflow:hidden;display:flex;gap:2px}
+  .comp-seg{height:100%;border-radius:999px;transition:width .4s}
+  .comp-label{font-size:.68rem;color:#9ca3af;margin-top:.3rem;display:flex;flex-wrap:wrap;gap:.5rem}
+  .comp-pip{font-size:.68rem;font-weight:600;padding:.1rem .45rem;border-radius:.35rem;font-family:monospace}
+
+  /* ── Status badges ── */
+  .badge-ready  {background:#dcfce7;color:#15803d;border-radius:999px;padding:.22rem .75rem;font-size:.72rem;font-weight:700}
+  .badge-partial{background:#fef9c3;color:#854d0e;border-radius:999px;padding:.22rem .75rem;font-size:.72rem;font-weight:700}
+  .badge-empty  {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.22rem .75rem;font-size:.72rem;font-weight:700}
+  .badge-results{background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:.22rem .75rem;font-size:.72rem;font-weight:700}
+
+  /* ── Action buttons ── */
+  .btn-action{border-radius:.65rem;padding:.35rem .85rem;font-size:.78rem;font-weight:600;border:1.5px solid;transition:all .15s}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+
+  /* ── Add schedule button ── */
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* ── Empty state ── */
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;padding:.6rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:120px;flex-shrink:0;padding-top:.1rem}
+
+  /* ── Progress circle ── */
+  .progress-ring{width:52px;height:52px;border-radius:50%;border:4px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+
+  .subject-icon{width:36px;height:36px;border-radius:.75rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
+</style>
+
+<!-- Banner -->
+<div class="exam-banner">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3"
+       style="position:relative;z-index:1">
+    <div>
+      <div style="opacity:.75;font-size:.78rem;margin-bottom:.25rem">
+        <i class="bi bi-file-earmark-text me-1"></i>
+        {{ exam.get_exam_type_display }}
+      </div>
+      <h4 class="fw-bold text-white mb-1">{{ exam.name }}</h4>
+      <div class="banner-meta">
+        <span><i class="bi bi-building me-1"></i>{{ exam.grade }}</span>
+        <span><i class="bi bi-calendar me-1"></i>
+          {{ exam.start_date|date:"M d" }} – {{ exam.end_date|date:"M d, Y" }}
+        </span>
+        <span><i class="bi bi-calendar2-range me-1"></i>{{ exam.academic_year }}</span>
+        {% if exam.term %}
+        <span><i class="bi bi-bookmark me-1"></i>{{ exam.term }}</span>
+        {% endif %}
+        {% if exam.is_published %}
+        <span class="badge rounded-pill"
+              style="background:rgba(255,255,255,.2);color:#fff">
+          <i class="bi bi-globe me-1"></i>Published
+        </span>
+        {% else %}
+        <span class="badge rounded-pill"
+              style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)">
+          <i class="bi bi-lock me-1"></i>Draft
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Stat pills -->
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="stat-pill">
+        <div class="num">{{ schedule_info|length }}</div>
+        <div class="lbl">Schedules</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num" id="readyCount">0</div>
+        <div class="lbl">Ready</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num" id="resultCount">0</div>
+        <div class="lbl">With Results</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Action bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'exam_list' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-arrow-left me-1"></i>All Exams
+    </a>
+    <a href="{% url 'exam_edit' exam.pk %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-pencil me-1"></i>Edit Exam
+    </a>
+    <a href="{% url 'exam_publish_toggle' exam.pk %}"
+       class="btn rounded-pill px-3
+       {% if exam.is_published %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+      {% if exam.is_published %}
+      <i class="bi bi-lock me-1"></i>Unpublish
+      {% else %}
+      <i class="bi bi-globe me-1"></i>Publish
+      {% endif %}
+    </a>
+    {% if schedule_info %}
+    <a href="{% url 'report_card_list' exam.pk %}"
+       class="btn btn-outline-info rounded-pill px-3">
+      <i class="bi bi-file-earmark-pdf me-1"></i>Report Cards
+    </a>
+    {% endif %}
+  </div>
+  <a href="{% url 'schedule_create' exam.pk %}"
+     class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Add Subject Schedule
+  </a>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Schedules -->
+  <div class="col-lg-8">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h6 class="fw-bold mb-0">
+        <i class="bi bi-calendar3 me-2 text-primary"></i>
+        Exam Schedules
+        {% if schedule_info %}
+        <span class="badge rounded-pill bg-primary-subtle text-primary ms-1"
+              style="font-size:.72rem">
+          {{ schedule_info|length }}
+        </span>
+        {% endif %}
+      </h6>
+    </div>
+
+    {% if schedule_info %}
+
+    {% for info in schedule_info %}
+    {% with sch=info.schedule %}
+    <div class="schedule-card"
+         data-ready="{% if info.comp_ready %}1{% else %}0{% endif %}"
+         data-results="{{ info.result_count }}">
+
+      <!-- Card header -->
+      <div class="schedule-header">
+        <div class="d-flex align-items-center gap-3">
+          <div class="subject-icon">
+            <i class="bi bi-journal-text"></i>
+          </div>
+          <div>
+            <div class="fw-bold">{{ sch.subject.name }}</div>
+            <div class="text-muted small">
+              <span class="badge rounded-pill bg-primary-subtle text-primary me-1"
+                    style="font-size:.7rem">
+                {{ sch.section.grade }} — {{ sch.section.name }}
+              </span>
+              <i class="bi bi-calendar me-1"></i>{{ sch.exam_date|date:"M d, Y" }}
+              &nbsp;
+              <i class="bi bi-clock me-1"></i>{{ sch.start_time|time:"H:i" }} – {{ sch.end_time|time:"H:i" }}
+              {% if sch.room %}
+              &nbsp;
+              <i class="bi bi-geo-alt me-1"></i>{{ sch.room }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Status badge -->
+        <div class="d-flex align-items-center gap-2">
+          {% if info.result_count > 0 %}
+          <span class="badge-results">
+            <i class="bi bi-check2-all me-1"></i>
+            {{ info.result_count }}/{{ info.enr_count }} Results
+          </span>
+          {% endif %}
+
+          {% if info.comp_ready %}
+          <span class="badge-ready">
+            <i class="bi bi-check-circle me-1"></i>
+            Components ✓
+          </span>
+          {% elif info.comp_total > 0 %}
+          <span class="badge-partial">
+            <i class="bi bi-hourglass-split me-1"></i>
+            {{ info.comp_total }}/100
+          </span>
+          {% else %}
+          <span class="badge-empty">
+            <i class="bi bi-exclamation-circle me-1"></i>
+            No Components
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Card body: component bar + actions -->
+      <div class="schedule-body">
+
+        <!-- Component progress bar -->
+        <div class="comp-bar-wrap">
+          {% if info.comp_total > 0 %}
+          <div class="comp-bar">
+            {% for comp in sch.components.all %}
+            <div class="comp-seg"
+                 style="flex:{{ comp.max_marks }};
+                 background:
+                 {% if comp.component_type == 'quiz' %}#3b82f6
+                 {% elif comp.component_type == 'mid_term' %}#8b5cf6
+                 {% elif comp.component_type == 'final' %}#0ea5a0
+                 {% elif comp.component_type == 'assignment' %}#f59e0b
+                 {% else %}#22c55e{% endif %}"
+                 title="{{ comp.get_component_type_display }}: {{ comp.max_marks }} marks">
+            </div>
+            {% endfor %}
+            {% if info.comp_total < 100 %}
+            <div class="comp-seg"
+                 style="flex:{{ 100|add:'-'|add:info.comp_total }};background:#e9ecef">
+            </div>
+            {% endif %}
+          </div>
+          <div class="comp-label">
+            {% for comp in sch.components.all %}
+            <span class="comp-pip"
+                  style="
+                  background:
+                  {% if comp.component_type == 'quiz' %}#eff6ff;color:#1d4ed8
+                  {% elif comp.component_type == 'mid_term' %}#f5f3ff;color:#6d28d9
+                  {% elif comp.component_type == 'final' %}#f0fdf4;color:#15803d
+                  {% elif comp.component_type == 'assignment' %}#fff7ed;color:#c2410c
+                  {% else %}#f0fdf4;color:#15803d{% endif %}">
+              {{ comp.get_component_type_display }}: {{ comp.max_marks }}
+            </span>
+            {% endfor %}
+            <span class="ms-1 fw-semibold
+              {% if info.comp_ready %}text-success{% else %}text-warning{% endif %}">
+              Total: {{ info.comp_total }}/100
+            </span>
+          </div>
+          {% else %}
+          <div class="text-muted small">
+            <i class="bi bi-exclamation-circle me-1 text-warning"></i>
+            No components defined yet — add Quiz, Mid-Term, Final, etc.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Action buttons -->
+        <div class="d-flex gap-2 flex-wrap flex-shrink-0">
+
+          <!-- Components -->
+          <a href="{% url 'component_list' sch.pk %}"
+             class="btn btn-action btn-outline-primary"
+             title="Manage Components">
+            <i class="bi bi-list-check me-1"></i>
+            Components
+          </a>
+
+          <!-- Enter Results (only if components ready) -->
+          {% if info.comp_ready %}
+          <a href="{% url 'result_entry' sch.pk %}"
+             class="btn btn-action btn-outline-success"
+             title="Enter Results">
+            <i class="bi bi-pencil-square me-1"></i>
+            {% if info.result_count > 0 %}Edit{% else %}Enter{% endif %} Results
+          </a>
+          {% else %}
+          <button class="btn btn-action btn-outline-secondary"
+                  disabled title="Set up components first">
+            <i class="bi bi-pencil-square me-1"></i>
+            Enter Results
+          </button>
+          {% endif %}
+
+          <!-- View Results -->
+          {% if info.result_count > 0 %}
+          <a href="{% url 'result_list' sch.pk %}"
+             class="btn btn-action btn-outline-info"
+             title="View Results">
+            <i class="bi bi-bar-chart me-1"></i>
+            Results
+          </a>
+          {% endif %}
+
+          <!-- Delete -->
+          <a href="{% url 'schedule_delete' sch.pk %}"
+             class="action-icon text-danger ms-1"
+             title="Delete Schedule"
+             onclick="return confirm('Delete {{ sch.subject.name }} schedule?')">
+            <i class="bi bi-trash"></i>
+          </a>
+
+        </div>
+      </div>
+
+    </div>
+    {% endwith %}
+    {% endfor %}
+
+    {% else %}
+
+    <!-- Empty schedules -->
+    <div class="info-card card">
+      <div class="empty-state">
+        <i class="bi bi-calendar3 fs-1 d-block mb-3 opacity-25"></i>
+        <h6 class="fw-bold text-dark">No Subjects Scheduled Yet</h6>
+        <p class="small text-muted mb-3">
+          Add a subject schedule for each subject
+          that will be examined in <strong>{{ exam.name }}</strong>.
+        </p>
+        <a href="{% url 'schedule_create' exam.pk %}"
+           class="btn btn-primary rounded-pill px-4">
+          <i class="bi bi-plus-circle me-2"></i>Add First Schedule
+        </a>
+      </div>
+    </div>
+
+    {% endif %}
+  </div>
+
+  <!-- RIGHT: Exam info sidebar -->
+  <div class="col-lg-4">
+
+    <!-- Exam info -->
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Exam Info
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Name</span>
+        <span class="fw-semibold small">{{ exam.name }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Type</span>
+        <span class="small">{{ exam.get_exam_type_display }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Grade</span>
+        <span class="small">{{ exam.grade }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Academic Year</span>
+        <span class="small">{{ exam.academic_year }}</span>
+      </div>
+      {% if exam.term %}
+      <div class="info-row">
+        <span class="info-label">Term</span>
+        <span class="small">{{ exam.term }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Start Date</span>
+        <span class="small">{{ exam.start_date|date:"M d, Y" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">End Date</span>
+        <span class="small">{{ exam.end_date|date:"M d, Y" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Status</span>
+        {% if exam.is_published %}
+        <span class="badge rounded-pill bg-success-subtle text-success px-2">
+          Published
+        </span>
+        {% else %}
+        <span class="badge rounded-pill bg-secondary-subtle text-secondary px-2">
+          Draft
+        </span>
+        {% endif %}
+      </div>
+      {% if exam.description %}
+      <div class="info-row">
+        <span class="info-label">Notes</span>
+        <span class="small text-muted">{{ exam.description }}</span>
+      </div>
+      {% endif %}
+      {% if exam.created_by %}
+      <div class="info-row">
+        <span class="info-label">Created By</span>
+        <span class="small text-muted">{{ exam.created_by.get_full_name }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Ethiopian system reminder -->
+    <div class="info-card card p-4 mb-4"
+         style="background:#eff6ff;border:1px solid #bfdbfe">
+      <h6 class="fw-bold mb-3" style="color:#1e40af">
+        <i class="bi bi-info-circle me-2"></i>Ethiopian Grading
+      </h6>
+      <div style="font-size:.78rem;color:#1e40af;line-height:1.7">
+        <div class="mb-2">
+          <strong>Components must sum to 100:</strong>
+        </div>
+        <div class="d-flex flex-column gap-1">
+          <span>📝 Quiz: <strong>5–10</strong></span>
+          <span>📖 Mid-Term: <strong>20–30</strong></span>
+          <span>📋 Final Exam: <strong>40–50</strong></span>
+          <span>📁 Assignment: <strong>10–20</strong></span>
+          <span>✅ Attendance+Book: <strong>5–10</strong></span>
+        </div>
+        <hr style="border-color:#bfdbfe;margin:.75rem 0">
+        <div><strong>Pass:</strong> total ≥ 50/100</div>
+        <div class="mt-1">
+          <strong>Promoted:</strong> avg ≥ 50
+          <em>and</em> failed ≤ 2 subjects
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick links -->
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-lightning me-2 text-warning"></i>Quick Links
+      </h6>
+      <div class="d-flex flex-column gap-2">
+        <a href="{% url 'schedule_create' exam.pk %}"
+           class="btn btn-outline-primary rounded-3 text-start px-3"
+           style="font-size:.82rem">
+          <i class="bi bi-plus-circle me-2"></i>Add Subject Schedule
+        </a>
+        {% if schedule_info %}
+        <a href="{% url 'report_card_list' exam.pk %}"
+           class="btn btn-outline-success rounded-3 text-start px-3"
+           style="font-size:.82rem">
+          <i class="bi bi-file-earmark-pdf me-2"></i>View Report Cards
+        </a>
+        {% endif %}
+        <a href="{% url 'exam_edit' exam.pk %}"
+           class="btn btn-outline-secondary rounded-3 text-start px-3"
+           style="font-size:.82rem">
+          <i class="bi bi-pencil me-2"></i>Edit Exam Details
+        </a>
+        <a href="{% url 'exam_publish_toggle' exam.pk %}"
+           class="btn rounded-3 text-start px-3
+           {% if exam.is_published %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+           style="font-size:.82rem">
+          {% if exam.is_published %}
+          <i class="bi bi-lock me-2"></i>Unpublish Exam
+          {% else %}
+          <i class="bi bi-globe me-2"></i>Publish Results
+          {% endif %}
+        </a>
+        <a href="{% url 'exam_delete' exam.pk %}"
+           class="btn btn-outline-danger rounded-3 text-start px-3"
+           style="font-size:.82rem"
+           onclick="return confirm('Delete {{ exam.name }}?')">
+          <i class="bi bi-trash me-2"></i>Delete Exam
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const cards   = document.querySelectorAll('.schedule-card');
+  let ready = 0, results = 0;
+  cards.forEach(c => {
+    if(c.dataset.ready === '1')    ready++;
+    if(parseInt(c.dataset.results) > 0) results++;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('readyCount',  ready);
+  set('resultCount', results);
+});
+</script>
+
+{% endblock %}

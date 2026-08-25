@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Report{% endblock %}
+{% block page_title %}Attendance Report{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.85rem;color:#374151;margin-bottom:.35rem;display:block}
+  .btn-run{border-radius:.875rem;padding:.75rem 2rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* Summary cards */
+  .summary-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem;text-align:center}
+  .summary-num{font-size:1.8rem;font-weight:800;line-height:1;margin-bottom:.25rem}
+
+  /* Table */
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.8rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* Avatar */
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* Progress bar */
+  .pct-bar{height:6px;background:#e9ecef;border-radius:999px;overflow:hidden;margin-top:.3rem;min-width:80px}
+  .pct-fill{height:100%;border-radius:999px;transition:width .4s}
+
+  /* At-risk badge */
+  .at-risk-row{background:#fff8f8!important}
+  .at-risk-badge{background:#fee2e2;color:#dc2626;border-radius:999px;padding:.15rem .6rem;font-size:.65rem;font-weight:700}
+
+  /* Status mini badges */
+  .mini-badge{border-radius:.4rem;padding:.15rem .5rem;font-size:.72rem;font-weight:600;font-family:monospace}
+  .mb-present{background:#dcfce7;color:#15803d}
+  .mb-absent {background:#fee2e2;color:#dc2626}
+  .mb-late   {background:#fef3c7;color:#d97706}
+  .mb-excused{background:#e0f2fe;color:#0369a1}
+
+  /* Empty / no-results */
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+
+  /* Print */
+  @media print{
+    .topbar,.sidebar,.sidebar-overlay,.form-card,.btn-run{display:none!important}
+    .main-content{margin-left:0!important}
+  }
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Attendance Report</h5>
+    <p class="text-muted small mb-0">
+      Filter by section, student or date range
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if records %}
+    <button onclick="window.print()"
+            class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-printer me-1"></i>Print
+    </button>
+    {% endif %}
+    <a href="{% url 'attendance_select' %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-check2-square me-1"></i>Mark Attendance
+    </a>
+  </div>
+</div>
+
+<!-- Filter form -->
+<div class="form-card card p-4 mb-4">
+  <form method="get" novalidate>
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger rounded-3 mb-3">
+      {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+      <!-- Section -->
+      <div class="col-md-4">
+        <label><i class="bi bi-building me-1 text-primary"></i>Section</label>
+        {{ form.section }}
+        {% if form.section.errors %}
+        <small class="text-danger">{{ form.section.errors.0 }}</small>
+        {% endif %}
+      </div>
+
+      <!-- Student -->
+      <div class="col-md-4">
+        <label><i class="bi bi-person me-1 text-success"></i>Student</label>
+        {{ form.student }}
+        {% if form.student.errors %}
+        <small class="text-danger">{{ form.student.errors.0 }}</small>
+        {% endif %}
+      </div>
+
+      <!-- Status -->
+      <div class="col-md-4">
+        <label><i class="bi bi-toggle-on me-1 text-warning"></i>Status</label>
+        {{ form.status }}
+        {% if form.status.errors %}
+        <small class="text-danger">{{ form.status.errors.0 }}</small>
+        {% endif %}
+      </div>
+
+      <!-- Date from -->
+      <div class="col-md-4">
+        <label><i class="bi bi-calendar me-1 text-primary"></i>Date From</label>
+        {{ form.date_from }}
+        {% if form.date_from.errors %}
+        <small class="text-danger">{{ form.date_from.errors.0 }}</small>
+        {% endif %}
+      </div>
+
+      <!-- Date to -->
+      <div class="col-md-4">
+        <label><i class="bi bi-calendar-check me-1 text-success"></i>Date To</label>
+        {{ form.date_to }}
+        {% if form.date_to.errors %}
+        <small class="text-danger">{{ form.date_to.errors.0 }}</small>
+        {% endif %}
+        <small class="text-muted">Max 90-day range</small>
+      </div>
+
+      <!-- Submit -->
+      <div class="col-md-4 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-run text-white flex-grow-1">
+          <i class="bi bi-bar-chart me-2"></i>Run Report
+        </button>
+        {% if request.GET %}
+        <a href="{% url 'attendance_report' %}"
+           class="btn btn-outline-secondary rounded-pill px-3">
+          <i class="bi bi-x"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+  </form>
+</div>
+
+{% if records is not None %}
+{% if summary %}
+
+<!-- Summary stat cards -->
+{% with total_present=0 total_absent=0 total_late=0 total_excused=0 %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-num text-dark">{{ summary|length }}</div>
+      <div class="text-muted small">Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-num" style="color:#22c55e">
+        {{ records|length }}
+      </div>
+      <div class="text-muted small">Total Records</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-num text-danger" id="totalAbsent">—</div>
+      <div class="text-muted small">Total Absences</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="summary-card">
+      <div class="summary-num text-warning" id="atRiskCount">—</div>
+      <div class="text-muted small">At Risk (&lt;75%)</div>
+    </div>
+  </div>
+</div>
+{% endwith %}
+
+<!-- Summary table -->
+<div class="table-card card mb-4">
+  <div class="table-responsive">
+    <table class="table mb-0" id="summaryTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Section</th>
+          <th class="text-center">Total</th>
+          <th class="text-center">Present</th>
+          <th class="text-center">Absent</th>
+          <th class="text-center">Late</th>
+          <th class="text-center">Excused</th>
+          <th>Attendance %</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in summary %}
+        <tr class="{% if row.at_risk %}at-risk-row{% endif %}"
+            data-absent="{{ row.absent }}"
+            data-at-risk="{{ row.at_risk|yesno:'1,0' }}">
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Student -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ row.student.user.first_name|first|upper }}{{ row.student.user.last_name|first|upper }}
+              </div>
+              <a href="{% url 'student_detail' row.student.pk %}"
+                 class="fw-semibold small text-decoration-none text-dark">
+                {{ row.student.user.get_full_name }}
+              </a>
+            </div>
+          </td>
+
+          <!-- Section -->
+          <td>
+            {% with enr=row.student.enrollments.all|first %}
+            {% if enr %}
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-2"
+                  style="font-size:.72rem">
+              {{ enr.section.grade }} — {{ enr.section.name }}
+            </span>
+            {% else %}—{% endif %}
+            {% endwith %}
+          </td>
+
+          <!-- Counts -->
+          <td class="text-center fw-bold">{{ row.total }}</td>
+          <td class="text-center">
+            <span class="mini-badge mb-present">{{ row.present }}</span>
+          </td>
+          <td class="text-center">
+            <span class="mini-badge mb-absent">{{ row.absent }}</span>
+          </td>
+          <td class="text-center">
+            <span class="mini-badge mb-late">{{ row.late }}</span>
+          </td>
+          <td class="text-center">
+            <span class="mini-badge mb-excused">{{ row.excused }}</span>
+          </td>
+
+          <!-- Percentage bar -->
+          <td style="min-width:130px">
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold small
+                {% if row.percentage >= 90 %}text-success
+                {% elif row.percentage >= 75 %}text-warning
+                {% else %}text-danger{% endif %}">
+                {{ row.percentage }}%
+              </span>
+              <div class="pct-bar flex-grow-1">
+                <div class="pct-fill"
+                     style="width:{{ row.percentage }}%;
+                     background:{% if row.percentage >= 90 %}#22c55e{% elif row.percentage >= 75 %}#f59e0b{% else %}#ef4444{% endif %}">
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- At-risk flag -->
+          <td>
+            {% if row.at_risk %}
+            <span class="at-risk-badge">
+              <i class="bi bi-exclamation-triangle me-1"></i>At Risk
+            </span>
+            {% else %}
+            <span class="badge rounded-pill bg-success-subtle text-success px-2"
+                  style="font-size:.7rem">
+              <i class="bi bi-check-circle me-1"></i>Good
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+
+<!-- No results -->
+<div class="table-card card">
+  <div class="empty-state">
+    <i class="bi bi-bar-chart fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No records found</h6>
+    <p class="small mb-0 text-muted">
+      Try adjusting the filters — check that attendance has been
+      marked for the selected date range.
+    </p>
+  </div>
+</div>
+
+{% endif %}
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows      = document.querySelectorAll('#summaryTable tbody tr');
+  let totalAbsent = 0;
+  let atRisk      = 0;
+
+  rows.forEach(row => {
+    totalAbsent += parseInt(row.dataset.absent  || 0);
+    atRisk      += parseInt(row.dataset.atRisk  || 0);
+  });
+
+  const absentEl  = document.getElementById('totalAbsent');
+  const atRiskEl  = document.getElementById('atRiskCount');
+  if(absentEl)  absentEl.textContent  = totalAbsent || '0';
+  if(atRiskEl)  atRiskEl.textContent  = atRisk      || '0';
+});
+</script>
+
+{% endblock %}

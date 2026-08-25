@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Live avatar preview ── */
+  .avatar-preview{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:1.5rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .3s}
+  .name-preview{font-weight:700;font-size:1rem;color:#1e293b;margin-left:.1rem}
+  .name-sub{font-size:.78rem;color:#9ca3af;margin-top:.1rem}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-xl-5">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'library_author_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if author %}Update author details
+          {% else %}Add a new author to the system{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div class="d-flex align-items-center gap-3 p-4 mb-4 rounded-3"
+         style="background:#f8f9fb;border:1.5px solid #e2e8f0">
+      <div class="avatar-preview" id="avatarPreview">
+        {% if author %}
+        {{ author.first_name|first|upper }}{{ author.last_name|first|upper }}
+        {% else %}?{% endif %}
+      </div>
+      <div>
+        <div class="name-preview" id="namePreview">
+          {% if author %}{{ author.full_name }}{% else %}Author Name{% endif %}
+        </div>
+        <div class="name-sub" id="nameSubPreview">
+          {% if author %}{{ author.last_name }}, {{ author.first_name }}
+          {% else %}Last, First format{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Name fields -->
+        <div class="section-head">
+          <i class="bi bi-person me-2"></i>Author Name
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>First Name <span class="req">*</span></label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.first_name.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Last Name <span class="req">*</span></label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.last_name.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Bio -->
+        <div class="section-head">
+          <i class="bi bi-file-text me-2"></i>Biography
+        </div>
+        <div class="mb-4">
+          <label>Short Bio <span class="text-muted fw-normal">(optional)</span></label>
+          {{ form.bio }}
+          {% if form.bio.errors %}
+          <small class="text-danger d-block mt-1">{{ form.bio.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            A brief description of the author — nationality, field, notable works, etc.
+          </small>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'library_author_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if author %}Save Changes{% else %}Add Author{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const firstInp = document.querySelector('[name="first_name"]');
+const lastInp  = document.querySelector('[name="last_name"]');
+const avatar   = document.getElementById('avatarPreview');
+const namePrev = document.getElementById('namePreview');
+const nameSub  = document.getElementById('nameSubPreview');
+
+function updatePreview(){
+  const first = firstInp?.value.trim() || '';
+  const last  = lastInp?.value.trim()  || '';
+  const fi    = first ? first[0].toUpperCase() : '';
+  const li    = last  ? last[0].toUpperCase()  : '';
+  avatar.textContent  = fi || li ? (fi + li) : '?';
+  namePrev.textContent= (first || last)
+    ? (first + (first && last ? ' ' : '') + last)
+    : 'Author Name';
+  nameSub.textContent = (first || last)
+    ? (last + (first && last ? ', ' : '') + first)
+    : 'Last, First format';
+}
+
+firstInp?.addEventListener('input', updatePreview);
+lastInp?.addEventListener('input',  updatePreview);
+</script>
+
+{% endblock %}

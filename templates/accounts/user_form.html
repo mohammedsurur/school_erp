@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .required-mark{color:#ef4444}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .input-wrapper{position:relative}
+  .toggle-pw{position:absolute;right:.85rem;top:50%;transform:translateY(-50%);border:none;background:transparent;color:#9ca3af;cursor:pointer;padding:0}
+  .toggle-pw:hover{color:#1a3c72}
+  .user-avatar{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:#fff;flex-shrink:0}
+  .role-info{background:#f8f9fb;border-radius:.875rem;padding:1rem 1.25rem;font-size:.82rem}
+  .role-info li{margin-bottom:.25rem;color:#6b7280}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9 col-xl-8">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'user_list' %}" class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">{% if user_obj %}Edit existing user information{% else %}Fill in details to create a new user account{% endif %}</p>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+
+      {% if user_obj %}
+      <!-- Edit mode header -->
+      <div class="d-flex align-items-center gap-3 mb-4 pb-4" style="border-bottom:1px solid #f1f5f9">
+        {% if user_obj.profile_image %}
+        <img src="{{ user_obj.profile_image.url }}" class="user-avatar" style="object-fit:cover" alt="">
+        {% else %}
+        <div class="user-avatar">{{ user_obj.first_name|first|upper }}{{ user_obj.last_name|first|upper }}</div>
+        {% endif %}
+        <div>
+          <div class="fw-bold">{{ user_obj.get_full_name|default:user_obj.username }}</div>
+          <div class="text-muted small">@{{ user_obj.username }}</div>
+          <span class="badge rounded-pill bg-primary-subtle text-primary mt-1 px-3">{{ user_obj.get_role_display }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <form method="POST" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <!-- Non-field errors -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Account Info -->
+        <div class="section-head"><i class="bi bi-person-badge me-2"></i>Account Information</div>
+        <div class="row g-3 mb-4">
+          {% if not user_obj %}
+          <div class="col-md-6">
+            <label>Username <span class="required-mark">*</span></label>
+            {{ form.username }}
+            {% if form.username.errors %}<small class="text-danger">{{ form.username.errors.0 }}</small>{% endif %}
+          </div>
+          {% endif %}
+          <div class="col-md-{% if user_obj %}12{% else %}6{% endif %}">
+            <label>Role <span class="required-mark">*</span></label>
+            {{ form.role }}
+            {% if form.role.errors %}<small class="text-danger">{{ form.role.errors.0 }}</small>{% endif %}
+          </div>
+        </div>
+
+        <!-- Role info box -->
+        <div class="role-info mb-4" id="roleInfo" style="display:none">
+          <strong class="small d-block mb-1 text-dark">Role Access:</strong>
+          <ul class="mb-0 ps-3" id="roleInfoList"></ul>
+        </div>
+
+        <!-- Personal Info -->
+        <div class="section-head"><i class="bi bi-person me-2"></i>Personal Information</div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>First Name <span class="required-mark">*</span></label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<small class="text-danger">{{ form.first_name.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Last Name <span class="required-mark">*</span></label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<small class="text-danger">{{ form.last_name.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Email Address</label>
+            {{ form.email }}
+            {% if form.email.errors %}<small class="text-danger">{{ form.email.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Phone Number</label>
+            {{ form.phone }}
+            {% if form.phone.errors %}<small class="text-danger">{{ form.phone.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Gender</label>
+            {{ form.gender }}
+          </div>
+          <div class="col-12">
+            <label>Address</label>
+            {{ form.address }}
+          </div>
+        </div>
+
+        <!-- Profile Picture -->
+        <div class="section-head"><i class="bi bi-image me-2"></i>Profile Picture</div>
+        <div class="mb-4">
+          {{ form.profile_image }}
+          <small class="text-muted">Optional — JPG, PNG — max 5MB</small>
+        </div>
+
+        <!-- Password (create only) -->
+        {% if not user_obj %}
+        <div class="section-head"><i class="bi bi-shield-lock me-2"></i>Password</div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Password <span class="required-mark">*</span></label>
+            <div class="input-wrapper">
+              {{ form.password1 }}
+              <button type="button" class="toggle-pw" onclick="togglePw(this)"><i class="bi bi-eye"></i></button>
+            </div>
+            {% if form.password1.errors %}<small class="text-danger">{{ form.password1.errors.0 }}</small>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Confirm Password <span class="required-mark">*</span></label>
+            <div class="input-wrapper">
+              {{ form.password2 }}
+              <button type="button" class="toggle-pw" onclick="togglePw(this)"><i class="bi bi-eye"></i></button>
+            </div>
+            {% if form.password2.errors %}<small class="text-danger">{{ form.password2.errors.0 }}</small>{% endif %}
+            <small class="text-danger d-none" id="pwMismatch">Passwords do not match</small>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end pt-3" style="border-top:1px solid #f1f5f9">
+          <a href="{% url 'user_list' %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if user_obj %}Save Changes{% else %}Create User{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePw(btn){
+  const inp  = btn.closest('.input-wrapper').querySelector('input');
+  const icon = btn.querySelector('i');
+  inp.type   = inp.type === 'password' ? 'text' : 'password';
+  icon.classList.toggle('bi-eye');
+  icon.classList.toggle('bi-eye-slash');
+}
+
+// Password match check
+const p1 = document.querySelector('[name="password1"]');
+const p2 = document.querySelector('[name="password2"]');
+p2?.addEventListener('input', () => {
+  document.getElementById('pwMismatch').classList.toggle('d-none', p2.value === p1.value || !p2.value);
+});
+
+// Role info box
+const roleDescriptions = {
+  'super_admin':  ['Full access to all modules','Can manage all users','System configuration'],
+  'principal':    ['Access to all academic modules','Approve reports and exams','View all dashboards'],
+  'admin_staff':  ['Manage students and staff','Handle admissions','Fee management'],
+  'teacher':      ['Mark attendance','Enter exam marks','View assigned classes'],
+  'student':      ['View timetable and results','Check attendance','Access library'],
+  'parent':       ['View child progress','Check fees','Receive notices'],
+  'librarian':    ['Manage books and issues','View member records'],
+  'accountant':   ['Manage fees and payments','Generate financial reports'],
+};
+
+const roleSelect = document.querySelector('[name="role"]');
+roleSelect?.addEventListener('change', function(){
+  const desc  = roleDescriptions[this.value] || [];
+  const box   = document.getElementById('roleInfo');
+  const list  = document.getElementById('roleInfoList');
+  if(desc.length){
+    list.innerHTML = desc.map(d => `<li>${d}</li>`).join('');
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+  }
+});
+// Trigger on page load for edit mode
+roleSelect?.dispatchEvent(new Event('change'));
+</script>
+
+{% endblock %}

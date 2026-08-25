@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Reservation banner ── */
+  .res-banner{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:1rem;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:.75rem;font-size:.85rem;color:#1e40af}
+
+  /* ── Borrower tabs ── */
+  .borrow-tab{border:1.5px solid #e2e8f0;border-radius:.75rem;padding:.65rem 1.25rem;cursor:pointer;font-weight:600;font-size:.85rem;transition:all .2s;display:flex;align-items:center;gap:.5rem}
+  .borrow-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .borrow-tab:not(.active){color:#374151}
+  .borrow-tab:not(.active):hover{background:#f8faff;border-color:#1a3c72}
+
+  /* ── Due date pill ── */
+  .due-pill{background:#f0fdf4;border:1.5px solid #86efac;border-radius:.75rem;padding:.85rem 1.1rem;font-size:.82rem;color:#15803d;display:flex;align-items:center;gap:.5rem}
+  .due-pill.warn{background:#fff7ed;border-color:#fed7aa;color:#92400e}
+
+  /* ── Summary card ── */
+  .summary-card{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1rem 1.25rem}
+  .sum-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f1f5f9;font-size:.83rem}
+  .sum-row:last-child{border-bottom:none}
+  .sum-label{color:#9ca3af;font-weight:500}
+  .sum-val{font-weight:600;color:#1e293b}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'issuance_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">Issue a book to a student or staff member</p>
+      </div>
+    </div>
+
+    <!-- Reservation context -->
+    {% if reservation %}
+    <div class="res-banner">
+      <i class="bi bi-bookmark-fill fs-5"></i>
+      <div>
+        <strong>Fulfilling Reservation</strong> —
+        {{ reservation.student.user.get_full_name }}
+        reserved <strong>{{ reservation.book.title }}</strong>
+        on {{ reservation.reserved_date|date:"M d, Y" }}.
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Borrower type -->
+        <div class="section-head">
+          <i class="bi bi-person me-2"></i>Borrower
+        </div>
+        <div class="d-flex gap-2 mb-3" id="borrowerTabs">
+          <div class="borrow-tab {% if not form.borrower_type.value or form.borrower_type.value == 'student' %}active{% endif %}"
+               onclick="setBorrower('student')">
+            <i class="bi bi-mortarboard"></i> Student
+          </div>
+          <div class="borrow-tab {% if form.borrower_type.value == 'staff' %}active{% endif %}"
+               onclick="setBorrower('staff')">
+            <i class="bi bi-person-badge"></i> Staff
+          </div>
+        </div>
+
+        <!-- Hidden borrower_type field -->
+        <div style="display:none">{{ form.borrower_type }}</div>
+
+        <!-- Student select -->
+        <div id="studentField" class="mb-3"
+             style="display:{% if form.borrower_type.value == 'staff' %}none{% else %}block{% endif %}">
+          <label>Student <span class="req">*</span></label>
+          {{ form.student }}
+          {% if form.student.errors %}
+          <small class="text-danger d-block mt-1">{{ form.student.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Staff select -->
+        <div id="staffField" class="mb-4"
+             style="display:{% if form.borrower_type.value == 'staff' %}block{% else %}none{% endif %}">
+          <label>Staff Member <span class="req">*</span></label>
+          {{ form.staff }}
+          {% if form.staff.errors %}
+          <small class="text-danger d-block mt-1">{{ form.staff.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Book copy -->
+        <div class="section-head">
+          <i class="bi bi-collection me-2"></i>Book Copy
+        </div>
+        <div class="mb-4">
+          <label>Select Copy <span class="req">*</span></label>
+          {{ form.book_copy }}
+          {% if form.book_copy.errors %}
+          <small class="text-danger d-block mt-1">{{ form.book_copy.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            Only available copies are listed
+          </small>
+        </div>
+
+        <!-- Dates -->
+        <div class="section-head">
+          <i class="bi bi-calendar me-2"></i>Loan Period
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label>Issue Date <span class="req">*</span></label>
+            {{ form.issued_date }}
+            {% if form.issued_date.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.issued_date.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Due Date <span class="req">*</span></label>
+            {{ form.due_date }}
+            {% if form.due_date.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.due_date.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Quick due date buttons -->
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          <span class="text-muted small fw-semibold">Quick set:</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2"
+                  style="font-size:.75rem" onclick="setDueDate(7)">
+            1 week
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2"
+                  style="font-size:.75rem" onclick="setDueDate(14)">
+            2 weeks ★
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2"
+                  style="font-size:.75rem" onclick="setDueDate(21)">
+            3 weeks
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2"
+                  style="font-size:.75rem" onclick="setDueDate(30)">
+            30 days
+          </button>
+        </div>
+
+        <!-- Due date status -->
+        <div class="due-pill mb-4" id="duePill">
+          <i class="bi bi-calendar-check"></i>
+          <span id="duePillText">Set due date above</span>
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-4">
+          <label>Notes</label>
+          {{ form.notes }}
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-card mb-4" id="issueSummary">
+          <div class="fw-semibold small mb-2">
+            <i class="bi bi-receipt me-2 text-primary"></i>Issuance Summary
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Book</span>
+            <span class="sum-val" id="sumBook">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Borrower Type</span>
+            <span class="sum-val" id="sumType">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Issue Date</span>
+            <span class="sum-val" id="sumIssued">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Due Date</span>
+            <span class="sum-val" id="sumDue">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="sum-label">Loan Days</span>
+            <span class="sum-val" id="sumDays">—</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'issuance_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-box-arrow-right me-2"></i>Issue Book
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Borrower type toggle ─────────────────────
+function setBorrower(type){
+  document.querySelector('[name="borrower_type"]').value = type;
+  document.querySelectorAll('.borrow-tab').forEach(t => t.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('studentField').style.display = type === 'student' ? 'block' : 'none';
+  document.getElementById('staffField').style.display   = type === 'staff'   ? 'block' : 'none';
+  updateSummary();
+}
+
+// ── Quick due date ───────────────────────────
+function setDueDate(days){
+  const issued = document.querySelector('[name="issued_date"]').value;
+  const base   = issued ? new Date(issued) : new Date();
+  base.setDate(base.getDate() + days);
+  document.querySelector('[name="due_date"]').value =
+    base.toISOString().slice(0,10);
+  updateDuePill();
+  updateSummary();
+}
+
+// ── Due date pill ────────────────────────────
+function updateDuePill(){
+  const issued = document.querySelector('[name="issued_date"]').value;
+  const due    = document.querySelector('[name="due_date"]').value;
+  const pill   = document.getElementById('duePill');
+  const text   = document.getElementById('duePillText');
+  if(!issued || !due){ return; }
+  const days = Math.round((new Date(due) - new Date(issued)) / 86400000);
+  if(days <= 0){
+    pill.className = 'due-pill warn mb-4';
+    text.textContent = '⚠ Due date must be after issue date';
+  } else if(days > 30){
+    pill.className = 'due-pill warn mb-4';
+    text.textContent = `⚠ Loan period is ${days} days — maximum is 30 days`;
+  } else {
+    pill.className = 'due-pill mb-4';
+    text.textContent = `✅ ${days}-day loan period — due ${new Date(due).toLocaleDateString('en', {month:'short',day:'numeric',year:'numeric'})}`;
+  }
+}
+
+// ── Summary update ───────────────────────────
+function updateSummary(){
+  const copySel   = document.querySelector('[name="book_copy"]');
+  const typeSel   = document.querySelector('[name="borrower_type"]');
+  const issuedInp = document.querySelector('[name="issued_date"]');
+  const dueInp    = document.querySelector('[name="due_date"]');
+
+  const bookText = copySel?.options[copySel.selectedIndex]?.text || '—';
+  const typeText = typeSel?.value === 'student' ? 'Student' : 'Staff';
+  const issued   = issuedInp?.value || '—';
+  const due      = dueInp?.value    || '—';
+  const days     = (issued !== '—' && due !== '—')
+    ? Math.round((new Date(due) - new Date(issued)) / 86400000)
+    : '—';
+
+  document.getElementById('sumBook').textContent   = bookText.length > 35 ? bookText.slice(0,35)+'…' : bookText;
+  document.getElementById('sumType').textContent   = typeText;
+  document.getElementById('sumIssued').textContent = issued;
+  document.getElementById('sumDue').textContent    = due;
+  document.getElementById('sumDays').textContent   = days !== '—' ? `${days} day${days!==1?'s':''}` : '—';
+}
+
+// ── Event listeners ──────────────────────────
+document.querySelector('[name="book_copy"]')?.addEventListener('change', updateSummary);
+document.querySelector('[name="issued_date"]')?.addEventListener('change', () => {
+  updateDuePill(); updateSummary();
+});
+document.querySelector('[name="due_date"]')?.addEventListener('change', () => {
+  updateDuePill(); updateSummary();
+});
+document.addEventListener('DOMContentLoaded', () => {
+  updateDuePill();
+  updateSummary();
+});
+</script>
+
+{% endblock %}

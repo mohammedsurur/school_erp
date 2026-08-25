@@ -1,0 +1,448 @@
+{% load static %}
+
+<style>
+  /* ── Collapsible nav groups ── */
+  .nav-group-btn{
+    width:100%;background:none;border:none;
+    color:rgba(255,255,255,.4);
+    font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;font-weight:700;
+    padding:.7rem 1.25rem .25rem;
+    display:flex;align-items:center;justify-content:space-between;cursor:pointer;
+    transition:color .2s;
+  }
+  .nav-group-btn:hover{color:rgba(255,255,255,.7)}
+  .nav-group-btn .chevron{
+    font-size:.65rem;transition:transform .25s;
+    color:rgba(255,255,255,.35)
+  }
+  .nav-group-btn.collapsed .chevron{transform:rotate(-90deg)}
+  .nav-group-items{overflow:hidden;transition:max-height .3s ease}
+
+  /* ── Nav link ── */
+  .sidebar-nav .nav-link{
+    color:rgba(255,255,255,.75);
+    padding:.62rem 1.25rem;border-radius:.5rem;
+    margin:.1rem .75rem;
+    display:flex;align-items:center;gap:.65rem;
+    transition:background .2s,color .2s;
+    text-decoration:none;font-size:.875rem;
+    position:relative;
+  }
+  .sidebar-nav .nav-link:hover{background:rgba(255,255,255,.12);color:#fff}
+  .sidebar-nav .nav-link.active{background:rgba(255,255,255,.18);color:#fff}
+  .sidebar-nav .nav-link.active::before{
+    content:"";position:absolute;left:0;top:20%;bottom:20%;
+    width:3px;border-radius:0 3px 3px 0;
+    background:#fff;margin-left:.75rem;
+  }
+  .sidebar-nav .nav-link i{font-size:1rem;flex-shrink:0;width:18px;text-align:center}
+
+  /* ── Badge on link ── */
+  .nav-badge{
+    margin-left:auto;background:rgba(255,255,255,.2);
+    border-radius:999px;padding:.1rem .55rem;
+    font-size:.65rem;font-weight:700;color:#fff;flex-shrink:0
+  }
+
+  /* ── Sidebar footer ── */
+  .sidebar-footer{
+    padding:1rem 1.25rem;
+    border-top:1px solid rgba(255,255,255,.1);
+    margin-top:.5rem
+  }
+  .sidebar-footer .nav-link{margin:0;border-radius:.5rem;padding:.6rem 1rem}
+
+  .sidebar-sub-label {
+  font-size: .65rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 700;
+  color: #9ca3af;
+  padding: .55rem 1.25rem .2rem;
+  margin-top: .25rem;
+}
+</style>
+
+<!-- ══════════════════════════════════ -->
+<!--  DASHBOARD                        -->
+<!-- ══════════════════════════════════ -->
+<a href="{% url 'admin_dashboard' %}"
+   class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+  <i class="bi bi-speedometer2"></i> Dashboard
+</a>
+
+<!-- ══════════════════════════════════ -->
+<!--  PEOPLE                           -->
+<!-- ══════════════════════════════════ -->
+<button class="nav-group-btn" onclick="toggleGroup(this,'grpPeople')">
+  <span>People</span><i class="bi bi-chevron-down chevron"></i>
+</button>
+<div class="nav-group-items" id="grpPeople">
+  <a href="{% url 'user_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">
+    <i class="bi bi-people"></i> All Users
+  </a>
+  <a href="{% url 'user_create' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'user_create' %}active{% endif %}">
+    <i class="bi bi-person-plus"></i> Add User
+  </a>
+  <a href="{% url 'student_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'student_list' %}active{% endif %}">
+    <i class="bi bi-mortarboard"></i> Students
+  </a>
+  <a href="{% url 'student_create' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'student_create' %}active{% endif %}">
+    <i class="bi bi-person-add"></i> Add Student
+  </a>
+  <a href="{% url 'enrollment_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'enrollment_list' %}active{% endif %}">
+    <i class="bi bi-journal-check"></i> Enrollments
+  </a>
+  <a href="{% url 'staff_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'staff_list' %}active{% endif %}">
+    <i class="bi bi-person-badge"></i> Staff
+  </a>
+  <a href="{% url 'parent_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'parent_list' %}active{% endif %}">
+    <i class="bi bi-people-fill"></i> Parents
+  </a>
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!--  ACADEMIC                         -->
+<!-- ══════════════════════════════════ -->
+<button class="nav-group-btn" onclick="toggleGroup(this,'grpAcademic')">
+  <span>Academic</span><i class="bi bi-chevron-down chevron"></i>
+</button>
+<div class="nav-group-items" id="grpAcademic">
+  <a href="{% url 'academic_year_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'academic_year_list' %}active{% endif %}">
+    <i class="bi bi-calendar2-range"></i> Academic Years
+  </a>
+  <a href="{% url 'term_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'term_list' %}active{% endif %}">
+    <i class="bi bi-calendar3"></i> Terms
+  </a>
+  <a href="{% url 'grade_list' %}"
+   class="nav-link {% if request.resolver_match.url_name == 'grade_list' %}active{% endif %}">
+  <i class="bi bi-building"></i> Grades
+  </a>
+  <a href="{% url 'section_list' %}"
+    class="nav-link {% if request.resolver_match.url_name == 'section_list' %}active{% endif %}">
+    <i class="bi bi-diagram-3"></i> Sections
+  </a>
+  <a href="{% url 'subject_list' %}"
+   class="nav-link {% if request.resolver_match.url_name == 'subject_list' %}active{% endif %}">
+  <i class="bi bi-book"></i> Subjects
+  </a>
+  <a href="{% url 'subject_teacher_list' %}"
+    class="nav-link {% if request.resolver_match.url_name == 'subject_teacher_list' %}active{% endif %}">
+    <i class="bi bi-person-workspace"></i> Subject–Teachers
+  </a>
+  <a href="{% url 'timetable_view' %}"
+    class="nav-link {% if request.resolver_match.url_name == 'timetable_view' %}active{% endif %}">
+    <i class="bi bi-table"></i> Timetable
+  </a>
+  <a href="{% url 'period_list' %}"
+    class="nav-link {% if request.resolver_match.url_name == 'period_list' %}active{% endif %}">
+    <i class="bi bi-clock"></i> Periods
+  </a>
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!--  OPERATIONS                       -->
+<!-- ══════════════════════════════════ -->
+<button class="nav-group-btn" onclick="toggleGroup(this,'grpOps')">
+  <span>Operations</span><i class="bi bi-chevron-down chevron"></i>
+</button>
+<div class="nav-group-items" id="grpOps">
+  <!-- Attendance -->
+  <a href="{% url 'attendance_select' %}"
+     class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-check2-square"></i> Mark Attendance
+  </a>
+  <a href="{% url 'attendance_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'attendance_list' %}active{% endif %}">
+    <i class="bi bi-list-check"></i> Attendance Records
+  </a>
+  <a href="{% url 'attendance_report' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'attendance_report' %}active{% endif %}">
+    <i class="bi bi-bar-chart"></i> Attendance Report
+  </a>
+    <!-- Exams -->
+  <a href="{% url 'exam_list' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'exam_list' %}active{% endif %}">
+    <i class="bi bi-file-earmark-text"></i> Exams
+  </a>
+  <a href="{% url 'exam_create' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'exam_create' %}active{% endif %}">
+    <i class="bi bi-plus-circle"></i> Create Exam
+  </a>
+  <a href="{% url 'exam_list' %}"
+   class="nav-link {% if request.resolver_match.url_name in 'result_entry,result_list,exam_detail,schedule_create' %}active{% endif %}">
+  <i class="bi bi-pencil-square"></i> Enter Results
+</a>
+
+  <!-- Operations → Fee Management -->
+  <a href="{% url 'student_fee_list' %}"
+    class="nav-link {% if 'fee' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="bi bi-cash-coin"></i> Fee Management
+  </a>
+  <a href="{% url 'fee_structure_list' %}"
+    class="nav-link {% if request.resolver_match.url_name == 'fee_structure_list' %}active{% endif %}">
+    <i class="bi bi-list-check"></i> Fee Structures
+  </a>
+  <a href="{% url 'daily_collection' %}"
+    class="nav-link {% if request.resolver_match.url_name == 'daily_collection' %}active{% endif %}">
+    <i class="bi bi-calendar-day"></i> Daily Collection
+  </a>
+  <a href="{% url 'fee_report' %}"
+    class="nav-link {% if request.resolver_match.url_name == 'fee_report' %}active{% endif %}">
+    <i class="bi bi-graph-up"></i> Fee Report
+  </a>
+  
+ 
+  <!-- sidebar_admin.html / sidebar_librarian.html -->
+  <a href="{% url 'library_dashboard' %}" class="nav-link">
+    <i class="bi bi-book-half"></i> Library
+  </a>
+  <a href="{% url 'book_list' %}" class="nav-link">
+    <i class="bi bi-journal-text"></i> Book Catalog
+  </a>
+  <a href="{% url 'library_author_list' %}" class="nav-link">
+    <i class="bi bi-journal-text"></i> Authors
+  </a>
+  <a href="{% url 'issue_book' %}" class="nav-link">
+    <i class="bi bi-box-arrow-right"></i> Issue Book
+  </a>
+  <a href="{% url 'issuance_list' %}" class="nav-link">
+    <i class="bi bi-list-check"></i> Issuances
+  </a>
+  <a href="{% url 'fine_list' %}" class="nav-link">
+    <i class="bi bi-cash-coin"></i> Fines
+  </a>
+
+  <!-- sidebar_student.html -->
+  <a href="{% url 'my_books' %}" class="nav-link">
+    <i class="bi bi-book"></i> My Books
+  </a>
+  
+  <!-- sidebar_admin.html — Operations group -->
+<a href="{% url 'transport_dashboard' %}"
+   class="nav-link {% if 'transport' in request.resolver_match.url_name %}active{% endif %}">
+  <i class="bi bi-bus-front"></i> Transport
+</a>
+<a href="{% url 'route_list' %}"
+   class="nav-link {% if request.resolver_match.url_name == 'route_list' %}active{% endif %}">
+  <i class="bi bi-signpost-split"></i> Routes
+</a>
+<a href="{% url 'vehicle_list' %}"
+   class="nav-link {% if request.resolver_match.url_name == 'vehicle_list' %}active{% endif %}">
+  <i class="bi bi-truck"></i> Vehicles
+</a>
+<a href="{% url 'student_transport_list' %}"
+   class="nav-link {% if request.resolver_match.url_name == 'student_transport_list' %}active{% endif %}">
+  <i class="bi bi-people"></i> Assignments
+</a>
+
+<!-- sidebar_student.html -->
+<a href="{% url 'my_transport' %}"
+   class="nav-link {% if request.resolver_match.url_name == 'my_transport' %}active{% endif %}">
+  <i class="bi bi-bus-front"></i> My Transport
+</a>
+
+  
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!--  COMMUNICATION                    -->
+<!-- ══════════════════════════════════ -->
+ 
+<button class="nav-group-btn" onclick="toggleGroup(this,'grpComm')">
+  <span>Communication</span><i class="bi bi-chevron-down chevron"></i>
+</button>
+<div class="nav-group-items" id="grpComm">
+  <!-- All roles -->
+<a href="{% url 'comm_dashboard' %}"  class="nav-link {% if request.resolver_match.url_name == 'comm_dashboard' %}active{% endif %}"><i class="bi bi-megaphone"></i> Communication</a>
+<a href="{% url 'announcement_list' %}"  class="nav-link {% if request.resolver_match.url_name == 'announcement_list' %}active{% endif %}"><i class="bi bi-bell"></i> Announcements</a>
+<a href="{% url 'inbox' %}"  class="nav-link {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}"><i class="bi bi-envelope"></i> Messages</a>
+<a href="{% url 'notification_list' %}"  class="nav-link {% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}"><i class="bi bi-bell-fill"></i> Notifications</a>
+<a href="{% url 'event_list' %}" class="nav-link {% if request.resolver_match.url_name == 'event_list' %}active{% endif %}"><i class="bi bi-calendar-event"></i> Events</a>
+  
+
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!--  REPORTS                          -->
+<!-- ══════════════════════════════════ -->
+<button class="nav-group-btn" onclick="toggleGroup(this,'grpReports')">
+  <span>Reports</span><i class="bi bi-chevron-down chevron"></i>
+</button>
+<div class="sidebar-group">
+  <div class="sidebar-group-header" onclick="toggleGroup('reportsGroup')">
+    <span>
+      <i class="bi bi-file-earmark-bar-graph"></i>
+      Reports
+    </span>
+    <i class="bi bi-chevron-down toggle-icon" id="reportsGroup-icon"></i>
+  </div>
+  <div class="sidebar-group-items" id="reportsGroup">
+
+    <!-- Dashboard -->
+    <a href="{% url 'reports_dashboard' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'reports_dashboard' %}active{% endif %}">
+      <i class="bi bi-grid-1x2"></i>
+      Report Dashboard
+    </a>
+
+    <!-- ── Academic ── -->
+    <div class="sidebar-sub-label">Academic</div>
+
+    <a href="{% url 'report_card' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'report_card' %}active{% endif %}">
+      <i class="bi bi-card-list"></i>
+      Report Card
+    </a>
+
+    <a href="{% url 'exam_results' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'exam_results' %}active{% endif %}">
+      <i class="bi bi-journal-check"></i>
+      Exam Results
+    </a>
+
+    <!-- ── Attendance ── -->
+    <div class="sidebar-sub-label">Attendance</div>
+
+    <a href="{% url 'attendance_report' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'attendance_report' %}active{% endif %}">
+      <i class="bi bi-calendar-check"></i>
+      Attendance Report
+    </a>
+
+    <!-- ── Finance ── -->
+    <div class="sidebar-sub-label">Finance</div>
+
+    <a href="{% url 'fee_collection' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'fee_collection' %}active{% endif %}">
+      <i class="bi bi-cash-coin"></i>
+      Fee Collection
+    </a>
+
+    <a href="{% url 'outstanding_fees' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'outstanding_fees' %}active{% endif %}">
+      <i class="bi bi-exclamation-circle"></i>
+      Outstanding Fees
+    </a>
+
+    <!-- ── Library ── -->
+    <div class="sidebar-sub-label">Library</div>
+
+    <a href="{% url 'library_report' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'library_report' %}active{% endif %}">
+      <i class="bi bi-book"></i>
+      Library Report
+    </a>
+
+    <!-- ── Transport ── -->
+    <div class="sidebar-sub-label">Transport</div>
+
+    <a href="{% url 'transport_report' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'transport_report' %}active{% endif %}">
+      <i class="bi bi-bus-front"></i>
+      Transport Report
+    </a>
+
+    <!-- ── People ── -->
+    <div class="sidebar-sub-label">People</div>
+
+    <a href="{% url 'student_list_report' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'student_list_report' %}active{% endif %}">
+      <i class="bi bi-mortarboard"></i>
+      Student List
+    </a>
+
+    <a href="{% url 'staff_list_report' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'staff_list_report' %}active{% endif %}">
+      <i class="bi bi-person-badge"></i>
+      Staff List
+    </a>
+
+    <!-- ── History ── -->
+    <div class="sidebar-sub-label">Log</div>
+
+    <a href="{% url 'report_history' %}"
+       class="sidebar-item {% if request.resolver_match.url_name == 'report_history' %}active{% endif %}">
+      <i class="bi bi-clock-history"></i>
+      Report History
+    </a>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!--  SYSTEM  (always visible)         -->
+<!-- ══════════════════════════════════ -->
+<div class="sidebar-footer">
+  <a href="{% url 'school_setup' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'school_setup' %}active{% endif %}">
+    <i class="bi bi-building-gear"></i> School Setup
+  </a>
+  <a href="{% url 'audit_log' %}"
+     class="nav-link {% if request.resolver_match.url_name == 'audit_log' %}active{% endif %}">
+    <i class="bi bi-clock-history"></i> Audit Log
+  </a>
+  <a href="/admin/" class="nav-link">
+    <i class="bi bi-gear"></i> Django Admin
+  </a>
+</div>
+
+<script>
+/* ── Toggle group ── */
+function toggleGroup(btn, id){
+  const items = document.getElementById(id);
+  const isOpen = items.style.maxHeight && items.style.maxHeight !== '0px';
+  if(isOpen){
+    items.style.maxHeight = '0px';
+    btn.classList.add('collapsed');
+    // save state
+    sessionStorage.setItem('nav_'+id, 'closed');
+  } else {
+    items.style.maxHeight = items.scrollHeight + 'px';
+    btn.classList.remove('collapsed');
+    sessionStorage.setItem('nav_'+id, 'open');
+  }
+}
+
+/* ── Restore state on page load ── */
+document.addEventListener('DOMContentLoaded', () => {
+  const groups = ['grpPeople','grpAcademic','grpOps','grpComm','grpReports'];
+
+  groups.forEach(id => {
+    const el  = document.getElementById(id);
+    const btn = el?.previousElementSibling;
+    if(!el || !btn) return;
+
+    // Check if any child link is active
+    const hasActive = el.querySelector('.nav-link.active');
+    const saved     = sessionStorage.getItem('nav_'+id);
+
+    if(hasActive || saved === 'open'){
+      // Open
+      el.style.maxHeight = el.scrollHeight + 'px';
+      btn.classList.remove('collapsed');
+    } else if(saved === 'closed'){
+      // Closed
+      el.style.maxHeight = '0px';
+      btn.classList.add('collapsed');
+    } else {
+      // Default: open People & Academic, close others
+      if(id === 'grpPeople' || id === 'grpAcademic'){
+        el.style.maxHeight = el.scrollHeight + 'px';
+      } else {
+        el.style.maxHeight = '0px';
+        btn.classList.add('collapsed');
+      }
+    }
+  });
+});
+</script>

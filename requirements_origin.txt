@@ -1,0 +1,45 @@
+# ── Core Framework ─────────────────────────────
+Django==4.2.9
+djangorestframework==3.14.0
+
+# ── Database ───────────────────────────────────
+psycopg2-binary==2.9.9
+
+# ── Environment & Config ───────────────────────
+django-environ==0.11.2
+python-decouple==3.8
+
+# ── Authentication & Security ──────────────────
+djangorestframework-simplejwt==5.3.0
+django-cors-headers==4.3.1
+
+# ── Forms & Templates ──────────────────────────
+django-crispy-forms==2.1
+crispy-bootstrap5==0.7
+
+# ── Filtering & Search ─────────────────────────
+django-filter==23.5
+
+# ── Image Handling ─────────────────────────────
+Pillow==10.2.0
+
+# ── PDF Generation ─────────────────────────────
+weasyprint==60.2
+
+# ── Excel Reports ──────────────────────────────
+openpyxl==3.1.2
+
+# ── Date & Time Utilities ──────────────────────
+python-dateutil==2.8.2
+
+# ── API Documentation ──────────────────────────
+drf-spectacular==0.27.0
+
+# ── Rate Limiting ──────────────────────────────
+django-ratelimit==4.1.0
+
+# ── HTMX support ───────────────────────────────
+django-htmx==1.17.2
+
+# ── Admin Enhancement ──────────────────────────
+django-import-export==3.3.3

@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Records{% endblock %}
+{% block page_title %}Attendance Records{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.8rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover,.filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .adm-no{font-family:monospace;font-size:.72rem;background:#f1f5f9;padding:.15rem .45rem;border-radius:.35rem;color:#475569}
+  .stat-row{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+
+  /* Status badges */
+  .badge-present{background:#dcfce7;color:#15803d}
+  .badge-absent {background:#fee2e2;color:#dc2626}
+  .badge-late   {background:#fef3c7;color:#d97706}
+  .badge-excused{background:#e0f2fe;color:#0369a1}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Attendance Records</h5>
+    <p class="text-muted small mb-0">
+      {{ records.paginator.count }} record{{ records.paginator.count|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'attendance_report' %}"
+       class="btn btn-outline-success rounded-pill px-3">
+      <i class="bi bi-bar-chart me-1"></i>Report
+    </a>
+    <a href="{% url 'attendance_select' %}" class="btn btn-add text-white">
+      <i class="bi bi-check2-square me-2"></i>Mark Attendance
+    </a>
+  </div>
+</div>
+
+<!-- Summary stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-row text-center">
+      <div class="stat-num text-success">
+        {{ records.paginator.object_list|length }}
+      </div>
+      <div class="text-muted small">Total Records</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-row text-center">
+      <div class="stat-num" style="color:#22c55e" id="presentCount">—</div>
+      <div class="text-muted small">Present</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-row text-center">
+      <div class="stat-num text-danger" id="absentCount">—</div>
+      <div class="text-muted small">Absent</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-row text-center">
+      <div class="stat-num text-warning" id="lateCount">—</div>
+      <div class="text-muted small">Late / Excused</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="mb-4">
+  <div class="row g-3">
+    <!-- Section -->
+    <div class="col-md-3">
+      <select name="section" class="form-select search-bar" onchange="this.form.submit()">
+        <option value="">All Sections</option>
+        {% for sec in sections %}
+        <option value="{{ sec.pk }}"
+          {% if section_id == sec.pk|stringformat:'s' %}selected{% endif %}>
+          {{ sec.grade }} — {{ sec.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Date -->
+    <div class="col-md-2">
+      <input type="date" name="date" value="{{ date_str }}"
+             class="form-control search-bar"
+             onchange="this.form.submit()">
+    </div>
+
+    <!-- Status -->
+    <div class="col-md-2">
+      <select name="status" class="form-select search-bar" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for val, label in statuses %}
+        <option value="{{ val }}" {% if status == val %}selected{% endif %}>
+          {{ label }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Search -->
+    <div class="col-md-3">
+      <input type="text" name="q" value="{{ q }}"
+             class="form-control search-bar"
+             placeholder="Search student name or admission no…">
+    </div>
+
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-outline-primary rounded-pill px-3 flex-grow-1">
+        <i class="bi bi-search"></i>
+      </button>
+      {% if q or section_id or status or date_str %}
+      <a href="{% url 'attendance_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+<!-- Status filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="?{% if section_id %}section={{ section_id }}&{% endif %}{% if date_str %}date={{ date_str }}&{% endif %}{% if q %}q={{ q }}{% endif %}"
+     class="filter-tab {% if not status %}active{% endif %}">All</a>
+  <a href="?status=present{% if section_id %}&section={{ section_id }}{% endif %}{% if date_str %}&date={{ date_str }}{% endif %}"
+     class="filter-tab {% if status == 'present' %}active{% endif %}">
+    <i class="bi bi-check-circle me-1"></i>Present
+  </a>
+  <a href="?status=absent{% if section_id %}&section={{ section_id }}{% endif %}{% if date_str %}&date={{ date_str }}{% endif %}"
+     class="filter-tab {% if status == 'absent' %}active{% endif %}">
+    <i class="bi bi-x-circle me-1"></i>Absent
+  </a>
+  <a href="?status=late{% if section_id %}&section={{ section_id }}{% endif %}{% if date_str %}&date={{ date_str }}{% endif %}"
+     class="filter-tab {% if status == 'late' %}active{% endif %}">
+    <i class="bi bi-clock me-1"></i>Late
+  </a>
+  <a href="?status=excused{% if section_id %}&section={{ section_id }}{% endif %}{% if date_str %}&date={{ date_str }}{% endif %}"
+     class="filter-tab {% if status == 'excused' %}active{% endif %}">
+    <i class="bi bi-shield-check me-1"></i>Excused
+  </a>
+
+  <!-- Today shortcut -->
+  <a href="?date={{ today|date:'Y-m-d' }}"
+   class="filter-tab ms-auto {% if date_str == today|date:'Y-m-d' %}active{% endif %}">
+  <i class="bi bi-calendar-check me-1"></i>Today
+</a>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Section</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Note</th>
+          <th>Marked By</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+        <tr>
+          <td class="text-muted small fw-semibold">
+            {{ records.start_index|add:forloop.counter0 }}
+          </td>
+
+          <!-- Student -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ record.student.user.first_name|first|upper }}{{ record.student.user.last_name|first|upper }}
+              </div>
+              <div>
+                <a href="{% url 'student_detail' record.student.pk %}"
+                   class="fw-semibold small text-decoration-none text-dark">
+                  {{ record.student.user.get_full_name }}
+                </a>
+                <div><span class="adm-no">{{ record.student.admission_number }}</span></div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Section -->
+          <td>
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-3">
+              {{ record.section.grade }} — {{ record.section.name }}
+            </span>
+          </td>
+
+          <!-- Date -->
+          <td class="small text-muted fw-semibold">
+            {{ record.date|date:"M d, Y" }}
+            {% if record.date == today %}
+            <span class="badge rounded-pill bg-success-subtle text-success ms-1"
+                  style="font-size:.65rem">Today</span>
+            {% endif %}
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="badge rounded-pill px-3 badge-{{ record.status }}">
+              {% if record.status == 'present' %}<i class="bi bi-check-circle me-1"></i>
+              {% elif record.status == 'absent' %}<i class="bi bi-x-circle me-1"></i>
+              {% elif record.status == 'late' %}<i class="bi bi-clock me-1"></i>
+              {% else %}<i class="bi bi-shield-check me-1"></i>{% endif %}
+              {{ record.get_status_display }}
+            </span>
+          </td>
+
+          <!-- Note -->
+          <td class="small text-muted">{{ record.note|default:"—" }}</td>
+
+          <!-- Marked by -->
+          <td class="small text-muted">
+            {{ record.marked_by.get_full_name|default:"—" }}
+          </td>
+
+          <!-- Action — re-open mark page -->
+          <td>
+            <a href="{% url 'attendance_mark' record.section.pk record.date|date:'Y-m-d' %}"
+               class="btn btn-sm btn-outline-primary rounded-pill px-2"
+               style="font-size:.72rem" title="Edit this date">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-check2-square fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No records found</h6>
+              <p class="small mb-3">
+                {% if q %}No results for "{{ q }}"
+                {% elif date_str %}No attendance marked for this date
+                {% else %}No attendance records yet{% endif %}
+              </p>
+              <a href="{% url 'attendance_select' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-check2-square me-2"></i>Mark Attendance
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if records.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if records.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ records.previous_page_number }}&q={{ q }}&section={{ section_id }}&date={{ date_str }}&status={{ status }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in records.paginator.page_range %}
+    <li class="page-item {% if records.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&q={{ q }}&section={{ section_id }}&date={{ date_str }}&status={{ status }}">
+        {{ num }}
+      </a>
+    </li>
+    {% endfor %}
+    {% if records.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ records.next_page_number }}&q={{ q }}&section={{ section_id }}&date={{ date_str }}&status={{ status }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+// Count statuses from visible rows and update stat cards
+document.addEventListener('DOMContentLoaded', () => {
+  const rows    = document.querySelectorAll('tbody tr:not(.empty-row)');
+  let present=0, absent=0, lateExcused=0;
+  rows.forEach(row => {
+    const badge = row.querySelector('.badge');
+    if(!badge) return;
+    const cls = badge.className;
+    if(cls.includes('badge-present'))  present++;
+    else if(cls.includes('badge-absent'))  absent++;
+    else if(cls.includes('badge-late') || cls.includes('badge-excused')) lateExcused++;
+  });
+  document.getElementById('presentCount').textContent = present     || '—';
+  document.getElementById('absentCount').textContent  = absent      || '—';
+  document.getElementById('lateCount').textContent    = lateExcused || '—';
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Academic Years{% endblock %}
+{% block page_title %}Academic Years{% endblock %}
+{% block content %}
+
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:32px;height:32px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .current-badge{background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;border-radius:999px;padding:.3rem 1rem;font-size:.75rem;font-weight:700}
+</style>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Academic Years</h5>
+    <p class="text-muted small mb-0">Manage school academic years</p>
+  </div>
+  <a href="{% url 'academic_year_create' %}" class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Add Academic Year
+  </a>
+</div>
+
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Terms</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for year in years %}
+        <tr>
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+          <td class="fw-bold">{{ year.name }}</td>
+          <td class="small text-muted">{{ year.start_date|date:"M d, Y" }}</td>
+          <td class="small text-muted">{{ year.end_date|date:"M d, Y" }}</td>
+          <td>
+            <span class="badge bg-primary-subtle text-primary rounded-pill px-3">
+              {{ year.terms.count }} term{{ year.terms.count|pluralize }}
+            </span>
+          </td>
+          <td>
+            {% if year.is_current %}
+            <span class="current-badge"><i class="bi bi-check-circle me-1"></i>Current</span>
+            {% else %}
+            <a href="{% url 'academic_year_set_current' year.pk %}"
+               class="badge rounded-pill bg-secondary-subtle text-secondary px-3 text-decoration-none"
+               onclick="return confirm('Set {{ year.name }} as current academic year?')">
+              Set as Current
+            </a>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'academic_year_edit' year.pk %}" class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              {% if not year.is_current %}
+              <a href="{% url 'academic_year_delete' year.pk %}" class="action-icon text-danger" title="Delete">
+                <i class="bi bi-trash"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="text-center py-5">
+              <i class="bi bi-calendar-x fs-1 text-muted opacity-25 d-block mb-3"></i>
+              <h6 class="fw-bold text-dark">No academic years yet</h6>
+              <p class="text-muted small mb-3">Create your first academic year to get started.</p>
+              <a href="{% url 'academic_year_create' %}" class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Create Now
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

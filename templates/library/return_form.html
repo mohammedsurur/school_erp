@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Return Book — {{ issuance.book_copy.book.title }}{% endblock %}
+{% block page_title %}Return Book{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+
+  /* ── Book banner ── */
+  .return-banner{border-radius:1.25rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .return-banner.ontime {background:linear-gradient(135deg,#1a3c72,#0ea5a0)}
+  .return-banner.overdue{background:linear-gradient(135deg,#7f1d1d,#dc2626)}
+  .return-banner::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .banner-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+
+  /* ── Book thumb ── */
+  .book-thumb{width:52px;height:68px;border-radius:.65rem;border:3px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:rgba(255,255,255,.7);flex-shrink:0;object-fit:cover;overflow:hidden}
+
+  /* ── Fine preview card ── */
+  .fine-preview{border-radius:1rem;padding:1.25rem 1.5rem;margin-bottom:1.25rem}
+  .fine-preview.overdue{background:#fff7ed;border:2px solid #fed7aa}
+  .fine-preview.ontime {background:#f0fdf4;border:2px solid #86efac}
+  .fine-amount{font-size:2rem;font-weight:800;font-family:monospace;line-height:1}
+
+  /* ── Days late chip ── */
+  .days-late-chip{background:#fee2e2;color:#dc2626;border-radius:.5rem;padding:.3rem .85rem;font-size:.82rem;font-weight:700;font-family:monospace}
+  .days-ok-chip  {background:#dcfce7;color:#15803d;border-radius:.5rem;padding:.3rem .85rem;font-size:.82rem;font-weight:700}
+
+  /* ── Condition buttons ── */
+  .cond-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.65rem 1rem;text-align:center;cursor:pointer;transition:all .2s;background:#fff;position:relative}
+  .cond-btn:hover{border-color:#1a3c72}
+  .cond-btn.selected{border-color:var(--cond-colour);background:var(--cond-bg)}
+  .cond-btn .icon{font-size:1.3rem;margin-bottom:.25rem}
+  .cond-btn .name{font-size:.78rem;font-weight:700;color:#374151}
+  .cond-btn .hint{font-size:.65rem;color:#9ca3af;margin-top:.1rem}
+
+  /* ── Lost zone ── */
+  .lost-zone{border:2px dashed #fca5a5;border-radius:.875rem;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;transition:background .2s}
+  .lost-zone.checked{background:#fff1f2;border-color:#ef4444}
+
+  /* ── Summary strip ── */
+  .summary-strip{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1rem 1.25rem}
+  .sum-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f1f5f9;font-size:.83rem}
+  .sum-row:last-child{border-bottom:none;padding-top:.6rem;margin-top:.2rem}
+
+  /* ── Action buttons ── */
+  .btn-return{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#15803d,#22c55e);border:none;transition:opacity .2s,transform .2s}
+  .btn-return:hover{opacity:.9;transform:translateY(-1px)}
+  .btn-lost{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#374151,#6b7280);border:none;transition:opacity .2s,transform .2s}
+  .btn-lost:hover{opacity:.9;transform:translateY(-1px)}
+
+  .acc-no{font-family:monospace;font-size:.82rem;background:rgba(255,255,255,.2);padding:.15rem .5rem;border-radius:.35rem;color:#fff}
+  .amount-mono{font-family:monospace;font-weight:700}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-xl-5">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'issuance_detail' issuance.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">Return Book</h5>
+        <p class="text-muted small mb-0">Process book return and check condition</p>
+      </div>
+    </div>
+
+    <!-- Banner -->
+    <div class="return-banner {% if issuance.is_overdue %}overdue{% else %}ontime{% endif %}">
+      <div class="d-flex align-items-center gap-3"
+           style="position:relative;z-index:1">
+        {% if issuance.book_copy.book.cover_image %}
+        <img src="{{ issuance.book_copy.book.cover_image.url }}"
+             class="book-thumb" alt="">
+        {% else %}
+        <div class="book-thumb">
+          <i class="bi bi-journal-text"></i>
+        </div>
+        {% endif %}
+        <div>
+          <div style="opacity:.75;font-size:.78rem;margin-bottom:.25rem">
+            {% if issuance.is_overdue %}
+            <i class="bi bi-exclamation-circle me-1"></i>Overdue Return
+            {% else %}
+            <i class="bi bi-arrow-return-left me-1"></i>Book Return
+            {% endif %}
+          </div>
+          <h5 class="fw-bold text-white mb-1">
+            {{ issuance.book_copy.book.title }}
+          </h5>
+          <div class="banner-meta">
+            <span><span class="acc-no">{{ issuance.book_copy.accession_number }}</span></span>
+            <span><i class="bi bi-person me-1"></i>{{ issuance.borrower }}</span>
+            <span><i class="bi bi-calendar me-1"></i>
+              Due {{ issuance.due_date|date:"M d, Y" }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fine preview -->
+    {% if issuance.is_overdue %}
+    <div class="fine-preview overdue mb-4">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <div class="text-muted small fw-semibold mb-1 text-uppercase"
+               style="letter-spacing:.06em">
+            <i class="bi bi-cash-coin me-1 text-warning"></i>
+            Overdue Fine to Collect
+          </div>
+          <div class="fine-amount text-danger">
+            ETB {{ issuance.days_overdue }}.00
+          </div>
+          <div class="text-muted small mt-1">
+            {{ issuance.days_overdue }} day{{ issuance.days_overdue|pluralize }}
+            × ETB 2.00/day
+          </div>
+        </div>
+        <span class="days-late-chip">
+          {{ issuance.days_overdue }}d late
+        </span>
+      </div>
+      <div class="mt-2 small"
+           style="color:#92400e;background:#fff7ed;border-radius:.5rem;padding:.5rem .75rem">
+        <i class="bi bi-info-circle me-1"></i>
+        A fine of <strong>ETB {{ issuance.days_overdue }}.00</strong>
+        will be recorded automatically on return.
+        You can collect or waive it from the issuance detail page.
+      </div>
+    </div>
+    {% else %}
+    <div class="fine-preview ontime mb-4">
+      <div class="d-flex align-items-center gap-3">
+        <span class="days-ok-chip">
+          <i class="bi bi-check-circle me-1"></i>
+          On Time
+        </span>
+        <div class="text-success small fw-semibold">
+          No fine —
+          {{ issuance.days_remaining }} day{{ issuance.days_remaining|pluralize }}
+          before due date. Thank you for returning on time!
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Return form -->
+    <div class="form-card card p-4">
+      <form method="POST" novalidate id="returnForm">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Condition -->
+        <div class="section-head">
+          <i class="bi bi-clipboard-check me-2"></i>Book Condition on Return
+        </div>
+        <div class="row g-2 mb-4" id="conditionPicker">
+          {% for val, label in form.condition.field.choices %}
+          <div class="col-6 col-md-4">
+            <div class="cond-btn
+              {% if forloop.counter == 1 %}selected{% endif %}"
+                 data-value="{{ val }}"
+                 style="
+                 {% if val == 'new' %}--cond-colour:#22c55e;--cond-bg:#f0fdf4
+                 {% elif val == 'good' %}--cond-colour:#0ea5a0;--cond-bg:#f0fdfa
+                 {% elif val == 'fair' %}--cond-colour:#f59e0b;--cond-bg:#fefce8
+                 {% elif val == 'poor' %}--cond-colour:#f97316;--cond-bg:#fff7ed
+                 {% else %}--cond-colour:#ef4444;--cond-bg:#fff1f2{% endif %}"
+                 onclick="pickCondition('{{ val }}', this)">
+              <div class="icon">
+                {% if val == 'new' %}🟢
+                {% elif val == 'good' %}🔵
+                {% elif val == 'fair' %}🟡
+                {% elif val == 'poor' %}🟠
+                {% else %}🔴{% endif %}
+              </div>
+              <div class="name">{{ label }}</div>
+              <div class="hint">
+                {% if val == 'new' %}Unused
+                {% elif val == 'good' %}Light wear
+                {% elif val == 'fair' %}Noticeable wear
+                {% elif val == 'poor' %}Heavy wear
+                {% else %}Needs repair{% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Hidden condition field -->
+        <div style="display:none">{{ form.condition }}</div>
+
+        <!-- Notes -->
+        <div class="mb-4">
+          <label>Return Notes</label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+          <small class="text-danger d-block mt-1">{{ form.notes.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            Any damage, missing pages, or remarks about this return
+          </small>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-strip mb-4">
+          <div class="fw-semibold small mb-2">
+            <i class="bi bi-receipt me-2 text-primary"></i>Return Summary
+          </div>
+          <div class="sum-row">
+            <span class="text-muted">Book</span>
+            <span class="fw-semibold small">
+              {{ issuance.book_copy.book.title|truncatechars:30 }}
+            </span>
+          </div>
+          <div class="sum-row">
+            <span class="text-muted">Copy</span>
+            <span style="font-family:monospace;font-size:.82rem">
+              {{ issuance.book_copy.accession_number }}
+            </span>
+          </div>
+          <div class="sum-row">
+            <span class="text-muted">Borrower</span>
+            <span class="fw-semibold small">{{ issuance.borrower }}</span>
+          </div>
+          <div class="sum-row">
+            <span class="text-muted">Issued</span>
+            <span class="small">{{ issuance.issued_date|date:"M d, Y" }}</span>
+          </div>
+          <div class="sum-row">
+            <span class="text-muted">Due</span>
+            <span class="small
+              {% if issuance.is_overdue %}text-danger fw-bold{% endif %}">
+              {{ issuance.due_date|date:"M d, Y" }}
+            </span>
+          </div>
+          <div class="sum-row">
+            <span class="text-muted">Condition</span>
+            <span class="fw-semibold small" id="sumCondition">—</span>
+          </div>
+          <div class="sum-row">
+            <span class="text-muted fw-bold">Fine</span>
+            <span class="amount-mono
+              {% if issuance.is_overdue %}text-danger{% else %}text-success{% endif %}
+              fw-bold">
+              {% if issuance.is_overdue %}
+              ETB {{ issuance.days_overdue }}.00
+              {% else %}
+              ETB 0.00
+              {% endif %}
+            </span>
+          </div>
+        </div>
+
+        <!-- Lost zone -->
+        <div class="lost-zone mb-4" id="lostZone">
+          <div>
+            <div class="fw-semibold small text-danger">Mark as Lost</div>
+            <div class="text-muted" style="font-size:.75rem">
+              Book cannot be returned — will be removed from circulation
+            </div>
+          </div>
+          <div class="form-check mb-0">
+            {{ form.mark_lost }}
+            <label class="form-check-label small fw-semibold text-danger"
+                   for="{{ form.mark_lost.id_for_label }}">
+              Confirm Lost
+            </label>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="d-flex gap-3 justify-content-end" id="actionBtns">
+          <a href="{% url 'issuance_detail' issuance.pk %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-return text-white"
+                  id="returnBtn">
+            <i class="bi bi-arrow-return-left me-2"></i>Confirm Return
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Condition picker ─────────────────────────
+function pickCondition(val, el){
+  document.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="condition"]').value = val;
+
+  // Update summary
+  const labels = {
+    new: 'New', good: 'Good', fair: 'Fair',
+    poor: 'Poor', damaged: 'Damaged'
+  };
+  document.getElementById('sumCondition').textContent = labels[val] || val;
+}
+
+// ── Lost checkbox ────────────────────────────
+document.querySelector('[name="mark_lost"]')?.addEventListener('change', function(){
+  const zone    = document.getElementById('lostZone');
+  const btn     = document.getElementById('returnBtn');
+  if(this.checked){
+    zone.classList.add('checked');
+    btn.innerHTML = '<i class="bi bi-x-circle me-2"></i>Confirm Lost';
+    btn.style.background = 'linear-gradient(135deg,#374151,#6b7280)';
+  } else {
+    zone.classList.remove('checked');
+    btn.innerHTML = '<i class="bi bi-arrow-return-left me-2"></i>Confirm Return';
+    btn.style.background = 'linear-gradient(135deg,#15803d,#22c55e)';
+  }
+});
+
+// ── Init ─────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Set initial condition from select value
+  const sel = document.querySelector('[name="condition"]');
+  const initialVal = sel?.value || 'good';
+  const initialBtn = document.querySelector(`.cond-btn[data-value="${initialVal}"]`);
+  if(initialBtn){
+    document.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('selected'));
+    initialBtn.classList.add('selected');
+  }
+  const labels = {
+    new: 'New', good: 'Good', fair: 'Fair',
+    poor: 'Poor', damaged: 'Damaged'
+  };
+  document.getElementById('sumCondition').textContent = labels[initialVal] || '—';
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Student Transport{% endblock %}
+{% block page_title %}Student Transport{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Avatar ── */
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Route chip ── */
+  .route-chip{background:#eff6ff;color:#1d4ed8;border-radius:.5rem;padding:.18rem .6rem;font-size:.72rem;font-weight:700;white-space:nowrap}
+
+  /* ── Stop chip ── */
+  .stop-chip{background:#f0fdf4;color:#15803d;border-radius:.5rem;padding:.18rem .6rem;font-size:.72rem;font-weight:600}
+
+  /* ── Search/filter bar ── */
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.5rem;margin-bottom:1.5rem}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+  .time-mono{font-family:monospace;font-size:.72rem;color:#64748b}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Student Transport</h5>
+    <p class="text-muted small mb-0">
+      {{ assignments.paginator.count }}
+      assignment{{ assignments.paginator.count|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'transport_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+    <a href="{% url 'student_transport_assign' %}" class="btn btn-add text-white">
+      <i class="bi bi-person-plus me-2"></i>Assign Student
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-people text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">
+          {{ assignments.paginator.count }}
+        </div>
+        <div class="stat-lbl">Total Assigned</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-signpost-split text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntRoutes">—</div>
+        <div class="stat-lbl">Routes in Use</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-pin-map text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning" id="cntStops">—</div>
+        <div class="stat-lbl">Stops in Use</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0f9ff">
+        <i class="bi bi-calendar-check text-info"></i>
+      </div>
+      <div>
+        <div class="stat-num text-info" id="cntThisPage">—</div>
+        <div class="stat-lbl">This Page</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label class="small fw-semibold text-muted mb-1">Search Student</label>
+      {{ form.q }}
+    </div>
+    <div class="col-md-3">
+      <label class="small fw-semibold text-muted mb-1">Route</label>
+      {{ form.route }}
+    </div>
+    <div class="col-md-3">
+      <label class="small fw-semibold text-muted mb-1">Academic Year</label>
+      {{ form.academic_year }}
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit"
+              class="btn btn-outline-primary rounded-pill px-3 flex-grow-1">
+        <i class="bi bi-search me-1"></i>Filter
+      </button>
+      {% if request.GET %}
+      <a href="{% url 'student_transport_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="stTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Route</th>
+          <th>Pickup Stop</th>
+          <th>Academic Year</th>
+          <th>Start Date</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for st in assignments %}
+        <tr data-route="{{ st.route.name|lower }}"
+            data-stop="{{ st.stop.stop_name|lower|default:'' }}">
+
+          <td class="text-muted small fw-semibold">
+            {{ assignments.start_index|add:forloop.counter0 }}
+          </td>
+
+          <!-- Student -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ st.student.user.first_name|first|upper }}{{ st.student.user.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-semibold small">
+                  {{ st.student.user.get_full_name }}
+                </div>
+                <span class="adm-no">{{ st.student.admission_number }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Route -->
+          <td>
+            <a href="{% url 'route_detail' st.route.pk %}"
+               class="text-decoration-none">
+              <span class="route-chip">
+                <i class="bi bi-bus-front me-1"></i>{{ st.route.name }}
+              </span>
+            </a>
+            <div class="text-muted mt-1" style="font-size:.7rem">
+              {{ st.route.start_point }} → {{ st.route.end_point }}
+            </div>
+          </td>
+
+          <!-- Stop -->
+          <td>
+            {% if st.stop %}
+            <span class="stop-chip">
+              <i class="bi bi-pin-map me-1"></i>{{ st.stop.stop_name }}
+            </span>
+            {% if st.stop.pickup_time %}
+            <div class="time-mono mt-1">
+              <i class="bi bi-clock me-1"></i>{{ st.stop.pickup_time|time:"H:i" }}
+            </div>
+            {% endif %}
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Academic year -->
+          <td class="small text-muted">{{ st.academic_year }}</td>
+
+          <!-- Start date -->
+          <td class="small text-muted">{{ st.start_date|date:"M d, Y" }}</td>
+
+          <!-- Notes -->
+          <td class="small text-muted">
+            {{ st.notes|truncatechars:30|default:"—" }}
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'student_transport_edit' st.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'student_transport_remove' st.pk %}"
+                 class="action-icon text-danger" title="Remove"
+                 onclick="return confirm('Remove {{ st.student.user.get_full_name }} from {{ st.route.name }}?')">
+                <i class="bi bi-person-dash"></i>
+              </a>
+            </div>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-people fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No Assignments Found</h6>
+              <p class="small text-muted mb-3">
+                {% if request.GET.q %}
+                No results for "<strong>{{ request.GET.q }}</strong>"
+                {% elif request.GET.route %}
+                No students on the selected route
+                {% else %}
+                No students have been assigned to transport routes yet
+                {% endif %}
+              </p>
+              <a href="{% url 'student_transport_assign' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-person-plus me-2"></i>Assign First Student
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if assignments.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if assignments.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ assignments.previous_page_number }}&q={{ form.q.value|default:'' }}&route={{ form.route.value|default:'' }}&academic_year={{ form.academic_year.value|default:'' }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in assignments.paginator.page_range %}
+    <li class="page-item {% if assignments.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&q={{ form.q.value|default:'' }}&route={{ form.route.value|default:'' }}">
+        {{ num }}
+      </a>
+    </li>
+    {% endfor %}
+    {% if assignments.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ assignments.next_page_number }}&q={{ form.q.value|default:'' }}&route={{ form.route.value|default:'' }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows   = document.querySelectorAll('#stTable tbody tr[data-route]');
+  const routes = new Set();
+  const stops  = new Set();
+
+  rows.forEach(r => {
+    if(r.dataset.route) routes.add(r.dataset.route);
+    if(r.dataset.stop)  stops.add(r.dataset.stop);
+  });
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntRoutes',   routes.size || '0');
+  set('cntStops',    stops.size  || '0');
+  set('cntThisPage', rows.length || '0');
+});
+</script>
+
+{% endblock %}

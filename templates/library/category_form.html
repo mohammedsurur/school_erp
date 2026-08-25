@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Example chips ── */
+  .example-chip{background:#f1f5f9;border-radius:999px;padding:.25rem .85rem;font-size:.78rem;font-weight:500;color:#475569;cursor:pointer;transition:all .2s;border:1.5px solid transparent}
+  .example-chip:hover{background:#eff6ff;border-color:#1a3c72;color:#1a3c72}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-xl-5">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'library_category_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if category %}Edit existing category
+          {% else %}Create a new book category{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Name -->
+        <div class="section-head">
+          <i class="bi bi-tag me-2"></i>Category Details
+        </div>
+        <div class="mb-3">
+          <label>Category Name <span class="req">*</span></label>
+          {{ form.name }}
+          {% if form.name.errors %}
+          <small class="text-danger d-block mt-1">{{ form.name.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">Must be unique</small>
+        </div>
+
+        <!-- Quick-fill examples -->
+        {% if not category %}
+        <div class="mb-4">
+          <div class="text-muted small fw-semibold mb-2">
+            Quick examples:
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            
+           
+           
+            <span class="example-chip" onclick="fillName('Fiction')">Fiction</span>
+            <span class="example-chip" onclick="fillName('Non-Fiction')">Non-Fiction</span>
+            <span class="example-chip" onclick="fillName('Science')">Science</span>
+            <span class="example-chip" onclick="fillName('Mathematics')">Mathematics</span>
+            <span class="example-chip" onclick="fillName('History')">History</span>
+            <span class="example-chip" onclick="fillName('English')">English</span>
+            <span class="example-chip" onclick="fillName('Amharic')">Amharic</span>
+            <span class="example-chip" onclick="fillName('Religion')">Religion</span>
+            <span class="example-chip" onclick="fillName('Reference')">Reference</span>
+            <span class="example-chip" onclick="fillName('Children')">Children</span>
+            <span class="example-chip" onclick="fillName('Technology')">Technology</span>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Description -->
+        <div class="mb-4">
+          <label>Description</label>
+          {{ form.description }}
+          {% if form.description.errors %}
+          <small class="text-danger d-block mt-1">
+            {{ form.description.errors.0 }}
+          </small>
+          {% endif %}
+          <small class="text-muted">Optional — short note about this category</small>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'library_category_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if category %}Save Changes{% else %}Create Category{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function fillName(name){
+  const inp = document.querySelector('[name="name"]');
+  if(inp){ inp.value = name; inp.focus(); }
+}
+</script>
+
+{% endblock %}

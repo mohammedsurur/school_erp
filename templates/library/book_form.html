@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Cover preview ── */
+  .cover-preview{width:100px;height:130px;border-radius:.75rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.5);font-size:2rem;overflow:hidden}
+  .cover-preview img{width:100%;height:100%;object-fit:cover}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9 col-xl-8">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% if book %}{% url 'book_detail' book.pk %}{% else %}{% url 'book_list' %}{% endif %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if book %}Editing existing record{% else %}Add a new book to the catalog{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Basic info -->
+        <div class="section-head">
+          <i class="bi bi-journal-text me-2"></i>Book Information
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-8">
+            <label>Title <span class="req">*</span></label>
+            {{ form.title }}
+            {% if form.title.errors %}
+            <small class="text-danger d-block mt-1">{{ form.title.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <label>ISBN</label>
+            {{ form.isbn }}
+            {% if form.isbn.errors %}
+            <small class="text-danger d-block mt-1">{{ form.isbn.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Authors</label>
+            {{ form.authors }}
+            <small class="text-muted">Hold Ctrl to select multiple</small>
+            {% if form.authors.errors %}
+            <small class="text-danger d-block mt-1">{{ form.authors.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Category</label>
+            {{ form.category }}
+            <small class="text-muted">
+              <a href="{% url 'library_category_create' %}" target="_blank">
+                + Add category
+              </a>
+            </small>
+          </div>
+        </div>
+
+        <!-- Publication -->
+        <div class="section-head">
+          <i class="bi bi-building me-2"></i>Publication Details
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-5">
+            <label>Publisher</label>
+            {{ form.publisher }}
+            <small class="text-muted">
+              <a href="{% url 'library_publisher_create' %}" target="_blank">
+                + Add publisher
+              </a>
+            </small>
+          </div>
+          <div class="col-md-3">
+            <label>Publication Year</label>
+            {{ form.publication_year }}
+          </div>
+          <div class="col-md-4">
+            <label>Edition</label>
+            {{ form.edition }}
+          </div>
+          <div class="col-md-4">
+            <label>Language</label>
+            {{ form.language }}
+          </div>
+          <div class="col-md-8">
+            <label>Description</label>
+            {{ form.description }}
+          </div>
+        </div>
+
+        <!-- Cover image -->
+        <div class="section-head">
+          <i class="bi bi-image me-2"></i>Cover Image
+        </div>
+        <div class="d-flex align-items-start gap-4 mb-4">
+          <div class="cover-preview" id="coverPreview">
+            {% if book and book.cover_image %}
+            <img src="{{ book.cover_image.url }}" id="coverImg" alt="">
+            {% else %}
+            <i class="bi bi-journal-text" id="coverIcon"></i>
+            {% endif %}
+          </div>
+          <div class="flex-grow-1">
+            <label>Upload Cover</label>
+            {{ form.cover_image }}
+            <small class="text-muted d-block mt-1">
+              JPG or PNG recommended. Will be shown in the book catalog.
+            </small>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% if book %}{% url 'book_detail' book.pk %}{% else %}{% url 'book_list' %}{% endif %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if book %}Save Changes{% else %}Add to Catalog{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Cover image live preview
+document.querySelector('[name="cover_image"]')?.addEventListener('change', function(){
+  const file = this.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('coverPreview');
+    preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:.75rem">`;
+  };
+  reader.readAsDataURL(file);
+});
+</script>
+
+{% endblock %}

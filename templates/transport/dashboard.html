@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Transport Dashboard{% endblock %}
+{% block page_title %}Transport Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.8rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem;transition:transform .2s,box-shadow .2s}
+  .stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+
+  /* ── Route capacity card ── */
+  .route-cap-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1rem 1.25rem;margin-bottom:.75rem;display:flex;align-items:center;gap:1rem;transition:transform .15s,box-shadow .15s}
+  .route-cap-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1)}
+  .route-icon{width:40px;height:40px;border-radius:.875rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;flex-shrink:0}
+
+  /* ── Capacity bar ── */
+  .cap-bar{height:6px;background:#e9ecef;border-radius:999px;overflow:hidden;flex:1}
+  .cap-fill{height:100%;border-radius:999px;transition:width .5s ease}
+
+  /* ── Maintenance alert ── */
+  .maintenance-alert{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:.85rem 1.25rem;display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;font-size:.85rem;color:#92400e}
+
+  /* ── Section header ── */
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between}
+
+  /* ── Avatar ── */
+  .avatar-xs{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.68rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  .empty-note{text-align:center;padding:1.5rem;color:#9ca3af;font-size:.85rem}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Transport Dashboard</h5>
+    <p class="text-muted small mb-0">
+      <i class="bi bi-clock me-1"></i>{% now "l, F d, Y" %}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'student_transport_assign' %}"
+       class="btn btn-primary rounded-pill px-3 fw-semibold">
+      <i class="bi bi-person-plus me-2"></i>Assign Student
+    </a>
+    <a href="{% url 'route_create' %}"
+       class="btn btn-outline-success rounded-pill px-3">
+      <i class="bi bi-signpost-split me-1"></i>Add Route
+    </a>
+    <a href="{% url 'vehicle_create' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-truck me-1"></i>Add Vehicle
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'vehicle_list' %}" class="text-decoration-none">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#eff6ff">
+          <i class="bi bi-truck text-primary"></i>
+        </div>
+        <div>
+          <div class="stat-num text-primary">{{ active_vehicles }}</div>
+          <div class="stat-lbl">Active Vehicles</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'route_list' %}" class="text-decoration-none">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#f0fdf4">
+          <i class="bi bi-signpost-split text-success"></i>
+        </div>
+        <div>
+          <div class="stat-num text-success">{{ total_routes }}</div>
+          <div class="stat-lbl">Active Routes</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'student_transport_list' %}" class="text-decoration-none">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#faf5ff">
+          <i class="bi bi-people" style="color:#7c3aed"></i>
+        </div>
+        <div>
+          <div class="stat-num" style="color:#7c3aed">{{ total_students }}</div>
+          <div class="stat-lbl">Students Assigned</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff7ed">
+        <i class="bi bi-wrench text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning">{{ maintenance|length }}</div>
+        <div class="stat-lbl">Under Maintenance</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Maintenance alerts -->
+{% if maintenance %}
+<div class="mb-4">
+  {% for v in maintenance %}
+  <div class="maintenance-alert">
+    <i class="bi bi-exclamation-triangle fs-5 flex-shrink-0"></i>
+    <div>
+      <strong>{{ v.name }}</strong> ({{ v.plate_number }}) is under maintenance.
+      {% if v.notes %}<span class="text-muted"> — {{ v.notes }}</span>{% endif %}
+    </div>
+    <a href="{% url 'vehicle_edit' v.pk %}"
+       class="btn btn-sm btn-outline-warning rounded-pill px-3 ms-auto"
+       style="font-size:.75rem;white-space:nowrap">
+      Update Status
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  <!-- LEFT: Route capacity -->
+  <div class="col-lg-7">
+
+    <div class="sec-head">
+      <span>
+        <i class="bi bi-bar-chart me-2 text-primary"></i>Route Capacity
+      </span>
+      <a href="{% url 'route_list' %}"
+         class="text-primary small fw-semibold text-decoration-none">
+        View All
+      </a>
+    </div>
+
+    {% if routes %}
+    {% for route in routes %}
+    <div class="route-cap-card">
+
+      <div class="route-icon"><i class="bi bi-bus-front"></i></div>
+
+      <div class="flex-grow-1 min-w-0">
+        <!-- Name + count -->
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <a href="{% url 'route_detail' route.pk %}"
+             class="fw-bold small text-decoration-none text-dark text-truncate">
+            {{ route.name }}
+          </a>
+          <span class="text-muted small ms-2 flex-shrink-0">
+            {{ route.assigned }}/{% if route.vehicle %}{{ route.vehicle.capacity }}{% else %}—{% endif %}
+          </span>
+        </div>
+
+        <!-- Capacity bar -->
+        {% if route.vehicle %}
+          {% widthratio route.assigned route.vehicle.capacity 100 as fill_pct %}
+          <div class="d-flex align-items-center gap-2">
+            <div class="cap-bar">
+              <div class="cap-fill"
+                   style="width:{{ fill_pct }}%;
+                   background:{% if fill_pct >= 90 %}#ef4444{% elif fill_pct >= 70 %}#f59e0b{% else %}#22c55e{% endif %}">
+              </div>
+            </div>
+            <span class="text-muted" style="font-size:.7rem;white-space:nowrap">
+              {{ route.available_seats }} free
+            </span>
+          </div>
+        {% else %}
+          <div class="text-muted" style="font-size:.72rem">
+            <i class="bi bi-exclamation-circle me-1 text-warning"></i>
+            No vehicle assigned
+          </div>
+        {% endif %}
+
+        <!-- Meta -->
+        <div class="d-flex flex-wrap gap-2 mt-1" style="font-size:.7rem;color:#9ca3af">
+          <span><i class="bi bi-geo-alt me-1"></i>{{ route.start_point }}</span>
+          {% if route.departure_time %}
+          <span><i class="bi bi-clock me-1"></i>{{ route.departure_time|time:"H:i" }}</span>
+          {% endif %}
+          {% if route.stop_count %}
+          <span>
+            <i class="bi bi-pin-map me-1"></i>
+            {{ route.stop_count }} stop{{ route.stop_count|pluralize }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Attendance button -->
+      <a href="{% url 'transport_attendance_mark' route.pk %}"
+         class="btn btn-sm btn-outline-primary rounded-pill px-2 flex-shrink-0"
+         style="font-size:.72rem">
+        <i class="bi bi-check2-square me-1"></i>Attendance
+      </a>
+
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="info-card card">
+      <div class="empty-note">
+        <i class="bi bi-signpost-split d-block fs-1 mb-2 opacity-25"></i>
+        No active routes yet.
+        <a href="{% url 'route_create' %}" class="fw-semibold">Create first route</a>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- RIGHT: Quick actions + Recent -->
+  <div class="col-lg-5">
+
+    <!-- Quick actions -->
+    <div class="info-card card p-4 mb-4">
+      <div class="sec-head">
+        <span><i class="bi bi-lightning me-2 text-warning"></i>Quick Actions</span>
+      </div>
+      <div class="d-flex flex-column gap-2">
+        <a href="{% url 'student_transport_assign' %}"
+           class="btn btn-primary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-person-plus me-2"></i>Assign Student to Route
+        </a>
+        <a href="{% url 'route_create' %}"
+           class="btn btn-outline-success rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-signpost-split me-2"></i>Add New Route
+        </a>
+        <a href="{% url 'vehicle_create' %}"
+           class="btn btn-outline-secondary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-truck me-2"></i>Register Vehicle
+        </a>
+        <a href="{% url 'student_transport_list' %}"
+           class="btn btn-outline-secondary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-people me-2"></i>View All Assignments
+        </a>
+        <a href="{% url 'vehicle_list' %}"
+           class="btn btn-outline-secondary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-truck me-2"></i>Manage Vehicles
+        </a>
+      </div>
+    </div>
+
+    <!-- Recent assignments -->
+    <div class="info-card card p-4">
+      <div class="sec-head">
+        <span>
+          <i class="bi bi-clock-history me-2 text-primary"></i>
+          Recent Assignments
+        </span>
+        <a href="{% url 'student_transport_list' %}"
+           class="text-primary small fw-semibold text-decoration-none">
+          View All
+        </a>
+      </div>
+      {% for st in recent %}
+      <div class="d-flex align-items-center gap-2 py-2"
+           style="border-bottom:1px solid #f1f5f9">
+        <div class="avatar-xs">
+          {{ st.student.user.first_name|first|upper }}{{ st.student.user.last_name|first|upper }}
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="fw-semibold small text-truncate">
+            {{ st.student.user.get_full_name }}
+          </div>
+          <div class="text-muted" style="font-size:.7rem">
+            <i class="bi bi-bus-front me-1"></i>{{ st.route.name }}
+          </div>
+        </div>
+        <div class="text-muted" style="font-size:.7rem;white-space:nowrap">
+          {{ st.created_at|date:"M d" }}
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted small text-center py-2 mb-0">No assignments yet</p>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,478 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Report History{% endblock %}
+{% block page_title %}Report History{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.82rem;color:#374151;margin-bottom:.3rem;display:block}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+
+  /* ── Status badges ── */
+  .s-ready     {background:#dcfce7;color:#15803d;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-pending   {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-processing{background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-failed    {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+
+  /* ── Format chip ── */
+  .fmt-pdf  {background:#fff1f2;color:#be123c;border-radius:.4rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700}
+  .fmt-excel{background:#f0fdf4;color:#15803d;border-radius:.4rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700}
+
+  /* ── Type chip ── */
+  .type-chip{background:#f8f9fb;color:#374151;border-radius:.5rem;padding:.12rem .55rem;font-size:.72rem;font-weight:600;border:1px solid #e2e8f0}
+
+  /* ── History card ── */
+  .history-card{border:none;border-radius:1rem;box-shadow:0 2px 8px rgba(0,0,0,.05);padding:1rem 1.35rem;margin-bottom:.65rem;display:flex;align-items:center;gap:1rem;transition:transform .15s,box-shadow .15s;border-left:4px solid}
+  .history-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.09)}
+  .history-card.ready     {border-left-color:#22c55e;background:#fff}
+  .history-card.pending   {border-left-color:#f59e0b;background:#fffbeb}
+  .history-card.processing{border-left-color:#1a3c72;background:#f8faff}
+  .history-card.failed    {border-left-color:#ef4444;background:#fff8f8}
+
+  /* ── Report type icon ── */
+  .type-icon{width:42px;height:42px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+
+  /* ── Duration badge ── */
+  .dur-badge{background:#f1f5f9;color:#64748b;border-radius:.4rem;padding:.1rem .45rem;font-size:.68rem;font-weight:600;font-family:monospace}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.38rem .95rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .filter-tab.red.active{background:#dc2626;border-color:#dc2626}
+  .filter-tab.red{border-color:#fca5a5;color:#dc2626}
+  .filter-tab.red:hover:not(.active){background:#fff1f2}
+  .filter-tab.green.active{background:#15803d;border-color:#15803d}
+  .filter-tab.green{border-color:#86efac;color:#15803d}
+  .filter-tab.green:hover:not(.active){background:#f0fdf4}
+
+  /* ── Chart card ── */
+  .chart-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;height:100%}
+  .chart-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+
+  /* ── Error box ── */
+  .error-box{background:#fff1f2;border:1px solid #fecaca;border-radius:.75rem;padding:.75rem 1rem;font-size:.78rem;color:#dc2626;margin-top:.5rem;font-family:monospace}
+
+  /* ── Search ── */
+  .search-wrap{position:relative;flex:1;max-width:280px}
+  .search-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:#9ca3af}
+  .search-pill{border:1.5px solid #e2e8f0;border-radius:999px;padding:.55rem 1rem .55rem 2.5rem;font-size:.85rem;width:100%;transition:border-color .2s}
+  .search-pill:focus{border-color:#1a3c72;outline:none;box-shadow:0 0 0 .2rem rgba(26,60,114,.1)}
+
+  .btn-run{border-radius:.875rem;padding:.65rem 1.75rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;color:#fff;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Report History</h5>
+    <p class="text-muted small mb-0">
+      Log of all generated reports
+    </p>
+  </div>
+  <a href="{% url 'reports_dashboard' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-grid me-1"></i>Dashboard
+  </a>
+</div>
+
+<!-- Filter form -->
+<div class="filter-bar">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <label>Report Type</label>
+      {{ form.report_type }}
+    </div>
+    <div class="col-md-2">
+      <label>Status</label>
+      {{ form.status }}
+    </div>
+    <div class="col-md-2">
+      <label>From Date</label>
+      {{ form.date_from }}
+    </div>
+    <div class="col-md-2">
+      <label>To Date</label>
+      {{ form.date_to }}
+    </div>
+    <div class="col-md-3 d-flex gap-2 align-self-end">
+      <button type="submit" class="btn-run flex-grow-1">
+        <i class="bi bi-search me-1"></i>Filter
+      </button>
+      {% if request.GET %}
+      <a href="{% url 'report_history' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Stat cards (JS-counted from page) -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-file-earmark-bar-graph text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ history.paginator.count }}</div>
+        <div class="stat-lbl">Total Reports</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntReady">—</div>
+        <div class="stat-lbl">Ready</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-x-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger" id="cntFailed">—</div>
+        <div class="stat-lbl">Failed</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-clock text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning" id="cntPending">—</div>
+        <div class="stat-lbl">Pending / Processing</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if history %}
+
+<div class="row g-4 mb-4">
+  <!-- Bar: reports by type -->
+  <div class="col-md-8">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart"></i>Reports Generated by Type
+      </div>
+      <canvas id="barType" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- Doughnut: status breakdown -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-pie-chart"></i>Status Breakdown
+      </div>
+      <canvas id="pieStatus" height="160"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Filter tabs + search -->
+<div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+  <a href="{% url 'report_history' %}"
+     class="filter-tab {% if not request.GET.status %}active{% endif %}">
+    All
+  </a>
+  <a href="?status=ready"
+     class="filter-tab green {% if request.GET.status == 'ready' %}active{% endif %}">
+    <i class="bi bi-check-circle me-1"></i>Ready
+  </a>
+  <a href="?status=pending"
+     class="filter-tab {% if request.GET.status == 'pending' %}active{% endif %}">
+    <i class="bi bi-clock me-1"></i>Pending
+  </a>
+  <a href="?status=failed"
+     class="filter-tab red {% if request.GET.status == 'failed' %}active{% endif %}">
+    <i class="bi bi-x-circle me-1"></i>Failed
+  </a>
+  <div class="search-wrap ms-auto">
+    <i class="bi bi-search search-icon"></i>
+    <input type="text" id="searchInp"
+           class="search-pill"
+           placeholder="Search reports…"
+           oninput="searchHistory(this.value)">
+  </div>
+</div>
+
+<!-- History cards -->
+<div id="historyList">
+  {% for r in history %}
+  <div class="history-card {{ r.status }}"
+       data-status="{{ r.status }}"
+       data-search="{{ r.title|lower }} {{ r.get_report_type_display|lower }}">
+
+    <!-- Type icon -->
+    <div class="type-icon
+      {% if 'report_card' in r.report_type or 'exam' in r.report_type %}
+      " style="background:#eff6ff;color:#1d4ed8">
+      <i class="bi bi-journal-check"></i>
+      {% elif 'attendance' in r.report_type %}
+      " style="background:#f0f9ff;color:#0369a1">
+      <i class="bi bi-calendar-check"></i>
+      {% elif 'fee' in r.report_type %}
+      " style="background:#f0fdf4;color:#15803d">
+      <i class="bi bi-cash-coin"></i>
+      {% elif 'library' in r.report_type %}
+      " style="background:#faf5ff;color:#7c3aed">
+      <i class="bi bi-book"></i>
+      {% elif 'transport' in r.report_type %}
+      " style="background:#fff7ed;color:#c2410c">
+      <i class="bi bi-bus-front"></i>
+      {% elif 'student' in r.report_type %}
+      " style="background:#eff6ff;color:#1d4ed8">
+      <i class="bi bi-people"></i>
+      {% elif 'staff' in r.report_type %}
+      " style="background:#f1f5f9;color:#374151">
+      <i class="bi bi-person-badge"></i>
+      {% else %}
+      " style="background:#f8f9fb;color:#9ca3af">
+      <i class="bi bi-file-earmark-bar-graph"></i>
+      {% endif %}
+    </div>
+
+    <!-- Content -->
+    <div class="flex-grow-1 min-w-0">
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+        <span class="fw-semibold small text-dark">{{ r.title|truncatechars:50 }}</span>
+        <span class="type-chip">{{ r.get_report_type_display }}</span>
+        <span class="fmt-{{ r.format }}">
+          {{ r.format|upper }}
+        </span>
+      </div>
+      <div class="d-flex flex-wrap gap-3 align-items-center"
+           style="font-size:.72rem;color:#9ca3af">
+        <span>
+          <i class="bi bi-person me-1"></i>
+          {{ r.requested_by.get_full_name|default:"System" }}
+        </span>
+        <span>
+          <i class="bi bi-clock me-1"></i>
+          {{ r.requested_at|date:"M d, Y H:i" }}
+        </span>
+        {% if r.completed_at %}
+        <span>
+          <i class="bi bi-check me-1"></i>
+          Completed {{ r.completed_at|date:"H:i" }}
+        </span>
+        {% endif %}
+        {% if r.duration_seconds %}
+        <span class="dur-badge">
+          {% if r.duration_seconds < 60 %}
+          {{ r.duration_seconds }}s
+          {% else %}
+          {{ r.duration_seconds|floatformat:0 }}s
+          {% endif %}
+        </span>
+        {% endif %}
+      </div>
+      {% if r.status == 'failed' and r.error_message %}
+      <div class="error-box mt-1">
+        <i class="bi bi-exclamation-circle me-1"></i>
+        {{ r.error_message|truncatechars:120 }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Status + action -->
+    <div class="d-flex flex-column align-items-end gap-2 flex-shrink-0">
+      <span class="s-{{ r.status }}">
+        {% if r.status == 'ready' %}
+        <i class="bi bi-check-circle me-1"></i>Ready
+        {% elif r.status == 'pending' %}
+        <i class="bi bi-clock me-1"></i>Pending
+        {% elif r.status == 'processing' %}
+        <i class="bi bi-arrow-repeat me-1"></i>Processing
+        {% else %}
+        <i class="bi bi-x-circle me-1"></i>Failed
+        {% endif %}
+      </span>
+      {% if r.status == 'ready' and r.file %}
+      <a href="{{ r.file.url }}"
+         class="btn btn-outline-primary rounded-pill px-3"
+         style="font-size:.72rem">
+        <i class="bi bi-download me-1"></i>Download
+      </a>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endfor %}
+
+  <!-- No results (JS) -->
+  <div id="noResults" class="info-card card" style="display:none">
+    <div class="empty-state">
+      <i class="bi bi-search fs-1 d-block mb-3 opacity-25"></i>
+      <h6 class="fw-bold text-dark">No matching reports</h6>
+      <p class="small text-muted mb-0">Try a different search term</p>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if history.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1 mb-0">
+    {% if history.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ history.previous_page_number }}&{{ request.GET.urlencode }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in history.paginator.page_range %}
+    <li class="page-item {% if history.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+    </li>
+    {% endfor %}
+    {% if history.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ history.next_page_number }}&{{ request.GET.urlencode }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// Build chart data from page cards
+const cards  = document.querySelectorAll('#historyList .history-card[data-status]');
+let ready=0, failed=0, pending=0;
+const typeCounts = {};
+cards.forEach(c => {
+  if(c.dataset.status === 'ready')      ready++;
+  else if(c.dataset.status === 'failed') failed++;
+  else                                   pending++;
+  const chip = c.querySelector('.type-chip');
+  if(chip){
+    const t = chip.textContent.trim();
+    typeCounts[t] = (typeCounts[t] || 0) + 1;
+  }
+});
+
+// ── Stat badges ───────────────────────────────
+const s = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+s('cntReady',  ready);
+s('cntFailed', failed);
+s('cntPending',pending);
+
+// ── Bar: by type ──────────────────────────────
+const typeLabels = Object.keys(typeCounts);
+const typeData   = Object.values(typeCounts);
+const COLORS     = ['#1a3c72','#0ea5a0','#22c55e','#f59e0b','#8b5cf6',
+                    '#ef4444','#f97316','#06b6d4','#ec4899','#14b8a6'];
+
+new Chart(document.getElementById('barType'), {
+  type: 'bar',
+  data: {
+    labels: typeLabels,
+    datasets: [{
+      label:           'Reports',
+      data:            typeData,
+      backgroundColor: typeData.map((_,i) => COLORS[i % COLORS.length]),
+      borderRadius:    6,
+      borderSkipped:   false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} report(s)` } }
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f1f5f9' },
+           ticks: { font: { size: 11 }, precision: 0 } },
+      x: { grid: { display: false },
+           ticks: { font: { size: 10 }, maxRotation: 30 } }
+    }
+  }
+});
+
+// ── Doughnut: status breakdown ────────────────
+new Chart(document.getElementById('pieStatus'), {
+  type: 'doughnut',
+  data: {
+    labels:   ['Ready', 'Failed', 'Pending/Processing'],
+    datasets: [{
+      data:            [ready, failed, pending],
+      backgroundColor: ['#22c55e', '#ef4444', '#f59e0b'],
+      borderWidth:     3,
+      borderColor:     '#fff',
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } }
+    },
+    cutout: '62%',
+  }
+});
+
+// ── Search filter ─────────────────────────────
+function searchHistory(q){
+  const term    = q.toLowerCase().trim();
+  const items   = document.querySelectorAll('#historyList .history-card');
+  let   visible = 0;
+  items.forEach(c => {
+    const match = !term || c.dataset.search.includes(term);
+    c.style.display = match ? '' : 'none';
+    if(match) visible++;
+  });
+  const noRes = document.getElementById('noResults');
+  if(noRes) noRes.style.display = visible === 0 ? 'block' : 'none';
+}
+</script>
+
+{% else %}
+<div class="info-card card">
+  <div class="empty-state">
+    <i class="bi bi-clock-history fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No report history yet</h6>
+    <p class="small text-muted mb-3">
+      Generated reports will appear here. Go to a report type and click Generate.
+    </p>
+    <a href="{% url 'reports_dashboard' %}"
+       class="btn btn-primary rounded-pill px-4">
+      <i class="bi bi-file-earmark-bar-graph me-2"></i>Go to Reports
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}Enrollments{% endblock %}
+{% block page_title %}Enrollments{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr:hover{background:#f8faff}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .adm-no{font-family:monospace;font-size:.75rem;background:#f1f5f9;padding:.2rem .5rem;border-radius:.4rem;color:#475569}
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.75rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+</style>
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Enrollments</h5>
+    <p class="text-muted small mb-0">{{ enrollments.paginator.count }} enrollment{{ enrollments.paginator.count|pluralize }}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'bulk_enroll' %}" class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-people me-1"></i>Bulk Enroll
+    </a>
+    <a href="{% url 'student_enroll' %}" class="btn btn-add text-white">
+      <i class="bi bi-plus-circle me-2"></i>Enroll Student
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+  <select name="year" class="form-select search-bar" style="max-width:160px" onchange="this.form.submit()">
+    <option value="">All Years</option>
+    {% for year in years %}
+    <option value="{{ year.pk }}" {% if year_id == year.pk|stringformat:'s' %}selected{% endif %}>
+      {{ year.name }}{% if year.is_current %} ★{% endif %}
+    </option>
+    {% endfor %}
+  </select>
+  <select name="grade" class="form-select search-bar" style="max-width:150px" onchange="this.form.submit()">
+    <option value="">All Grades</option>
+    {% for grade in grades %}
+    <option value="{{ grade.pk }}" {% if grade_id == grade.pk|stringformat:'s' %}selected{% endif %}>
+      {{ grade.name }}
+    </option>
+    {% endfor %}
+  </select>
+  <input type="text" name="q" value="{{ q }}" class="form-control search-bar"
+         placeholder="Search student…" style="max-width:260px">
+  <button type="submit" class="btn btn-outline-primary rounded-pill px-4">
+    <i class="bi bi-search me-1"></i>Filter
+  </button>
+  {% if q or year_id or grade_id %}
+  <a href="{% url 'enrollment_list' %}" class="btn btn-outline-secondary rounded-pill px-3">Clear</a>
+  {% endif %}
+</form>
+
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Admission No</th>
+          <th>Class / Section</th>
+          <th>Academic Year</th>
+          <th>Enrolled On</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for enr in enrollments %}
+        <tr>
+          <td class="text-muted small fw-semibold">{{ enrollments.start_index|add:forloop.counter0 }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ enr.student.user.first_name|first|upper }}{{ enr.student.user.last_name|first|upper }}
+              </div>
+              <a href="{% url 'student_detail' enr.student.pk %}"
+                 class="fw-semibold small text-decoration-none text-dark">
+                {{ enr.student.user.get_full_name }}
+              </a>
+            </div>
+          </td>
+          <td><span class="adm-no">{{ enr.student.admission_number }}</span></td>
+          <td>
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-3">
+              {{ enr.section.grade }} — {{ enr.section.name }}
+            </span>
+          </td>
+          <td class="small text-muted">{{ enr.academic_year }}</td>
+          <td class="small text-muted">{{ enr.enrolled_date|date:"M d, Y" }}</td>
+          <td>
+            {% if enr.is_active %}
+            <span class="badge rounded-pill bg-success-subtle text-success px-3">Active</span>
+            {% elif enr.is_promoted %}
+            <span class="badge rounded-pill bg-info-subtle text-info px-3">Promoted</span>
+            {% else %}
+            <span class="badge rounded-pill bg-secondary-subtle text-secondary px-3">Cancelled</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if enr.is_active %}
+            <a href="{% url 'enrollment_cancel' enr.pk %}"
+               class="btn btn-sm btn-outline-danger rounded-pill px-2"
+               style="font-size:.75rem"
+               onclick="return confirm('Cancel enrollment for {{ enr.student.user.get_full_name }}?')">
+              Cancel
+            </a>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="text-center py-5">
+              <i class="bi bi-journal-x fs-1 text-muted opacity-25 d-block mb-3"></i>
+              <h6 class="fw-bold text-dark">No enrollments found</h6>
+              <a href="{% url 'student_enroll' %}" class="btn btn-primary rounded-pill px-4 mt-2">
+                <i class="bi bi-plus-circle me-2"></i>Enroll Now
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if enrollments.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if enrollments.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3" href="?page={{ enrollments.previous_page_number }}&q={{ q }}&year={{ year_id }}&grade={{ grade_id }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in enrollments.paginator.page_range %}
+    <li class="page-item {% if enrollments.number == num %}active{% endif %}">
+      <a class="page-link rounded-3" href="?page={{ num }}&q={{ q }}&year={{ year_id }}&grade={{ grade_id }}">{{ num }}</a>
+    </li>
+    {% endfor %}
+    {% if enrollments.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3" href="?page={{ enrollments.next_page_number }}&q={{ q }}&year={{ year_id }}&grade={{ grade_id }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

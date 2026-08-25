@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ staff.user.get_full_name }} — Profile{% endblock %}
+{% block page_title %}Staff Profile{% endblock %}
+
+{% block content %}
+<style>
+  .profile-hero{background:linear-gradient(135deg,#16a34a,#0ea5a0);border-radius:1.25rem;padding:2rem 2.5rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .profile-hero::before{content:"";position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .profile-avatar{width:90px;height:90px;border-radius:50%;border:4px solid rgba(255,255,255,.35);object-fit:cover;flex-shrink:0}
+  .profile-avatar-ph{width:90px;height:90px;border-radius:50%;border:4px solid rgba(255,255,255,.35);background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:2.2rem;font-weight:700;color:#fff;flex-shrink:0}
+  .staff-id-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.3rem 1rem;font-family:monospace;font-size:.85rem;font-weight:700;display:inline-block}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .info-row{display:flex;align-items:flex-start;padding:.8rem 0;border-bottom:1px solid #f1f5f9}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.78rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:160px;flex-shrink:0}
+  .info-value{font-weight:500;color:#1e293b;font-size:.9rem}
+  .section-head-card{padding:1.1rem 1.5rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
+</style>
+
+<!-- Hero -->
+<div class="profile-hero">
+  <div class="d-flex flex-wrap align-items-center gap-4">
+    {% if staff.photo %}
+    <img src="{{ staff.photo.url }}" class="profile-avatar" alt="">
+    {% else %}
+    <div class="profile-avatar-ph">
+      {{ staff.user.first_name|first|upper }}{{ staff.user.last_name|first|upper }}
+    </div>
+    {% endif %}
+    <div class="flex-grow-1">
+      <h4 class="fw-bold mb-1 text-white">{{ staff.user.get_full_name }}</h4>
+      <div class="staff-id-badge mb-2">{{ staff.staff_id }}</div>
+      <div class="d-flex flex-wrap gap-3 opacity-75 small mt-1">
+        <span><i class="bi bi-briefcase me-1"></i>{{ staff.get_staff_type_display }}</span>
+        {% if staff.department %}
+        <span><i class="bi bi-building me-1"></i>{{ staff.department }}</span>
+        {% endif %}
+        <span><i class="bi bi-shield-check me-1"></i>{{ staff.user.get_role_display }}</span>
+        {% if staff.user.email %}
+        <span><i class="bi bi-envelope me-1"></i>{{ staff.user.email }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="d-flex flex-column gap-2 flex-shrink-0">
+      <a href="{% url 'staff_edit' staff.pk %}"
+         class="btn btn-light btn-sm rounded-pill px-3 fw-semibold">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+      <a href="{% url 'staff_toggle_active' staff.pk %}"
+         class="btn btn-outline-light btn-sm rounded-pill px-3"
+         onclick="return confirm('{% if staff.is_active %}Deactivate{% else %}Activate{% endif %} this staff?')">
+        {% if staff.is_active %}
+        <i class="bi bi-pause-circle me-1"></i>Deactivate
+        {% else %}
+        <i class="bi bi-play-circle me-1"></i>Activate
+        {% endif %}
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Personal Info -->
+  <div class="col-lg-6">
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-person me-2 text-primary"></i>Personal Information
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Full Name</span>
+        <span class="info-value">{{ staff.user.get_full_name }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Username</span>
+        <span class="info-value">{{ staff.user.username }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Email</span>
+        <span class="info-value">{{ staff.user.email|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Phone</span>
+        <span class="info-value">{{ staff.user.phone|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">System Role</span>
+        <span class="info-value">
+          <span class="badge rounded-pill bg-primary-subtle text-primary px-3">
+            {{ staff.user.get_role_display }}
+          </span>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Status</span>
+        <span class="info-value">
+          {% if staff.is_active %}
+          <span class="badge rounded-pill bg-success-subtle text-success px-3">
+            <i class="bi bi-check-circle me-1"></i>Active
+          </span>
+          {% else %}
+          <span class="badge rounded-pill bg-danger-subtle text-danger px-3">
+            <i class="bi bi-x-circle me-1"></i>Inactive
+          </span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Professional Info -->
+  <div class="col-lg-6">
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-briefcase me-2 text-success"></i>Professional Details
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Staff ID</span>
+        <span class="info-value" style="font-family:monospace">{{ staff.staff_id }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Staff Type</span>
+        <span class="info-value">{{ staff.get_staff_type_display }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Department</span>
+        <span class="info-value">{{ staff.department|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Qualification</span>
+        <span class="info-value">{{ staff.get_qualification_display|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Specialization</span>
+        <span class="info-value">{{ staff.specialization|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Experience</span>
+        <span class="info-value">{{ staff.experience_years }} year{{ staff.experience_years|pluralize }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Join Date</span>
+        <span class="info-value">{{ staff.join_date|date:"M d, Y" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Salary</span>
+        <span class="info-value fw-bold text-success">${{ staff.salary }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bank Info -->
+  <div class="col-lg-6">
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-bank me-2 text-warning"></i>Banking Details
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Bank Name</span>
+        <span class="info-value">{{ staff.bank_name|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Account No</span>
+        <span class="info-value" style="font-family:monospace">
+          {{ staff.bank_account|default:"—" }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency Contact -->
+  <div class="col-lg-6">
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-exclamation-circle me-2 text-danger"></i>Emergency Contact
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Contact Name</span>
+        <span class="info-value">{{ staff.emergency_contact_name|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Contact Phone</span>
+        <span class="info-value">{{ staff.emergency_contact_phone|default:"—" }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

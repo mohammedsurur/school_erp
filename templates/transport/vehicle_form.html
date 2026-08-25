@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Vehicle preview card ── */
+  .vehicle-preview{border-radius:1.25rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden;display:flex;align-items:center;gap:1.25rem}
+  .vehicle-preview::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .preview-icon{width:64px;height:64px;border-radius:1rem;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.75rem;flex-shrink:0}
+  .preview-plate{font-family:monospace;font-size:.9rem;background:rgba(255,255,255,.2);border-radius:.5rem;padding:.25rem .75rem;display:inline-block;margin-top:.35rem;letter-spacing:.08em}
+
+  /* ── Type selector ── */
+  .type-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.75rem 1rem;text-align:center;cursor:pointer;transition:all .2s;background:#fff}
+  .type-btn:hover{border-color:#1a3c72}
+  .type-btn.selected{border-color:var(--tc);background:var(--tb)}
+  .type-btn .type-icon{font-size:1.5rem;margin-bottom:.35rem}
+  .type-btn .type-name{font-size:.8rem;font-weight:700;color:#374151}
+  .type-btn .type-cap {font-size:.68rem;color:#9ca3af;margin-top:.1rem}
+
+  /* ── Status selector ── */
+  .status-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.6rem .9rem;cursor:pointer;transition:all .2s;background:#fff;display:flex;align-items:center;gap:.5rem;font-size:.82rem;font-weight:600}
+  .status-btn:hover{border-color:#1a3c72}
+  .status-btn.selected{border-color:var(--sc);background:var(--sb);color:var(--sc)}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'vehicle_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if vehicle %}Update vehicle details{% else %}Register a new vehicle{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div class="vehicle-preview" id="vehiclePreview"
+         style="background:linear-gradient(135deg,#1a3c72,#0ea5a0)">
+      <div class="preview-icon" id="previewIcon">
+        <i class="bi bi-bus-front" id="previewVehicleIcon"></i>
+      </div>
+      <div style="position:relative;z-index:1">
+        <div class="fw-bold fs-5" id="previewName">
+          {% if vehicle %}{{ vehicle.name }}{% else %}Vehicle Name{% endif %}
+        </div>
+        <div class="preview-plate" id="previewPlate">
+          {% if vehicle %}{{ vehicle.plate_number }}{% else %}PLATE-NO{% endif %}
+        </div>
+        <div class="mt-2 d-flex gap-3 opacity-75" style="font-size:.78rem">
+          <span id="previewCapacity">
+            <i class="bi bi-people me-1"></i>
+            {% if vehicle %}{{ vehicle.capacity }}{% else %}0{% endif %} seats
+          </span>
+          <span id="previewDriver">
+            {% if vehicle and vehicle.driver_name %}
+            <i class="bi bi-person me-1"></i>{{ vehicle.driver_name }}
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Vehicle type selector -->
+        <div class="section-head">
+          <i class="bi bi-truck me-2"></i>Vehicle Type
+        </div>
+        <div class="row g-2 mb-4">
+          <div class="col-4">
+            <div class="type-btn {% if not vehicle or vehicle.vehicle_type == 'bus' %}selected{% endif %}"
+                 data-value="bus"
+                 style="--tc:#1a3c72;--tb:#eff6ff"
+                 onclick="pickType('bus', this)">
+              <div class="type-icon">🚌</div>
+              <div class="type-name">Bus</div>
+              <div class="type-cap">Large capacity</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="type-btn {% if vehicle.vehicle_type == 'minibus' %}selected{% endif %}"
+                 data-value="minibus"
+                 style="--tc:#7c3aed;--tb:#faf5ff"
+                 onclick="pickType('minibus', this)">
+              <div class="type-icon">🚐</div>
+              <div class="type-name">Minibus</div>
+              <div class="type-cap">Medium capacity</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="type-btn {% if vehicle.vehicle_type == 'van' %}selected{% endif %}"
+                 data-value="van"
+                 style="--tc:#0369a1;--tb:#f0f9ff"
+                 onclick="pickType('van', this)">
+              <div class="type-icon">🚙</div>
+              <div class="type-name">Van</div>
+              <div class="type-cap">Small capacity</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:none">{{ form.vehicle_type }}</div>
+
+        <!-- Basic info -->
+        <div class="section-head">
+          <i class="bi bi-info-circle me-2"></i>Vehicle Details
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-7">
+            <label>Vehicle Name <span class="req">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <small class="text-danger d-block mt-1">{{ form.name.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-5">
+            <label>Plate Number <span class="req">*</span></label>
+            {{ form.plate_number }}
+            {% if form.plate_number.errors %}
+            <small class="text-danger d-block mt-1">{{ form.plate_number.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <label>Capacity (seats) <span class="req">*</span></label>
+            {{ form.capacity }}
+            {% if form.capacity.errors %}
+            <small class="text-danger d-block mt-1">{{ form.capacity.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="section-head">
+          <i class="bi bi-activity me-2"></i>Status
+        </div>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          <div class="status-btn {% if not vehicle or vehicle.status == 'active' %}selected{% endif %}"
+               data-value="active"
+               style="--sc:#15803d;--sb:#f0fdf4"
+               onclick="pickStatus('active', this)">
+            <i class="bi bi-check-circle"></i> Active
+          </div>
+          <div class="status-btn {% if vehicle.status == 'maintenance' %}selected{% endif %}"
+               data-value="maintenance"
+               style="--sc:#854d0e;--sb:#fef9c3"
+               onclick="pickStatus('maintenance', this)">
+            <i class="bi bi-wrench"></i> Under Maintenance
+          </div>
+          <div class="status-btn {% if vehicle.status == 'inactive' %}selected{% endif %}"
+               data-value="inactive"
+               style="--sc:#64748b;--sb:#f1f5f9"
+               onclick="pickStatus('inactive', this)">
+            <i class="bi bi-x-circle"></i> Inactive
+          </div>
+        </div>
+        <div style="display:none">{{ form.status }}</div>
+
+        <!-- Driver -->
+        <div class="section-head">
+          <i class="bi bi-person-badge me-2"></i>Driver Information
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-7">
+            <label>Driver Name</label>
+            {{ form.driver_name }}
+          </div>
+          <div class="col-md-5">
+            <label>Driver Phone</label>
+            {{ form.driver_phone }}
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="mb-4">
+          <label>Notes</label>
+          {{ form.notes }}
+          <small class="text-muted">
+            Maintenance schedule, special remarks, etc.
+          </small>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'vehicle_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if vehicle %}Save Changes{% else %}Register Vehicle{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const TYPE_GRADIENTS = {
+  bus:     'linear-gradient(135deg,#1a3c72,#0ea5a0)',
+  minibus: 'linear-gradient(135deg,#7c3aed,#a78bfa)',
+  van:     'linear-gradient(135deg,#0369a1,#06b6d4)',
+};
+const TYPE_ICONS = {
+  bus: 'bus-front', minibus: 'bus-front', van: 'truck',
+};
+
+function pickType(val, el){
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="vehicle_type"]').value = val;
+  document.getElementById('vehiclePreview').style.background = TYPE_GRADIENTS[val];
+  document.getElementById('previewVehicleIcon').className = `bi bi-${TYPE_ICONS[val]}`;
+}
+
+function pickStatus(val, el){
+  document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="status"]').value = val;
+}
+
+// Live preview updates
+function updatePreview(){
+  const name     = document.querySelector('[name="name"]')?.value.trim()         || 'Vehicle Name';
+  const plate    = document.querySelector('[name="plate_number"]')?.value.trim() || 'PLATE-NO';
+  const capacity = document.querySelector('[name="capacity"]')?.value            || '0';
+  const driver   = document.querySelector('[name="driver_name"]')?.value.trim()  || '';
+
+  document.getElementById('previewName').textContent     = name;
+  document.getElementById('previewPlate').textContent    = plate.toUpperCase();
+  document.getElementById('previewCapacity').innerHTML   = `<i class="bi bi-people me-1"></i>${capacity} seats`;
+  document.getElementById('previewDriver').innerHTML     = driver
+    ? `<i class="bi bi-person me-1"></i>${driver}` : '';
+}
+
+['name','plate_number','capacity','driver_name'].forEach(n => {
+  document.querySelector(`[name="${n}"]`)?.addEventListener('input', updatePreview);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Sync hidden selects from instance values
+  const vt = document.querySelector('[name="vehicle_type"]')?.value || 'bus';
+  const vs = document.querySelector('[name="status"]')?.value       || 'active';
+  document.getElementById('vehiclePreview').style.background = TYPE_GRADIENTS[vt] || TYPE_GRADIENTS.bus;
+  updatePreview();
+});
+</script>
+
+{% endblock %}

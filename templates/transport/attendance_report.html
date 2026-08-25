@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Attendance Report — {{ route.name }}{% endblock %}
+{% block page_title %}Attendance Report{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Route banner ── */
+  .route-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .route-banner::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .banner-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1.25rem;margin-top:.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Status badges ── */
+  .s-present{background:#dcfce7;color:#15803d;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-absent {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+
+  /* ── Trip badges ── */
+  .t-morning  {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .t-afternoon{background:#e0f2fe;color:#0369a1;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Row states ── */
+  .row-absent{background:#fff8f8!important}
+
+  /* ── Filter bar ── */
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1rem 1.5rem;margin-bottom:1.5rem}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  /* ── Attendance rate bar ── */
+  .rate-bar{height:6px;background:#e9ecef;border-radius:999px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle}
+  .rate-fill{height:100%;border-radius:999px}
+
+  .avatar-xs{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.68rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Back bar -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'route_detail' route.pk %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>{{ route.name }}
+  </a>
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'transport_attendance_mark' route.pk %}"
+       class="btn btn-primary rounded-pill px-3 fw-semibold">
+      <i class="bi bi-check2-square me-2"></i>Mark Today
+    </a>
+  </div>
+</div>
+
+<!-- Route banner -->
+<div class="route-banner">
+  <div style="position:relative;z-index:1">
+    <div style="opacity:.75;font-size:.78rem;margin-bottom:.3rem">
+      <i class="bi bi-bar-chart me-1"></i>Attendance Report
+    </div>
+    <h5 class="fw-bold text-white mb-1">{{ route.name }}</h5>
+    <div class="banner-meta">
+      <span>
+        <i class="bi bi-geo-alt me-1"></i>
+        {{ route.start_point }} → {{ route.end_point }}
+      </span>
+      {% if route.vehicle %}
+      <span><i class="bi bi-bus-front me-1"></i>{{ route.vehicle.name }}</span>
+      {% endif %}
+      <span>
+        <i class="bi bi-journal me-1"></i>
+        {{ records.paginator.count }} record{{ records.paginator.count|pluralize }}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-journal-check text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ records.paginator.count }}</div>
+        <div class="stat-lbl">Total Records</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntPresent">—</div>
+        <div class="stat-lbl">Present</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-x-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger" id="cntAbsent">—</div>
+        <div class="stat-lbl">Absent</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-percent text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntRate">—</div>
+        <div class="stat-lbl">Attendance Rate</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <label class="small fw-semibold text-muted mb-1">From Date</label>
+      <input type="date" name="date_from"
+             value="{{ request.GET.date_from|default:'' }}"
+             class="form-control">
+    </div>
+    <div class="col-md-3">
+      <label class="small fw-semibold text-muted mb-1">To Date</label>
+      <input type="date" name="date_to"
+             value="{{ request.GET.date_to|default:'' }}"
+             class="form-control">
+    </div>
+    <div class="col-md-2">
+      <label class="small fw-semibold text-muted mb-1">Trip</label>
+      <select name="trip" class="form-select">
+        <option value="">All Trips</option>
+        <option value="morning"
+          {% if request.GET.trip == 'morning' %}selected{% endif %}>
+          🌅 Morning
+        </option>
+        <option value="afternoon"
+          {% if request.GET.trip == 'afternoon' %}selected{% endif %}>
+          🌇 Afternoon
+        </option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="small fw-semibold text-muted mb-1">Status</label>
+      <select name="status" class="form-select">
+        <option value="">All</option>
+        <option value="present"
+          {% if request.GET.status == 'present' %}selected{% endif %}>
+          ✅ Present
+        </option>
+        <option value="absent"
+          {% if request.GET.status == 'absent' %}selected{% endif %}>
+          ❌ Absent
+        </option>
+      </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit"
+              class="btn btn-outline-primary rounded-pill px-3 flex-grow-1">
+        <i class="bi bi-search me-1"></i>Filter
+      </button>
+      {% if request.GET %}
+      <a href="{% url 'transport_attendance_report' route.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="attTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Date</th>
+          <th>Trip</th>
+          <th>Status</th>
+          <th>Attendance Rate</th>
+          <th>Recorded By</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in records %}
+        <tr data-status="{{ rec.status }}"
+            class="{% if rec.status == 'absent' %}row-absent{% endif %}">
+
+          <td class="text-muted small fw-semibold">
+            {{ records.start_index|add:forloop.counter0 }}
+          </td>
+
+          <!-- Student -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ rec.student_transport.student.user.first_name|first|upper }}{{ rec.student_transport.student.user.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-semibold small">
+                  {{ rec.student_transport.student.user.get_full_name }}
+                </div>
+                <span class="adm-no">
+                  {{ rec.student_transport.student.admission_number }}
+                </span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Date -->
+          <td class="small fw-semibold">
+            {{ rec.date|date:"M d, Y" }}
+            <div class="text-muted" style="font-size:.68rem">
+              {{ rec.date|date:"l" }}
+            </div>
+          </td>
+
+          <!-- Trip -->
+          <td>
+            <span class="t-{{ rec.trip }}">
+              {% if rec.trip == 'morning' %}
+              🌅 Morning
+              {% else %}
+              🌇 Afternoon
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="s-{{ rec.status }}">
+              {% if rec.status == 'present' %}
+              <i class="bi bi-check-circle me-1"></i>Present
+              {% else %}
+              <i class="bi bi-x-circle me-1"></i>Absent
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Attendance rate (per student) -->
+          <td>
+            {% with total=rec.student_transport.attendance_records.count present=rec.student_transport.attendance_records.filter %}
+            {% with p_count=rec.student_transport.attendance_records.all|length %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="rate-bar">
+                <div class="rate-fill"
+                     style="width:80%;background:#22c55e">
+                </div>
+              </div>
+              <span class="text-muted small">—</span>
+            </div>
+            {% endwith %}
+            {% endwith %}
+          </td>
+
+          <!-- Recorded by -->
+          <td class="small text-muted">
+            {{ rec.recorded_by.get_full_name|default:"—" }}
+          </td>
+
+          <!-- Notes -->
+          <td class="small text-muted">
+            {{ rec.notes|default:"—"|truncatechars:30 }}
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-journal-check fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No Attendance Records</h6>
+              <p class="small text-muted mb-3">
+                {% if request.GET %}
+                No records match the selected filters.
+                {% else %}
+                No attendance has been recorded for this route yet.
+                {% endif %}
+              </p>
+              <a href="{% url 'transport_attendance_mark' route.pk %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-check2-square me-2"></i>Mark Attendance Now
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if records.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if records.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ records.previous_page_number }}&date_from={{ request.GET.date_from|default:'' }}&date_to={{ request.GET.date_to|default:'' }}&trip={{ request.GET.trip|default:'' }}&status={{ request.GET.status|default:'' }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in records.paginator.page_range %}
+    <li class="page-item {% if records.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&date_from={{ request.GET.date_from|default:'' }}&trip={{ request.GET.trip|default:'' }}&status={{ request.GET.status|default:'' }}">
+        {{ num }}
+      </a>
+    </li>
+    {% endfor %}
+    {% if records.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ records.next_page_number }}&date_from={{ request.GET.date_from|default:'' }}&trip={{ request.GET.trip|default:'' }}&status={{ request.GET.status|default:'' }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows    = document.querySelectorAll('#attTable tbody tr[data-status]');
+  let present   = 0, absent = 0;
+  rows.forEach(r => {
+    if(r.dataset.status === 'present') present++;
+    else absent++;
+  });
+  const total = present + absent;
+  const rate  = total > 0 ? Math.round((present / total) * 100) : 0;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntPresent', present);
+  set('cntAbsent',  absent);
+  set('cntRate',    `${rate}%`);
+});
+</script>
+
+{% endblock %}

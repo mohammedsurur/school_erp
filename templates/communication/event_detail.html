@@ -1,0 +1,371 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block page_title %}Event Detail{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+
+  /* ── Hero ── */
+  .event-hero{border-radius:1.25rem;padding:2rem 2.25rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .cat-academic {background:linear-gradient(135deg,#1a3c72,#0ea5a0)}
+  .cat-exam     {background:linear-gradient(135deg,#7f1d1d,#dc2626)}
+  .cat-holiday  {background:linear-gradient(135deg,#14532d,#22c55e)}
+  .cat-sport    {background:linear-gradient(135deg,#7c2d12,#f97316)}
+  .cat-cultural {background:linear-gradient(135deg,#4c1d95,#8b5cf6)}
+  .cat-meeting  {background:linear-gradient(135deg,#0c4a6e,#0ea5e9)}
+  .cat-other    {background:linear-gradient(135deg,#374151,#6b7280)}
+  .event-hero::before{content:"";position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .event-hero::after {content:"";position:absolute;bottom:-20px;left:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.05)}
+
+  /* ── Hero date box ── */
+  .hero-date{background:rgba(255,255,255,.2);border-radius:1rem;padding:.85rem 1.25rem;text-align:center;min-width:70px;flex-shrink:0;position:relative;z-index:1}
+  .hero-day  {font-size:2.2rem;font-weight:800;line-height:1;color:#fff}
+  .hero-month{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.8);margin-top:.1rem}
+
+  /* ── Hero badges ── */
+  .hero-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.22rem .85rem;font-size:.78rem;font-weight:700;display:inline-block}
+
+  /* ── State badge ── */
+  .state-upcoming{background:#dcfce7;color:#15803d;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .state-ongoing {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .state-past    {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;padding:.7rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:130px;flex-shrink:0;padding-top:.1rem}
+
+  /* ── Countdown ── */
+  .countdown-strip{background:#f0fdf4;border:1.5px solid #86efac;border-radius:1rem;padding:1.1rem 1.5rem;display:flex;gap:1.25rem;justify-content:center;flex-wrap:wrap;margin-bottom:1rem}
+  .countdown-unit{text-align:center}
+  .countdown-num{font-size:1.8rem;font-weight:800;font-family:monospace;color:#15803d;line-height:1}
+  .countdown-lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-top:.2rem}
+
+  /* ── Ongoing pulse ── */
+  .ongoing-strip{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:1rem;padding:1rem 1.5rem;display:flex;align-items:center;gap:.75rem;margin-bottom:1rem}
+  .pulse-dot{width:12px;height:12px;border-radius:50%;background:#1d4ed8;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* ── Category chip ── */
+  .cat-chip{border-radius:999px;padding:.18rem .75rem;font-size:.72rem;font-weight:700}
+  .cc-academic{background:#eff6ff;color:#1d4ed8}
+  .cc-exam    {background:#fee2e2;color:#dc2626}
+  .cc-holiday {background:#dcfce7;color:#15803d}
+  .cc-sport   {background:#fff7ed;color:#c2410c}
+  .cc-cultural{background:#faf5ff;color:#7c3aed}
+  .cc-meeting {background:#f0f9ff;color:#0369a1}
+  .cc-other   {background:#f1f5f9;color:#64748b}
+
+  /* ── Multiday timeline ── */
+  .day-timeline{position:relative;padding-left:1.5rem}
+  .day-timeline::before{content:"";position:absolute;left:.5rem;top:8px;bottom:8px;width:2px;background:#e2e8f0;border-radius:999px}
+  .day-item{position:relative;margin-bottom:.85rem;font-size:.85rem}
+  .day-item:last-child{margin-bottom:0}
+  .day-dot{position:absolute;left:-1.2rem;top:.25rem;width:12px;height:12px;border-radius:50%;background:#1a3c72;border:2px solid #fff;box-shadow:0 0 0 2px #bfdbfe}
+</style>
+
+<!-- Back bar -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'event_list' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Events
+  </a>
+  {% if is_staff_role %}
+  <div class="d-flex gap-2 ms-auto flex-wrap">
+    <a href="{% url 'event_edit' event.pk %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    <a href="{% url 'event_delete' event.pk %}"
+       class="btn btn-outline-danger rounded-pill px-3"
+       onclick="return confirm('Delete {{ event.title }}?')">
+      <i class="bi bi-trash me-1"></i>Delete
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Hero -->
+<div class="event-hero cat-{{ event.category }}">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3"
+       style="position:relative;z-index:1">
+
+    <!-- Date + title -->
+    <div class="d-flex align-items-start gap-3">
+      <div class="hero-date">
+        <div class="hero-day">{{ event.start_date|date:"d" }}</div>
+        <div class="hero-month">{{ event.start_date|date:"M Y" }}</div>
+      </div>
+      <div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+          <span class="hero-badge">{{ event.get_category_display }}</span>
+          <span class="hero-badge">{{ event.get_audience_display }}</span>
+          {% if event.all_day %}
+          <span class="hero-badge">All Day</span>
+          {% endif %}
+        </div>
+        <h3 class="fw-bold text-white mb-1">{{ event.title }}</h3>
+        <div class="d-flex flex-wrap gap-3 opacity-75" style="font-size:.82rem">
+          {% if event.duration_days > 1 %}
+          <span>
+            <i class="bi bi-calendar-range me-1"></i>
+            {{ event.start_date|date:"M d" }} – {{ event.end_date|date:"M d, Y" }}
+            ({{ event.duration_days }} days)
+          </span>
+          {% else %}
+          <span>
+            <i class="bi bi-calendar me-1"></i>
+            {{ event.start_date|date:"l, F d, Y" }}
+          </span>
+          {% endif %}
+          {% if not event.all_day %}
+          <span>
+            <i class="bi bi-clock me-1"></i>
+            {{ event.start_date|time:"H:i" }} – {{ event.end_date|time:"H:i" }}
+          </span>
+          {% endif %}
+          {% if event.location %}
+          <span>
+            <i class="bi bi-geo-alt me-1"></i>{{ event.location }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- State badge -->
+    <div style="position:relative;z-index:1">
+      {% if event.is_ongoing %}
+      <span class="state-ongoing">
+        <i class="bi bi-play-fill me-1"></i>Happening Now
+      </span>
+      {% elif event.is_upcoming %}
+      <span class="state-upcoming">
+        <i class="bi bi-calendar-check me-1"></i>Upcoming
+      </span>
+      {% else %}
+      <span class="state-past">Past Event</span>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Description + countdown -->
+  <div class="col-lg-8">
+
+    <!-- Countdown (upcoming only) -->
+    {% if event.is_upcoming %}
+    <div class="countdown-strip mb-4" id="countdown">
+      <div class="countdown-unit">
+        <div class="countdown-num" id="cdDays">—</div>
+        <div class="countdown-lbl">Days</div>
+      </div>
+      <div class="countdown-unit">
+        <div class="countdown-num" id="cdHours">—</div>
+        <div class="countdown-lbl">Hours</div>
+      </div>
+      <div class="countdown-unit">
+        <div class="countdown-num" id="cdMinutes">—</div>
+        <div class="countdown-lbl">Minutes</div>
+      </div>
+      <div class="countdown-unit">
+        <div class="countdown-num" id="cdSeconds">—</div>
+        <div class="countdown-lbl">Seconds</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Ongoing pulse -->
+    {% if event.is_ongoing %}
+    <div class="ongoing-strip mb-4">
+      <div class="pulse-dot"></div>
+      <div>
+        <div class="fw-semibold small text-primary">This event is happening right now!</div>
+        <div class="text-muted small">
+          Ends {{ event.end_date|date:"M d, Y" }}
+          {% if not event.all_day %}at {{ event.end_date|time:"H:i" }}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Description -->
+    {% if event.description %}
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>About this Event
+      </h6>
+      <div style="font-size:.92rem;line-height:1.85;color:#374151;white-space:pre-wrap">
+        {{ event.description }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Multi-day timeline -->
+    {% if event.duration_days > 1 %}
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-calendar-range me-2 text-primary"></i>
+        Event Schedule ({{ event.duration_days }} Days)
+      </h6>
+      <div class="day-timeline">
+        {% for day_offset in "123456789"|make_list %}
+        {% if forloop.counter <= event.duration_days %}
+        <div class="day-item">
+          <div class="day-dot"></div>
+          <div class="fw-semibold">Day {{ forloop.counter }}</div>
+          <div class="text-muted small">
+            {{ event.start_date|date:"M d, Y" }}
+          </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      <small class="text-muted mt-2 d-block">
+        {{ event.start_date|date:"M d" }} – {{ event.end_date|date:"M d, Y" }}
+      </small>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- RIGHT: Details + actions -->
+  <div class="col-lg-4">
+
+    <!-- Event details -->
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Details
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Category</span>
+        <span class="cat-chip cc-{{ event.category }}">
+          {{ event.get_category_display }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Audience</span>
+        <span class="small">{{ event.get_audience_display }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Start</span>
+        <div>
+          <div class="small fw-semibold">
+            {{ event.start_date|date:"M d, Y" }}
+          </div>
+          {% if not event.all_day %}
+          <div class="text-muted" style="font-size:.72rem">
+            {{ event.start_date|time:"H:i" }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="info-row">
+        <span class="info-label">End</span>
+        <div>
+          <div class="small fw-semibold">
+            {{ event.end_date|date:"M d, Y" }}
+          </div>
+          {% if not event.all_day %}
+          <div class="text-muted" style="font-size:.72rem">
+            {{ event.end_date|time:"H:i" }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% if event.duration_days > 1 %}
+      <div class="info-row">
+        <span class="info-label">Duration</span>
+        <span class="small">{{ event.duration_days }} day{{ event.duration_days|pluralize }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">All Day</span>
+        <span class="small">{{ event.all_day|yesno:"Yes,No" }}</span>
+      </div>
+      {% if event.location %}
+      <div class="info-row">
+        <span class="info-label">Location</span>
+        <span class="small fw-semibold">{{ event.location }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Created By</span>
+        <span class="small">
+          {{ event.created_by.get_full_name|default:"System" }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Created On</span>
+        <span class="small text-muted">
+          {{ event.created_at|date:"M d, Y" }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Staff actions -->
+    {% if is_staff_role %}
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-gear me-2 text-secondary"></i>Actions
+      </h6>
+      <div class="d-flex flex-column gap-2">
+        <a href="{% url 'event_edit' event.pk %}"
+           class="btn btn-outline-primary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-pencil me-2"></i>Edit Event
+        </a>
+        <a href="{% url 'event_create' %}"
+           class="btn btn-outline-success rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-plus-circle me-2"></i>Create Another
+        </a>
+        <a href="{% url 'event_delete' event.pk %}"
+           class="btn btn-outline-danger rounded-3 text-start px-3"
+           style="font-size:.83rem"
+           onclick="return confirm('Delete {{ event.title }}?')">
+          <i class="bi bi-trash me-2"></i>Delete Event
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% if event.is_upcoming %}
+<script>
+const target = new Date("{{ event.start_date|date:'Y-m-d' }}T{{ event.start_date|time:'H:i:s' }}");
+
+function updateCountdown(){
+  const now  = new Date();
+  const diff = target - now;
+  if(diff <= 0){
+    document.getElementById('countdown').innerHTML =
+      '<div class="fw-bold text-success">🎉 Event has started!</div>';
+    return;
+  }
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000)  / 60000);
+  const s = Math.floor((diff % 60000)    / 1000);
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = String(val).padStart(2, '0');
+  };
+  set('cdDays',    d);
+  set('cdHours',   h);
+  set('cdMinutes', m);
+  set('cdSeconds', s);
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
+</script>
+{% endif %}
+
+{% endblock %}

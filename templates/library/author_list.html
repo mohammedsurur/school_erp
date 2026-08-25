@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Authors{% endblock %}
+{% block page_title %}Authors{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;text-align:center}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.2rem}
+
+  /* ── Author avatar ── */
+  .author-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.85rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Search bar ── */
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Authors</h5>
+    <p class="text-muted small mb-0">
+      {{ authors|length }} author{{ authors|length|pluralize }}
+    </p>
+  </div>
+  <a href="{% url 'library_author_create' %}" class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Add Author
+  </a>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <div class="stat-card">
+      <div class="stat-num text-primary">{{ authors|length }}</div>
+      <div class="text-muted small">Total Authors</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="stat-card">
+      <div class="stat-num text-success" id="totalBooks">—</div>
+      <div class="text-muted small">Books in Catalog</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="stat-card">
+      <div class="stat-num text-warning" id="topBooks">—</div>
+      <div class="text-muted small">Most Books by One Author</div>
+    </div>
+  </div>
+</div>
+
+<!-- Search -->
+<div class="mb-4">
+  <input type="text" id="searchInput"
+         class="search-bar form-control"
+         placeholder="Search by author name…"
+         oninput="filterAuthors(this.value)">
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="authorTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Author</th>
+          <th>Bio</th>
+          <th>Books</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for author in authors %}
+        <tr data-name="{{ author.full_name|lower }}"
+            data-books="{{ author.book_count }}">
+
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Author -->
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div class="author-avatar">
+                {{ author.first_name|first|upper }}{{ author.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-bold">{{ author.full_name }}</div>
+                <div class="text-muted" style="font-size:.72rem">
+                  {{ author.last_name }}, {{ author.first_name }}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Bio -->
+          <td class="small text-muted">
+            {{ author.bio|default:"—"|truncatechars:60 }}
+          </td>
+
+          <!-- Book count -->
+          <td>
+            {% if author.book_count %}
+            <a href="{% url 'book_list' %}?q={{ author.last_name }}"
+               class="badge rounded-pill bg-primary-subtle text-primary px-3 text-decoration-none">
+              <i class="bi bi-journal-text me-1"></i>
+              {{ author.book_count }} book{{ author.book_count|pluralize }}
+            </a>
+            {% else %}
+            <span class="text-muted small">No books yet</span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <a href="{% url 'library_author_edit' author.pk %}"
+               class="action-icon text-primary" title="Edit">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-person-lines-fill fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No authors yet</h6>
+              <p class="small text-muted mb-3">
+                Add authors to link them to books in the catalog.
+              </p>
+              <a href="{% url 'library_author_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add First Author
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Live client-side search
+function filterAuthors(q){
+  const rows = document.querySelectorAll('#authorTable tbody tr[data-name]');
+  const term = q.toLowerCase().trim();
+  let visible = 0;
+  rows.forEach(row => {
+    const match = !term || row.dataset.name.includes(term);
+    row.style.display = match ? '' : 'none';
+    if(match) visible++;
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#authorTable tbody tr[data-books]');
+  let total = 0, top = 0;
+  rows.forEach(r => {
+    const n = parseInt(r.dataset.books) || 0;
+    total += n;
+    if(n > top) top = n;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('totalBooks', total || '0');
+  set('topBooks',   top   || '0');
+});
+</script>
+
+{% endblock %}

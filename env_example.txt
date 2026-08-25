@@ -1,0 +1,59 @@
+# .env.example
+# Copy this file to .env and fill in your values.
+# NEVER commit .env to git — add it to .gitignore
+
+# ─────────────────────────────────────────────
+#  Django core
+# ─────────────────────────────────────────────
+
+# Generate with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+SECRET_KEY=your-very-long-random-secret-key-here
+
+# 'dev' or 'production'
+DJANGO_ENV=dev
+
+# Comma-separated list of allowed hosts
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Comma-separated trusted CSRF origins (production)
+CSRF_TRUSTED_ORIGINS=https://school.example.com
+
+# Comma-separated allowed CORS origins (production)
+CORS_ALLOWED_ORIGINS=https://school.example.com
+
+# Obscured admin URL — change in production!
+ADMIN_URL=secure-admin-2024/
+
+# ─────────────────────────────────────────────
+#  Database — PostgreSQL
+# ─────────────────────────────────────────────
+
+DB_NAME=school_erp
+DB_USER=postgres
+DB_PASSWORD=your-strong-db-password
+DB_HOST=localhost
+DB_PORT=5432
+
+# ─────────────────────────────────────────────
+#  Redis (production caching + sessions)
+# ─────────────────────────────────────────────
+
+REDIS_URL=redis://127.0.0.1:6379/1
+
+# ─────────────────────────────────────────────
+#  Email (SMTP)
+# ─────────────────────────────────────────────
+
+DEFAULT_FROM_EMAIL=noreply@school.example.com
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-gmail@gmail.com
+# Gmail: use an App Password, not your real password
+# https://myaccount.google.com/apppasswords
+EMAIL_HOST_PASSWORD=your-app-password
+
+# ─────────────────────────────────────────────
+#  Logging (production)
+# ─────────────────────────────────────────────
+
+LOG_DIR=/var/www/school_erp/logs

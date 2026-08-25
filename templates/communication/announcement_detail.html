@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ announcement.title }}{% endblock %}
+{% block page_title %}Announcement{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+
+  /* ── Hero ── */
+  .ann-hero{border-radius:1.25rem;padding:2rem 2.25rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .ann-hero.normal  {background:linear-gradient(135deg,#1a3c72,#0ea5a0)}
+  .ann-hero.urgent  {background:linear-gradient(135deg,#92400e,#f59e0b)}
+  .ann-hero.critical{background:linear-gradient(135deg,#7f1d1d,#dc2626)}
+  .ann-hero::before{content:"";position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .ann-hero::after {content:"";position:absolute;bottom:-20px;left:-20px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.05)}
+
+  /* ── Hero badges ── */
+  .hero-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.25rem .85rem;font-size:.78rem;font-weight:700}
+
+  /* ── Status badge ── */
+  .s-active   {background:#dcfce7;color:#15803d;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-draft    {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-scheduled{background:#fef9c3;color:#854d0e;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-expired  {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+
+  /* ── Body content ── */
+  .ann-body-text{font-size:.95rem;line-height:1.85;color:#374151;white-space:pre-wrap;word-break:break-word}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;padding:.65rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:130px;flex-shrink:0;padding-top:.1rem}
+
+  /* ── Attachment card ── */
+  .att-item{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:.85rem 1.1rem;display:flex;align-items:center;gap:.85rem;text-decoration:none;color:inherit;transition:all .2s;margin-bottom:.5rem}
+  .att-item:hover{background:#eff6ff;border-color:#1a3c72;color:#1a3c72;transform:translateX(3px)}
+  .att-icon{width:40px;height:40px;border-radius:.75rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;flex-shrink:0}
+
+  /* ── Action buttons ── */
+  .btn-publish{border-radius:.875rem;padding:.7rem 1.5rem;font-weight:600;border:none;transition:opacity .2s,transform .2s}
+  .btn-publish:hover{opacity:.9;transform:translateY(-1px)}
+</style>
+
+<!-- Back bar -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'announcement_list' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Announcements
+  </a>
+  {% if is_staff_role %}
+  <div class="d-flex gap-2 ms-auto flex-wrap">
+    <a href="{% url 'announcement_publish_toggle' announcement.pk %}"
+       class="btn rounded-pill px-3 fw-semibold
+       {% if announcement.is_published %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+      <i class="bi bi-{% if announcement.is_published %}eye-slash{% else %}eye{% endif %} me-1"></i>
+      {% if announcement.is_published %}Unpublish{% else %}Publish{% endif %}
+    </a>
+    <a href="{% url 'announcement_edit' announcement.pk %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    <a href="{% url 'announcement_delete' announcement.pk %}"
+       class="btn btn-outline-danger rounded-pill px-3"
+       onclick="return confirm('Delete this announcement?')">
+      <i class="bi bi-trash me-1"></i>Delete
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Hero -->
+<div class="ann-hero {{ announcement.priority }}">
+  <div style="position:relative;z-index:1">
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+      <span class="hero-badge">
+        {% if announcement.priority == 'critical' %}
+        <i class="bi bi-exclamation-circle me-1"></i>Critical
+        {% elif announcement.priority == 'urgent' %}
+        <i class="bi bi-exclamation-triangle me-1"></i>Urgent
+        {% else %}
+        <i class="bi bi-megaphone me-1"></i>Announcement
+        {% endif %}
+      </span>
+      <span class="hero-badge">{{ announcement.get_audience_display }}</span>
+      {% if announcement.target_grade %}
+      <span class="hero-badge">
+        <i class="bi bi-mortarboard me-1"></i>
+        {{ announcement.target_grade }}
+        {% if announcement.target_section %}— {{ announcement.target_section }}{% endif %}
+      </span>
+      {% endif %}
+    </div>
+    <h3 class="fw-bold text-white mb-2" style="position:relative;z-index:1">
+      {{ announcement.title }}
+    </h3>
+    <div class="d-flex flex-wrap gap-3 opacity-75" style="font-size:.82rem">
+      <span>
+        <i class="bi bi-person me-1"></i>
+        {{ announcement.created_by.get_full_name|default:"System" }}
+      </span>
+      <span>
+        <i class="bi bi-calendar me-1"></i>
+        {{ announcement.created_at|date:"l, F d, Y" }}
+      </span>
+      {% if announcement.expiry_date %}
+      <span>
+        <i class="bi bi-calendar-x me-1"></i>
+        Expires {{ announcement.expiry_date|date:"M d, Y" }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Body + Attachments -->
+  <div class="col-lg-8">
+
+    <!-- Body -->
+    <div class="info-card card p-4 mb-4">
+      <div class="ann-body-text">{{ announcement.body }}</div>
+    </div>
+
+    <!-- Attachments -->
+    {% if announcement.attachments.exists %}
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-paperclip me-2 text-primary"></i>
+        Attachments
+        <span class="badge rounded-pill bg-primary-subtle text-primary ms-1"
+              style="font-size:.7rem">{{ announcement.attachments.count }}</span>
+      </h6>
+      {% for att in announcement.attachments.all %}
+      <a href="{{ att.file.url }}" target="_blank" class="att-item">
+        <div class="att-icon">
+          <i class="bi bi-file-earmark-arrow-down"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="fw-semibold small text-truncate">
+            {{ att.filename }}
+          </div>
+          <div class="text-muted" style="font-size:.7rem">
+            <i class="bi bi-clock me-1"></i>
+            {{ att.uploaded_at|date:"M d, Y" }}
+          </div>
+        </div>
+        <i class="bi bi-download text-primary flex-shrink-0"></i>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- RIGHT: Details -->
+  <div class="col-lg-4">
+
+    <!-- Status + Details card -->
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Details
+      </h6>
+
+      <div class="info-row">
+        <span class="info-label">Status</span>
+        <span class="s-{{ announcement.status_label }}">
+          {% if announcement.status_label == 'active' %}
+          <i class="bi bi-check-circle me-1"></i>Active
+          {% elif announcement.status_label == 'draft' %}
+          <i class="bi bi-pencil me-1"></i>Draft
+          {% elif announcement.status_label == 'scheduled' %}
+          <i class="bi bi-clock me-1"></i>Scheduled
+          {% else %}
+          <i class="bi bi-x-circle me-1"></i>Expired
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Priority</span>
+        <span class="small fw-semibold
+          {% if announcement.priority == 'critical' %}text-danger
+          {% elif announcement.priority == 'urgent' %}text-warning
+          {% else %}text-muted{% endif %}">
+          {{ announcement.get_priority_display }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Audience</span>
+        <span class="small">{{ announcement.get_audience_display }}</span>
+      </div>
+      {% if announcement.target_grade %}
+      <div class="info-row">
+        <span class="info-label">Target Grade</span>
+        <span class="small">{{ announcement.target_grade }}</span>
+      </div>
+      {% endif %}
+      {% if announcement.target_section %}
+      <div class="info-row">
+        <span class="info-label">Target Section</span>
+        <span class="small">{{ announcement.target_section }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span class="info-label">Posted By</span>
+        <span class="small fw-semibold">
+          {{ announcement.created_by.get_full_name|default:"System" }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Posted On</span>
+        <span class="small">{{ announcement.created_at|date:"M d, Y H:i" }}</span>
+      </div>
+      {% if announcement.publish_date %}
+      <div class="info-row">
+        <span class="info-label">Publish Date</span>
+        <span class="small text-warning">
+          {{ announcement.publish_date|date:"M d, Y H:i" }}
+        </span>
+      </div>
+      {% endif %}
+      {% if announcement.expiry_date %}
+      <div class="info-row">
+        <span class="info-label">Expires</span>
+        <span class="small text-danger">
+          {{ announcement.expiry_date|date:"M d, Y H:i" }}
+        </span>
+      </div>
+      {% endif %}
+      {% if announcement.updated_at != announcement.created_at %}
+      <div class="info-row">
+        <span class="info-label">Last Edited</span>
+        <span class="small text-muted">
+          {{ announcement.updated_at|date:"M d, Y H:i" }}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Staff publish action card -->
+    {% if is_staff_role %}
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-gear me-2 text-secondary"></i>Actions
+      </h6>
+      <div class="d-flex flex-column gap-2">
+        <a href="{% url 'announcement_publish_toggle' announcement.pk %}"
+           class="btn rounded-3 text-start px-3 fw-semibold
+           {% if announcement.is_published %}btn-warning{% else %}btn-success{% endif %}"
+           style="font-size:.83rem">
+          <i class="bi bi-{% if announcement.is_published %}eye-slash{% else %}eye{% endif %} me-2"></i>
+          {% if announcement.is_published %}Unpublish{% else %}Publish Now{% endif %}
+        </a>
+        <a href="{% url 'announcement_edit' announcement.pk %}"
+           class="btn btn-outline-primary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-pencil me-2"></i>Edit Announcement
+        </a>
+        <a href="{% url 'announcement_create' %}"
+           class="btn btn-outline-secondary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-plus-circle me-2"></i>Post Another
+        </a>
+        <a href="{% url 'announcement_delete' announcement.pk %}"
+           class="btn btn-outline-danger rounded-3 text-start px-3"
+           style="font-size:.83rem"
+           onclick="return confirm('Delete this announcement permanently?')">
+          <i class="bi bi-trash me-2"></i>Delete
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#92400e}
+  .slot-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.5rem;display:flex;align-items:center;gap:1.25rem;position:relative;overflow:hidden}
+  .slot-banner::before{content:"";position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .slot-day{width:60px;height:60px;border-radius:.875rem;background:rgba(255,255,255,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+  .slot-day-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.8}
+  .slot-day-name{font-size:1.1rem;font-weight:800}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'timetable_view' %}{% if request.GET.section %}?section={{ request.GET.section }}{% endif %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          Add a class to the weekly timetable grid
+        </p>
+      </div>
+    </div>
+
+    <!-- Pre-filled slot banner (when coming from grid click) -->
+    {% if request.GET.day and request.GET.period %}
+    <div class="slot-banner">
+      <div class="slot-day">
+        <span class="slot-day-label">Day</span>
+        <span class="slot-day-name">{{ request.GET.day }}</span>
+      </div>
+      <div>
+        <div class="opacity-75 small mb-1">Adding entry for slot</div>
+        <div class="fw-bold">{{ request.GET.day }} — Period {{ request.GET.period }}</div>
+        {% if request.GET.section %}
+        <div class="opacity-75 small">Section pre-selected from timetable</div>
+        {% endif %}
+      </div>
+      <i class="bi bi-table fs-2 opacity-25 ms-auto"></i>
+    </div>
+    {% endif %}
+
+    <!-- Validation warnings -->
+    <div class="warn-box mb-4">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      <strong>3 checks run automatically:</strong>
+      <ol class="mb-0 mt-1 ps-3">
+        <li>This slot must not already be taken for the selected section</li>
+        <li>The teacher must be free at this time (not teaching elsewhere)</li>
+        <li>Subject grade must match the section grade</li>
+      </ol>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Academic Year -->
+        <div class="section-head">
+          <i class="bi bi-calendar2-range me-2"></i>Academic Year
+        </div>
+        <div class="mb-4">
+          <label>Academic Year <span class="req">*</span></label>
+          {{ form.academic_year }}
+          {% if form.academic_year.errors %}
+          <small class="text-danger d-block mt-1">{{ form.academic_year.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Slot -->
+        <div class="section-head">
+          <i class="bi bi-calendar-week me-2"></i>Day & Period
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Day <span class="req">*</span></label>
+            {{ form.day }}
+            {% if form.day.errors %}
+            <small class="text-danger d-block mt-1">{{ form.day.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Period <span class="req">*</span></label>
+            {{ form.period }}
+            {% if form.period.errors %}
+            <small class="text-danger d-block mt-1">{{ form.period.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Section -->
+        <div class="section-head">
+          <i class="bi bi-building me-2"></i>Class Section
+        </div>
+        <div class="mb-4">
+          <label>Section <span class="req">*</span></label>
+          {{ form.section }}
+          {% if form.section.errors %}
+          <small class="text-danger d-block mt-1">{{ form.section.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            Subject must belong to this section's grade
+          </small>
+        </div>
+
+        <!-- Subject & Teacher -->
+        <div class="section-head">
+          <i class="bi bi-book me-2"></i>Subject & Teacher
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <label>Subject <span class="req">*</span></label>
+            {{ form.subject }}
+            {% if form.subject.errors %}
+            <small class="text-danger d-block mt-1">{{ form.subject.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-12">
+            <label>Teacher <span class="req">*</span></label>
+            {{ form.teacher }}
+            {% if form.teacher.errors %}
+            <small class="text-danger d-block mt-1">{{ form.teacher.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">
+              Only active teachers shown — teacher must be free at this time
+            </small>
+          </div>
+          <div class="col-12">
+            <label>Room <span class="text-muted fw-normal">(optional)</span></label>
+            {{ form.room }}
+            {% if form.room.errors %}
+            <small class="text-danger d-block mt-1">{{ form.room.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'timetable_view' %}{% if request.GET.section %}?section={{ request.GET.section }}{% endif %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>Add to Timetable
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Pre-fill day and period from URL params when coming from grid click
+document.addEventListener('DOMContentLoaded', () => {
+  const params  = new URLSearchParams(window.location.search);
+  const day     = params.get('day');
+  const period  = params.get('period');
+  const section = params.get('section');
+
+  if(day){
+    const daySelect = document.querySelector('[name="day"]');
+    if(daySelect) daySelect.value = day;
+  }
+  if(period){
+    const periodSelect = document.querySelector('[name="period"]');
+    if(periodSelect) periodSelect.value = period;
+  }
+  if(section){
+    const sectionSelect = document.querySelector('[name="section"]');
+    if(sectionSelect) sectionSelect.value = section;
+  }
+});
+</script>
+
+{% endblock %}

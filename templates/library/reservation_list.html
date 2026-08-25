@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Reservations{% endblock %}
+{% block page_title %}Book Reservations{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .filter-tab.pending-tab{border-color:#fbbf24;color:#854d0e}
+  .filter-tab.pending-tab:hover{background:#fefce8}
+  .filter-tab.pending-tab.active{background:#f59e0b;border-color:#f59e0b;color:#fff}
+
+  /* ── Status badges ── */
+  .s-pending  {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-fulfilled{background:#dcfce7;color:#15803d;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-cancelled{background:#f1f5f9;color:#64748b;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-expired  {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+
+  /* ── Row states ── */
+  .row-pending  {background:#fefce8!important}
+  .row-expired  {background:#fff8f8!important;opacity:.8}
+  .row-fulfilled{background:#f0fdf4!important}
+
+  /* ── Book icon ── */
+  .book-icon{width:34px;height:44px;border-radius:.5rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.8);font-size:.85rem;flex-shrink:0;overflow:hidden}
+  .book-icon img{width:100%;height:100%;object-fit:cover}
+
+  /* ── Expiry chip ── */
+  .exp-ok  {background:#dcfce7;color:#15803d;border-radius:.4rem;padding:.1rem .5rem;font-size:.7rem;font-weight:700}
+  .exp-soon{background:#fef9c3;color:#854d0e;border-radius:.4rem;padding:.1rem .5rem;font-size:.7rem;font-weight:700}
+  .exp-over{background:#fee2e2;color:#dc2626;border-radius:.4rem;padding:.1rem .5rem;font-size:.7rem;font-weight:700}
+
+  /* ── Avail badge ── */
+  .avail-yes{background:#dcfce7;color:#15803d;border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+  .avail-no {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+
+  /* ── Action icons ── */
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+
+  .avatar-xs{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.68rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Book Reservations</h5>
+    <p class="text-muted small mb-0">
+      {{ reservations.paginator.count }}
+      reservation{{ reservations.paginator.count|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'reservation_create' %}"
+       class="btn btn-primary rounded-pill px-3 fw-semibold">
+      <i class="bi bi-bookmark-plus me-2"></i>New Reservation
+    </a>
+    <a href="{% url 'library_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fefce8">
+        <i class="bi bi-bookmark" style="color:#f59e0b"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#f59e0b" id="cntPending">—</div>
+        <div class="stat-lbl">Pending</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-bookmark-check text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntFulfilled">—</div>
+        <div class="stat-lbl">Fulfilled</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-bookmark-x text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger" id="cntExpired">—</div>
+        <div class="stat-lbl">Expired</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f1f5f9">
+        <i class="bi bi-x-circle text-secondary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-secondary" id="cntCancelled">—</div>
+        <div class="stat-lbl">Cancelled</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'reservation_list' %}"
+     class="filter-tab {% if not status %}active{% endif %}">
+    All
+  </a>
+  <a href="?status=pending"
+     class="filter-tab pending-tab {% if status == 'pending' %}active{% endif %}">
+    <i class="bi bi-bookmark me-1"></i>Pending
+  </a>
+  <a href="?status=fulfilled"
+     class="filter-tab {% if status == 'fulfilled' %}active{% endif %}">
+    <i class="bi bi-bookmark-check me-1"></i>Fulfilled
+  </a>
+  <a href="?status=expired"
+     class="filter-tab {% if status == 'expired' %}active{% endif %}">
+    <i class="bi bi-bookmark-x me-1"></i>Expired
+  </a>
+  <a href="?status=cancelled"
+     class="filter-tab {% if status == 'cancelled' %}active{% endif %}">
+    <i class="bi bi-x-circle me-1"></i>Cancelled
+  </a>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="resTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Book</th>
+          <th>Availability</th>
+          <th>Reserved On</th>
+          <th>Expires</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for res in reservations %}
+        <tr class="
+          {% if res.status == 'pending' and not res.is_expired %}row-pending
+          {% elif res.status == 'expired' or res.is_expired %}row-expired
+          {% elif res.status == 'fulfilled' %}row-fulfilled
+          {% endif %}"
+            data-status="{{ res.status }}">
+
+          <!-- # -->
+          <td class="text-muted small fw-semibold">
+            {{ reservations.start_index|add:forloop.counter0 }}
+          </td>
+
+          <!-- Student -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ res.student.user.first_name|first|upper }}{{ res.student.user.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-semibold small">
+                  {{ res.student.user.get_full_name }}
+                </div>
+                <span class="adm-no">{{ res.student.admission_number }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Book -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="book-icon">
+                {% if res.book.cover_image %}
+                <img src="{{ res.book.cover_image.url }}" alt="">
+                {% else %}
+                <i class="bi bi-journal-text"></i>
+                {% endif %}
+              </div>
+              <div>
+                <a href="{% url 'book_detail' res.book.pk %}"
+                   class="fw-semibold small text-decoration-none text-dark">
+                  {{ res.book.title|truncatechars:30 }}
+                </a>
+                {% if res.book.author_names %}
+                <div class="text-muted" style="font-size:.68rem">
+                  {{ res.book.author_names|truncatechars:25 }}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+
+          <!-- Availability -->
+          <td>
+            {% if res.book.is_available %}
+            <span class="avail-yes">
+              <i class="bi bi-check-circle me-1"></i>
+              {{ res.book.available_copies }} avail.
+            </span>
+            {% else %}
+            <span class="avail-no">
+              <i class="bi bi-x-circle me-1"></i>Unavailable
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- Reserved date -->
+          <td class="small text-muted">
+            {{ res.reserved_date|date:"M d, Y" }}
+          </td>
+
+          <!-- Expiry -->
+          <td>
+            {% if res.status == 'pending' %}
+              {% if res.is_expired %}
+              <div class="exp-over">
+                <i class="bi bi-exclamation-circle me-1"></i>
+                Expired {{ res.expiry_date|date:"M d" }}
+              </div>
+              {% else %}
+                {% with days_left=res.expiry_date|timeuntil %}
+                {% if res.expiry_date|date:"U"|add:"0" < today|date:"U"|add:"259200" %}
+                <div class="exp-soon">
+                  <i class="bi bi-clock me-1"></i>
+                  {{ res.expiry_date|date:"M d, Y" }}
+                </div>
+                {% else %}
+                <div class="exp-ok">{{ res.expiry_date|date:"M d, Y" }}</div>
+                {% endif %}
+                {% endwith %}
+              {% endif %}
+            {% else %}
+            <span class="text-muted small">{{ res.expiry_date|date:"M d, Y" }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="s-{{ res.status }}">
+              {% if res.status == 'pending' %}
+                {% if res.is_expired %}
+                <i class="bi bi-bookmark-x me-1"></i>Expired
+                {% else %}
+                <i class="bi bi-bookmark me-1"></i>Pending
+                {% endif %}
+              {% elif res.status == 'fulfilled' %}
+              <i class="bi bi-bookmark-check me-1"></i>Fulfilled
+              {% elif res.status == 'cancelled' %}
+              <i class="bi bi-x-circle me-1"></i>Cancelled
+              {% elif res.status == 'expired' %}
+              <i class="bi bi-bookmark-x me-1"></i>Expired
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1 align-items-center">
+              {% if res.status == 'pending' and not res.is_expired %}
+              <!-- Fulfil (only if book available) -->
+              {% if res.book.is_available %}
+              <a href="{% url 'reservation_fulfil' res.pk %}"
+                 class="btn btn-sm btn-outline-success rounded-pill px-2"
+                 style="font-size:.72rem" title="Issue Book">
+                <i class="bi bi-box-arrow-right me-1"></i>Issue
+              </a>
+              {% else %}
+              <button class="btn btn-sm btn-outline-secondary rounded-pill px-2"
+                      style="font-size:.72rem" disabled title="No copies available">
+                <i class="bi bi-box-arrow-right me-1"></i>Issue
+              </button>
+              {% endif %}
+              <!-- Cancel -->
+              <a href="{% url 'reservation_cancel' res.pk %}"
+                 class="action-icon text-danger" title="Cancel Reservation"
+                 onclick="return confirm('Cancel reservation for {{ res.student.user.get_full_name }}?')">
+                <i class="bi bi-x-lg"></i>
+              </a>
+              {% else %}
+              <a href="{% url 'book_detail' res.book.pk %}"
+                 class="action-icon text-primary" title="View Book">
+                <i class="bi bi-eye"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <i class="bi bi-bookmark fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No Reservations Found</h6>
+              <p class="small text-muted mb-3">
+                {% if status %}
+                No <strong>{{ status }}</strong> reservations at this time.
+                {% else %}
+                No reservations have been made yet.
+                {% endif %}
+              </p>
+              <a href="{% url 'reservation_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-bookmark-plus me-2"></i>Create Reservation
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if reservations.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if reservations.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ reservations.previous_page_number }}&status={{ status }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in reservations.paginator.page_range %}
+    <li class="page-item {% if reservations.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&status={{ status }}">{{ num }}</a>
+    </li>
+    {% endfor %}
+    {% if reservations.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ reservations.next_page_number }}&status={{ status }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#resTable tbody tr[data-status]');
+  const counts = { pending: 0, fulfilled: 0, expired: 0, cancelled: 0 };
+  rows.forEach(r => {
+    const s = r.dataset.status;
+    if(counts[s] !== undefined) counts[s]++;
+  });
+  const set = (id, val) => {
+    const el = document.getElementById(id); if(el) el.textContent = val;
+  };
+  set('cntPending',   counts.pending);
+  set('cntFulfilled', counts.fulfilled);
+  set('cntExpired',   counts.expired);
+  set('cntCancelled', counts.cancelled);
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Fee Report{% endblock %}
+{% block page_title %}Fee Report{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.85rem;color:#374151;margin-bottom:.35rem;display:block}
+  .btn-run{border-radius:.875rem;padding:.75rem 2rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* ── Summary strip ── */
+  .sum-strip{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;text-align:center}
+  .sum-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.2rem}
+  .sum-lbl{font-size:.65rem;opacity:.8;text-transform:uppercase;letter-spacing:.06em}
+
+  /* ── Table ── */
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.8rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Avatar ── */
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Status badges ── */
+  .s-pending {background:#eff6ff;color:#1d4ed8}
+  .s-partial  {background:#fef9c3;color:#854d0e}
+  .s-paid     {background:#dcfce7;color:#15803d}
+  .s-waived   {background:#f0f9ff;color:#0369a1}
+  .s-overdue  {background:#fee2e2;color:#dc2626}
+
+  /* ── Row states ── */
+  .row-paid   {background:#f0fdf4!important}
+  .row-overdue{background:#fff8f8!important}
+
+  /* ── Balance bar ── */
+  .bal-bar{height:4px;background:#e9ecef;border-radius:999px;overflow:hidden;width:60px}
+  .bal-fill{height:100%;border-radius:999px}
+
+  /* ── Collection rate ring ── */
+  .rate-ring{width:90px;height:90px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto .5rem;border:5px solid}
+  .rate-num{font-size:1.1rem;font-weight:800;line-height:1}
+  .rate-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;opacity:.8}
+
+  .amount-mono{font-family:monospace;font-weight:700;font-size:.875rem}
+  .adm-no{font-family:monospace;font-size:.7rem;color:#94a3b8}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+
+  @media print{
+    .topbar,.sidebar,.sidebar-overlay,.form-card,.btn-run{display:none!important}
+    .main-content{margin-left:0!important}
+    .table-card{box-shadow:none!important}
+  }
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Fee Report</h5>
+    <p class="text-muted small mb-0">Filter and analyse fee collection</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if fees %}
+    <button onclick="window.print()"
+            class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-printer me-1"></i>Print
+    </button>
+    {% endif %}
+    <a href="{% url 'daily_collection' %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-calendar-day me-1"></i>Daily Collection
+    </a>
+  </div>
+</div>
+
+<!-- Filter form -->
+<div class="form-card card p-4 mb-4">
+  <form method="get" novalidate>
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger rounded-3 mb-3">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label><i class="bi bi-calendar2-range me-1 text-primary"></i>Academic Year</label>
+        {{ form.academic_year }}
+      </div>
+      <div class="col-md-4">
+        <label><i class="bi bi-building me-1 text-success"></i>Grade</label>
+        {{ form.grade }}
+      </div>
+      <div class="col-md-4">
+        <label><i class="bi bi-tag me-1 text-warning"></i>Fee Category</label>
+        {{ form.fee_category }}
+      </div>
+      <div class="col-md-4">
+        <label><i class="bi bi-toggle-on me-1 text-info"></i>Status</label>
+        {{ form.status }}
+      </div>
+      <div class="col-md-3">
+        <label><i class="bi bi-calendar me-1"></i>Date From</label>
+        {{ form.date_from }}
+        {% if form.date_from.errors %}
+        <small class="text-danger">{{ form.date_from.errors.0 }}</small>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label><i class="bi bi-calendar-check me-1"></i>Date To</label>
+        {{ form.date_to }}
+        {% if form.date_to.errors %}
+        <small class="text-danger">{{ form.date_to.errors.0 }}</small>
+        {% endif %}
+      </div>
+      <div class="col-md-2 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-run text-white flex-grow-1">
+          <i class="bi bi-bar-chart me-1"></i>Run
+        </button>
+        {% if request.GET %}
+        <a href="{% url 'fee_report' %}"
+           class="btn btn-outline-secondary rounded-pill px-3">
+          <i class="bi bi-x"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+  </form>
+</div>
+
+{% if fees is not None %}
+{% if fees %}
+
+<!-- Summary strip -->
+<div class="sum-strip mb-4">
+  <div>
+    <div class="sum-num">{{ summary.total_count|default:'0' }}</div>
+    <div class="sum-lbl">Records</div>
+  </div>
+  <div>
+    <div class="sum-num">ETB {{ summary.total_due|floatformat:2|default:'0.00' }}</div>
+    <div class="sum-lbl">Total Invoiced</div>
+  </div>
+  <div>
+    <div class="sum-num">ETB {{ summary.total_discount|floatformat:2|default:'0.00' }}</div>
+    <div class="sum-lbl">Total Discounts</div>
+  </div>
+  <div>
+    <div class="sum-num">ETB {{ summary.total_paid|floatformat:2|default:'0.00' }}</div>
+    <div class="sum-lbl">Total Collected</div>
+  </div>
+  <div>
+    <div class="sum-num">ETB {{ summary.outstanding|floatformat:2|default:'0.00' }}</div>
+    <div class="sum-lbl">Outstanding</div>
+  </div>
+  <div>
+    <div class="sum-num" id="collRate">—</div>
+    <div class="sum-lbl">Collection Rate</div>
+  </div>
+</div>
+
+<!-- Results table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="reportTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Fee Category</th>
+          <th>Grade</th>
+          <th>Amount Due</th>
+          <th>Discount</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Collected</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fee in fees %}
+        <tr class="{% if fee.status == 'paid' %}row-paid{% elif fee.status == 'overdue' %}row-overdue{% endif %}">
+
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Student -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ fee.student.user.first_name|first|upper }}{{ fee.student.user.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="fw-semibold small">{{ fee.student.user.get_full_name }}</div>
+                <span class="adm-no">{{ fee.student.admission_number }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Category -->
+          <td class="small fw-semibold">
+            {{ fee.fee_structure.fee_category.name }}
+          </td>
+
+          <!-- Grade -->
+          <td>
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-2"
+                  style="font-size:.72rem">
+              {{ fee.fee_structure.grade }}
+            </span>
+          </td>
+
+          <!-- Amount due -->
+          <td>
+            <span class="amount-mono">{{ fee.amount_due|floatformat:2 }}</span>
+          </td>
+
+          <!-- Discount -->
+          <td>
+            {% if fee.discount %}
+            <span class="amount-mono text-info">-{{ fee.discount|floatformat:2 }}</span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Paid -->
+          <td>
+            <span class="amount-mono text-success">{{ fee.amount_paid|floatformat:2 }}</span>
+          </td>
+
+          <!-- Balance + bar -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="amount-mono {% if fee.balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ fee.balance|floatformat:2 }}
+              </span>
+              {% if fee.effective_amount > 0 %}
+              <div class="bal-bar">
+                <div class="bal-fill"
+                     style="width:{% widthratio fee.amount_paid fee.effective_amount 100 %}%;
+                     background:{% if fee.status == 'paid' %}#22c55e{% elif fee.status == 'partial' %}#f59e0b{% else %}#ef4444{% endif %}">
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Last payment date -->
+          <td class="small text-muted">
+            {% with last=fee.payments.last %}
+            {% if last %}{{ last.payment_date|date:"M d, Y" }}
+            {% else %}—{% endif %}
+            {% endwith %}
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="badge rounded-pill px-3 s-{{ fee.status }}" style="font-size:.7rem">
+              {% if fee.status == 'pending'  %}<i class="bi bi-clock me-1"></i>Pending
+              {% elif fee.status == 'partial' %}<i class="bi bi-half me-1"></i>Partial
+              {% elif fee.status == 'paid'    %}<i class="bi bi-check-circle me-1"></i>Paid
+              {% elif fee.status == 'waived'  %}<i class="bi bi-shield-check me-1"></i>Waived
+              {% elif fee.status == 'overdue' %}<i class="bi bi-exclamation-circle me-1"></i>Overdue
+              {% endif %}
+            </span>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+
+      <!-- Footer totals row -->
+      <tfoot>
+        <tr style="background:#f8f9fb;font-weight:700;border-top:2px solid #e9ecef">
+          <td colspan="4" class="text-muted small text-uppercase"
+              style="letter-spacing:.05em;padding:.85rem 1rem">
+            Totals ({{ fees|length }} records)
+          </td>
+          <td class="amount-mono" style="padding:.85rem 1rem">
+            {{ summary.total_due|floatformat:2 }}
+          </td>
+          <td class="amount-mono text-info" style="padding:.85rem 1rem">
+            -{{ summary.total_discount|floatformat:2 }}
+          </td>
+          <td class="amount-mono text-success" style="padding:.85rem 1rem">
+            {{ summary.total_paid|floatformat:2 }}
+          </td>
+          <td class="amount-mono text-danger" style="padding:.85rem 1rem">
+            {{ summary.outstanding|floatformat:2 }}
+          </td>
+          <td colspan="2" style="padding:.85rem 1rem"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<!-- No results -->
+<div class="table-card card">
+  <div class="empty-state">
+    <i class="bi bi-bar-chart fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No records found</h6>
+    <p class="small text-muted mb-0">
+      Try adjusting the filters above to find fee records.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const due  = parseFloat('{{ summary.total_due|default:0|floatformat:2 }}'.replace(',','')) || 0;
+  const paid = parseFloat('{{ summary.total_paid|default:0|floatformat:2 }}'.replace(',','')) || 0;
+  const rate = due > 0 ? Math.round(paid / due * 100) : 0;
+  const el   = document.getElementById('collRate');
+  if(el) el.textContent = due > 0 ? rate + '%' : '—';
+});
+</script>
+
+{% endblock %}

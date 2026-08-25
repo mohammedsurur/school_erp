@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  textarea.form-control{resize:vertical;min-height:110px}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Preview card ── */
+  .preview-card{border-radius:1.25rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden;transition:background .4s}
+  .preview-card::before{content:"";position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .prev-date{background:rgba(255,255,255,.2);border-radius:.875rem;padding:.65rem 1rem;text-align:center;min-width:60px;flex-shrink:0;position:relative;z-index:1}
+  .prev-day  {font-size:1.8rem;font-weight:800;line-height:1;color:#fff}
+  .prev-month{font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;opacity:.8;margin-top:.1rem}
+  .prev-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.18rem .75rem;font-size:.75rem;font-weight:700;display:inline-block;margin-bottom:.4rem}
+
+  /* ── Category selector ── */
+  .cat-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.65rem .85rem;text-align:center;cursor:pointer;transition:all .2s;background:#fff;flex:1;min-width:0}
+  .cat-btn:hover{border-color:#1a3c72}
+  .cat-btn.selected{border-color:var(--cc);background:var(--cb)}
+  .cat-btn .cat-icon{font-size:1.25rem;margin-bottom:.25rem}
+  .cat-btn .cat-name{font-size:.72rem;font-weight:700;color:#374151;white-space:nowrap}
+
+  /* ── Audience selector ── */
+  .aud-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.55rem .85rem;cursor:pointer;transition:all .2s;background:#fff;display:flex;align-items:center;gap:.5rem;font-size:.82rem;font-weight:600;color:#374151}
+  .aud-btn:hover{border-color:#1a3c72;color:#1a3c72}
+  .aud-btn.selected{border-color:#1a3c72;background:#eff6ff;color:#1a3c72}
+
+  /* ── Duration strip ── */
+  .duration-strip{border-radius:.75rem;padding:.85rem 1.1rem;font-size:.82rem;display:flex;align-items:center;gap:.5rem;margin-top:.5rem;transition:all .3s}
+  .duration-strip.ok   {background:#f0fdf4;border:1.5px solid #86efac;color:#15803d}
+  .duration-strip.warn {background:#fff7ed;border:1.5px solid #fed7aa;color:#92400e}
+  .duration-strip.error{background:#fff1f2;border:1.5px solid #fecaca;color:#dc2626}
+  .duration-strip.none {background:#f8f9fb;border:1.5px solid #e2e8f0;color:#9ca3af}
+
+  /* ── All-day toggle ── */
+  .allday-row{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.1rem;border-radius:.875rem;background:#f8f9fb;border:1.5px solid #e2e8f0}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'event_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if event %}Update event details
+          {% else %}Add a new event to the calendar{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div class="preview-card" id="previewCard"
+         style="background:linear-gradient(135deg,#1a3c72,#0ea5a0)">
+      <div class="d-flex align-items-start gap-3" style="position:relative;z-index:1">
+        <div class="prev-date">
+          <div class="prev-day"   id="prevDay">—</div>
+          <div class="prev-month" id="prevMonth">—</div>
+        </div>
+        <div>
+          <span class="prev-badge" id="prevCatBadge">Event</span>
+          <div class="fw-bold text-white" style="font-size:1.1rem;margin-bottom:.3rem"
+               id="prevTitle">
+            {% if event %}{{ event.title }}{% else %}Event Title{% endif %}
+          </div>
+          <div class="opacity-75" style="font-size:.8rem" id="prevMeta">
+            Set date and time below
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Category -->
+        <div class="section-head">
+          <i class="bi bi-tag me-2"></i>Category
+        </div>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          {% for val, label in form.category.field.choices %}
+          <div class="cat-btn
+            {% if form.category.value == val or not form.category.value and val == 'academic' %}selected{% endif %}"
+               data-value="{{ val }}"
+               style="
+               {% if val == 'academic' %}--cc:#1a3c72;--cb:#eff6ff
+               {% elif val == 'exam' %}--cc:#dc2626;--cb:#fff1f2
+               {% elif val == 'holiday' %}--cc:#15803d;--cb:#f0fdf4
+               {% elif val == 'sport' %}--cc:#c2410c;--cb:#fff7ed
+               {% elif val == 'cultural' %}--cc:#7c3aed;--cb:#faf5ff
+               {% elif val == 'meeting' %}--cc:#0369a1;--cb:#f0f9ff
+               {% else %}--cc:#6b7280;--cb:#f8f9fb{% endif %}"
+               onclick="pickCat('{{ val }}', this)">
+            <div class="cat-icon">
+              {% if val == 'academic' %}📚
+              {% elif val == 'exam' %}📝
+              {% elif val == 'holiday' %}🌴
+              {% elif val == 'sport' %}⚽
+              {% elif val == 'cultural' %}🎭
+              {% elif val == 'meeting' %}🤝
+              {% else %}📌{% endif %}
+            </div>
+            <div class="cat-name">{{ label }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <div style="display:none">{{ form.category }}</div>
+
+        <!-- Title -->
+        <div class="section-head">
+          <i class="bi bi-type me-2"></i>Event Details
+        </div>
+        <div class="mb-3">
+          <label>Title <span class="req">*</span></label>
+          {{ form.title }}
+          {% if form.title.errors %}
+          <small class="text-danger d-block mt-1">{{ form.title.errors.0 }}</small>
+          {% endif %}
+        </div>
+        <div class="mb-4">
+          <label>Description</label>
+          {{ form.description }}
+          {% if form.description.errors %}
+          <small class="text-danger d-block mt-1">{{ form.description.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Date & time -->
+        <div class="section-head">
+          <i class="bi bi-calendar-event me-2"></i>Date & Time
+        </div>
+
+        <!-- All-day toggle -->
+        <div class="allday-row mb-3">
+          <div>
+            <div class="fw-semibold small">All Day Event</div>
+            <div class="text-muted" style="font-size:.78rem">
+              Toggle on to hide time fields
+            </div>
+          </div>
+          {{ form.all_day }}
+        </div>
+
+        <div class="row g-3 mb-2" id="dateFields">
+          <div class="col-md-6">
+            <label>Start Date & Time <span class="req">*</span></label>
+            {{ form.start_date }}
+            {% if form.start_date.errors %}
+            <small class="text-danger d-block mt-1">{{ form.start_date.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>End Date & Time <span class="req">*</span></label>
+            {{ form.end_date }}
+            {% if form.end_date.errors %}
+            <small class="text-danger d-block mt-1">{{ form.end_date.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Duration strip -->
+        <div class="duration-strip none mb-4" id="durationStrip">
+          <i class="bi bi-clock" id="durIcon"></i>
+          <span id="durText">Set start and end to see duration</span>
+        </div>
+
+        <!-- Location & audience -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Location</label>
+            {{ form.location }}
+            {% if form.location.errors %}
+            <small class="text-danger d-block mt-1">{{ form.location.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Audience -->
+        <div class="section-head">
+          <i class="bi bi-people me-2"></i>Audience
+        </div>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          {% for val, label in form.audience.field.choices %}
+          <div class="aud-btn
+            {% if form.audience.value == val or not form.audience.value and val == 'all' %}selected{% endif %}"
+               data-value="{{ val }}"
+               onclick="pickAud('{{ val }}', this)">
+            {% if val == 'all' %}<i class="bi bi-globe"></i>
+            {% elif val == 'students' %}<i class="bi bi-mortarboard"></i>
+            {% elif val == 'parents' %}<i class="bi bi-people"></i>
+            {% elif val == 'teachers' %}<i class="bi bi-person-badge"></i>
+            {% elif val == 'staff' %}<i class="bi bi-building"></i>
+            {% elif val == 'admin' %}<i class="bi bi-shield-check"></i>
+            {% endif %}
+            {{ label }}
+          </div>
+          {% endfor %}
+        </div>
+        <div style="display:none">{{ form.audience }}</div>
+
+        <!-- Published toggle -->
+        <div class="allday-row mb-4">
+          <div>
+            <div class="fw-semibold small">Publish Event</div>
+            <div class="text-muted" style="font-size:.78rem">
+              Unpublished events are only visible to admins
+            </div>
+          </div>
+          {{ form.is_published }}
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'event_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if event %}Save Changes{% else %}Create Event{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CAT_GRADIENTS = {
+  academic: 'linear-gradient(135deg,#1a3c72,#0ea5a0)',
+  exam:     'linear-gradient(135deg,#7f1d1d,#dc2626)',
+  holiday:  'linear-gradient(135deg,#14532d,#22c55e)',
+  sport:    'linear-gradient(135deg,#7c2d12,#f97316)',
+  cultural: 'linear-gradient(135deg,#4c1d95,#8b5cf6)',
+  meeting:  'linear-gradient(135deg,#0c4a6e,#0ea5e9)',
+  other:    'linear-gradient(135deg,#374151,#6b7280)',
+};
+const CAT_ICONS = {
+  academic:'📚', exam:'📝', holiday:'🌴',
+  sport:'⚽', cultural:'🎭', meeting:'🤝', other:'📌',
+};
+const CAT_LABELS = {
+  academic:'Academic', exam:'Exam', holiday:'Holiday',
+  sport:'Sports', cultural:'Cultural', meeting:'Meeting', other:'Other',
+};
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun',
+                'Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ── Category ─────────────────────────────────
+function pickCat(val, el){
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="category"]').value = val;
+  document.getElementById('previewCard').style.background = CAT_GRADIENTS[val];
+  document.getElementById('prevCatBadge').textContent =
+    CAT_ICONS[val] + ' ' + CAT_LABELS[val];
+}
+
+// ── Audience ─────────────────────────────────
+function pickAud(val, el){
+  document.querySelectorAll('.aud-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="audience"]').value = val;
+}
+
+// ── All day toggle ────────────────────────────
+document.querySelector('[name="all_day"]')?.addEventListener('change', function(){
+  const startInp = document.querySelector('[name="start_date"]');
+  const endInp   = document.querySelector('[name="end_date"]');
+  if(this.checked){
+    if(startInp?.value) startInp.value = startInp.value.slice(0,10) + 'T00:00';
+    if(endInp?.value)   endInp.value   = endInp.value.slice(0,10)   + 'T23:59';
+  }
+  updateDuration();
+});
+
+// ── Live preview ─────────────────────────────
+function updatePreview(){
+  const title   = document.querySelector('[name="title"]')?.value.trim() || 'Event Title';
+  const startInp= document.querySelector('[name="start_date"]')?.value;
+  document.getElementById('prevTitle').textContent = title;
+  if(startInp){
+    const d = new Date(startInp);
+    document.getElementById('prevDay').textContent   = d.getDate() || '—';
+    document.getElementById('prevMonth').textContent = MONTHS[d.getMonth()] || '—';
+    updateMeta();
+  }
+}
+
+function updateMeta(){
+  const startInp = document.querySelector('[name="start_date"]')?.value;
+  const endInp   = document.querySelector('[name="end_date"]')?.value;
+  const loc      = document.querySelector('[name="location"]')?.value.trim();
+  const meta     = document.getElementById('prevMeta');
+  if(!startInp){ meta.textContent = 'Set date and time below'; return; }
+  const d    = new Date(startInp);
+  const days = endInp
+    ? Math.round((new Date(endInp) - d) / 86400000) + 1
+    : 1;
+  const timeStr = d.toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'});
+  let str = `${d.toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'})}`;
+  if(days > 1) str += ` · ${days} days`;
+  if(!document.querySelector('[name="all_day"]')?.checked) str += ` · ${timeStr}`;
+  if(loc) str += ` · 📍 ${loc}`;
+  meta.textContent = str;
+}
+
+// ── Duration strip ───────────────────────────
+function updateDuration(){
+  const startVal = document.querySelector('[name="start_date"]')?.value;
+  const endVal   = document.querySelector('[name="end_date"]')?.value;
+  const strip    = document.getElementById('durationStrip');
+  const text     = document.getElementById('durText');
+  const icon     = document.getElementById('durIcon');
+
+  if(!startVal || !endVal){
+    strip.className = 'duration-strip none mb-4';
+    text.textContent = 'Set start and end to see duration';
+    return;
+  }
+  const start = new Date(startVal);
+  const end   = new Date(endVal);
+  const ms    = end - start;
+  if(ms <= 0){
+    strip.className = 'duration-strip error mb-4';
+    icon.className  = 'bi bi-exclamation-circle';
+    text.textContent = 'End must be after start date';
+    return;
+  }
+  const days  = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  const mins  = Math.floor((ms % 3600000)  / 60000);
+  let durStr  = '';
+  if(days  > 0) durStr += `${days} day${days !== 1 ? 's' : ''} `;
+  if(hours > 0) durStr += `${hours} hr${hours !== 1 ? 's' : ''} `;
+  if(mins  > 0 && days === 0) durStr += `${mins} min`;
+
+  strip.className = 'duration-strip ok mb-4';
+  icon.className  = 'bi bi-clock-fill';
+  text.textContent = `Duration: ${durStr.trim()}`;
+  updateMeta();
+}
+
+// ── Event listeners ──────────────────────────
+['[name="title"]','[name="location"]'].forEach(sel => {
+  document.querySelector(sel)?.addEventListener('input', updatePreview);
+});
+['[name="start_date"]','[name="end_date"]'].forEach(sel => {
+  document.querySelector(sel)?.addEventListener('change', () => {
+    updateDuration(); updatePreview();
+  });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const cat = document.querySelector('[name="category"]')?.value || 'academic';
+  document.getElementById('previewCard').style.background = CAT_GRADIENTS[cat];
+  document.getElementById('prevCatBadge').textContent =
+    CAT_ICONS[cat] + ' ' + CAT_LABELS[cat];
+  updatePreview();
+  updateDuration();
+});
+</script>
+
+{% endblock %}

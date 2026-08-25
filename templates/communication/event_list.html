@@ -1,0 +1,434 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Events & Calendar{% endblock %}
+{% block page_title %}Events & Calendar{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.38rem .95rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .filter-tab.upcoming{border-color:#22c55e;color:#15803d}
+  .filter-tab.upcoming:hover{background:#f0fdf4}
+  .filter-tab.upcoming.active{background:#15803d;border-color:#15803d;color:#fff}
+
+  /* ── Event card ── */
+  .event-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;display:flex;margin-bottom:.85rem;transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit}
+  .event-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.1);color:inherit}
+  .event-card.past{opacity:.65}
+
+  /* ── Date block ── */
+  .event-date-block{width:72px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.85rem .5rem;text-align:center}
+  .event-day  {font-size:1.75rem;font-weight:800;line-height:1;color:#fff}
+  .event-month{font-size:.62rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.8);margin-top:.15rem}
+  .event-year {font-size:.58rem;color:rgba(255,255,255,.6);margin-top:.05rem}
+
+  /* ── Category colours for date block ── */
+  .cat-academic {background:linear-gradient(160deg,#1a3c72,#0ea5a0)}
+  .cat-exam     {background:linear-gradient(160deg,#7f1d1d,#dc2626)}
+  .cat-holiday  {background:linear-gradient(160deg,#14532d,#22c55e)}
+  .cat-sport    {background:linear-gradient(160deg,#7c2d12,#f97316)}
+  .cat-cultural {background:linear-gradient(160deg,#4c1d95,#8b5cf6)}
+  .cat-meeting  {background:linear-gradient(160deg,#0c4a6e,#0ea5e9)}
+  .cat-other    {background:linear-gradient(160deg,#374151,#6b7280)}
+
+  /* ── Event body ── */
+  .event-body{padding:1rem 1.25rem;flex:1;display:flex;flex-direction:column;justify-content:center}
+
+  /* ── State badges ── */
+  .state-upcoming{background:#dcfce7;color:#15803d;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .state-ongoing {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .state-past    {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Category chip ── */
+  .cat-chip{border-radius:999px;padding:.15rem .65rem;font-size:.7rem;font-weight:700}
+  .cc-academic{background:#eff6ff;color:#1d4ed8}
+  .cc-exam    {background:#fee2e2;color:#dc2626}
+  .cc-holiday {background:#dcfce7;color:#15803d}
+  .cc-sport   {background:#fff7ed;color:#c2410c}
+  .cc-cultural{background:#faf5ff;color:#7c3aed}
+  .cc-meeting {background:#f0f9ff;color:#0369a1}
+  .cc-other   {background:#f1f5f9;color:#64748b}
+
+  /* ── Multi-day badge ── */
+  .multiday-badge{background:#fef9c3;color:#854d0e;border-radius:.4rem;padding:.1rem .45rem;font-size:.68rem;font-weight:700}
+
+  /* ── Upcoming sidebar ── */
+  .upcoming-pill{display:flex;align-items:center;gap:.75rem;padding:.65rem 0;border-bottom:1px solid #f1f5f9;text-decoration:none;color:inherit;transition:background .15s}
+  .upcoming-pill:last-child{border-bottom:none}
+  .upcoming-pill:hover{padding-left:.35rem;background:#f8faff;border-radius:.5rem}
+  .mini-date{min-width:40px;height:40px;border-radius:.75rem;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0}
+
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1rem 1.5rem;margin-bottom:1.5rem}
+  .action-icon{width:28px;height:28px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Events & Calendar</h5>
+    <p class="text-muted small mb-0">
+      {{ events.paginator.count }}
+      event{{ events.paginator.count|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'comm_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+    {% if is_staff_role %}
+    <a href="{% url 'event_create' %}" class="btn btn-add text-white">
+      <i class="bi bi-plus-circle me-2"></i>Add Event
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-calendar-check text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntUpcoming">—</div>
+        <div class="stat-lbl">Upcoming</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-calendar-event text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary" id="cntOngoing">—</div>
+        <div class="stat-lbl">Ongoing</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f1f5f9">
+        <i class="bi bi-calendar-x text-secondary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-secondary" id="cntPast">—</div>
+        <div class="stat-lbl">Past</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#faf5ff">
+        <i class="bi bi-mortarboard" style="color:#7c3aed"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#7c3aed" id="cntExam">—</div>
+        <div class="stat-lbl">Exam Events</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Event list -->
+  <div class="col-lg-8">
+
+    <!-- Filter tabs -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <a href="{% url 'event_list' %}"
+         class="filter-tab {% if not form.period.value and not form.category.value %}active{% endif %}">
+        All
+      </a>
+      <a href="?period=upcoming"
+         class="filter-tab upcoming {% if form.period.value == 'upcoming' %}active{% endif %}">
+        <i class="bi bi-calendar-check me-1"></i>Upcoming
+      </a>
+      <a href="?period=ongoing"
+         class="filter-tab {% if form.period.value == 'ongoing' %}active{% endif %}">
+        <i class="bi bi-play-circle me-1"></i>Ongoing
+      </a>
+      <a href="?period=this_month"
+         class="filter-tab {% if form.period.value == 'this_month' %}active{% endif %}">
+        <i class="bi bi-calendar-month me-1"></i>This Month
+      </a>
+      <a href="?period=past"
+         class="filter-tab {% if form.period.value == 'past' %}active{% endif %}">
+        <i class="bi bi-clock-history me-1"></i>Past
+      </a>
+    </div>
+
+    <!-- Search + category filter -->
+    <div class="filter-bar">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-7">
+          {{ form.q }}
+        </div>
+        <div class="col-md-3">
+          {{ form.category }}
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit"
+                  class="btn btn-outline-primary rounded-pill px-3 flex-grow-1">
+            <i class="bi bi-search"></i>
+          </button>
+          {% if request.GET %}
+          <a href="{% url 'event_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-x"></i>
+          </a>
+          {% endif %}
+        </div>
+        {% if form.period.value %}
+        <input type="hidden" name="period" value="{{ form.period.value }}">
+        {% endif %}
+      </form>
+    </div>
+
+    <!-- Event cards -->
+    {% if events %}
+    {% for event in events %}
+    <a href="{% url 'event_detail' event.pk %}"
+       class="event-card {% if event.is_past %}past{% endif %}"
+       data-state="{% if event.is_upcoming %}upcoming{% elif event.is_ongoing %}ongoing{% else %}past{% endif %}"
+       data-category="{{ event.category }}">
+
+      <!-- Date block -->
+      <div class="event-date-block cat-{{ event.category }}">
+        <div class="event-day">{{ event.start_date|date:"d" }}</div>
+        <div class="event-month">{{ event.start_date|date:"M" }}</div>
+        <div class="event-year">{{ event.start_date|date:"Y" }}</div>
+      </div>
+
+      <!-- Body -->
+      <div class="event-body">
+        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+          <div class="flex-grow-1">
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+              <span class="fw-bold" style="font-size:.92rem;color:#1e293b">
+                {{ event.title }}
+              </span>
+              <!-- State badge -->
+              {% if event.is_ongoing %}
+              <span class="state-ongoing">
+                <i class="bi bi-play-fill me-1"></i>Ongoing
+              </span>
+              {% elif event.is_upcoming %}
+              <span class="state-upcoming">
+                <i class="bi bi-calendar-check me-1"></i>Upcoming
+              </span>
+              {% else %}
+              <span class="state-past">Past</span>
+              {% endif %}
+              <!-- Category chip -->
+              <span class="cat-chip cc-{{ event.category }}">
+                {{ event.get_category_display }}
+              </span>
+              <!-- Multi-day -->
+              {% if event.duration_days > 1 %}
+              <span class="multiday-badge">
+                {{ event.duration_days }} days
+              </span>
+              {% endif %}
+            </div>
+
+            {% if event.description %}
+            <p class="text-muted small mb-1" style="line-height:1.5">
+              {{ event.description|truncatechars:100 }}
+            </p>
+            {% endif %}
+
+            <!-- Meta -->
+            <div class="d-flex flex-wrap gap-3 align-items-center"
+                 style="font-size:.72rem;color:#9ca3af">
+              <span>
+                <i class="bi bi-calendar me-1"></i>
+                {% if event.duration_days > 1 %}
+                {{ event.start_date|date:"M d" }} – {{ event.end_date|date:"M d, Y" }}
+                {% else %}
+                {{ event.start_date|date:"M d, Y" }}
+                {% endif %}
+              </span>
+              {% if not event.all_day %}
+              <span>
+                <i class="bi bi-clock me-1"></i>
+                {{ event.start_date|time:"H:i" }}
+                {% if event.duration_days == 1 %}
+                – {{ event.end_date|time:"H:i" }}
+                {% endif %}
+              </span>
+              {% else %}
+              <span class="text-muted">All day</span>
+              {% endif %}
+              {% if event.location %}
+              <span>
+                <i class="bi bi-geo-alt me-1"></i>{{ event.location|truncatechars:25 }}
+              </span>
+              {% endif %}
+              <span>
+                <i class="bi bi-people me-1"></i>{{ event.get_audience_display }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Staff actions -->
+          {% if is_staff_role %}
+          <div class="d-flex gap-1 flex-shrink-0"
+               onclick="event.preventDefault()">
+            <a href="{% url 'event_edit' event.pk %}"
+               class="action-icon text-primary" title="Edit">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <a href="{% url 'event_delete' event.pk %}"
+               class="action-icon text-danger" title="Delete"
+               onclick="return confirm('Delete {{ event.title }}?')">
+              <i class="bi bi-trash"></i>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </a>
+    {% endfor %}
+
+    <!-- Pagination -->
+    {% if events.has_other_pages %}
+    <nav class="mt-3">
+      <ul class="pagination justify-content-center gap-1">
+        {% if events.has_previous %}
+        <li class="page-item">
+          <a class="page-link rounded-3"
+             href="?page={{ events.previous_page_number }}&period={{ form.period.value|default:'' }}&category={{ form.category.value|default:'' }}&q={{ form.q.value|default:'' }}">
+            <i class="bi bi-arrow-left"></i>
+          </a>
+        </li>
+        {% endif %}
+        {% for num in events.paginator.page_range %}
+        <li class="page-item {% if events.number == num %}active{% endif %}">
+          <a class="page-link rounded-3"
+             href="?page={{ num }}&period={{ form.period.value|default:'' }}&category={{ form.category.value|default:'' }}">
+            {{ num }}
+          </a>
+        </li>
+        {% endfor %}
+        {% if events.has_next %}
+        <li class="page-item">
+          <a class="page-link rounded-3"
+             href="?page={{ events.next_page_number }}&period={{ form.period.value|default:'' }}&category={{ form.category.value|default:'' }}">
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="card empty-state"
+         style="border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+      <i class="bi bi-calendar-event fs-1 d-block mb-3 opacity-25"></i>
+      <h6 class="fw-bold text-dark">No Events Found</h6>
+      <p class="small text-muted mb-3">
+        {% if request.GET.q %}
+        No results for "<strong>{{ request.GET.q }}</strong>"
+        {% elif form.period.value %}
+        No {{ form.period.value }} events found
+        {% else %}
+        No events have been created yet
+        {% endif %}
+      </p>
+      {% if is_staff_role %}
+      <a href="{% url 'event_create' %}"
+         class="btn btn-primary rounded-pill px-4">
+        <i class="bi bi-plus-circle me-2"></i>Create First Event
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- RIGHT: Upcoming sidebar -->
+  <div class="col-lg-4">
+    <div class="card p-4"
+         style="border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);position:sticky;top:1.5rem">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-calendar-week me-2 text-primary"></i>
+        Upcoming
+      </h6>
+      {% if upcoming %}
+      {% for ev in upcoming %}
+      <a href="{% url 'event_detail' ev.pk %}"
+         class="upcoming-pill">
+        <div class="mini-date cat-{{ ev.category }}"
+             style="color:#fff">
+          <div style="font-size:.85rem;font-weight:800;line-height:1">
+            {{ ev.start_date|date:"d" }}
+          </div>
+          <div style="font-size:.55rem;text-transform:uppercase;
+                      letter-spacing:.06em;opacity:.85">
+            {{ ev.start_date|date:"M" }}
+          </div>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="fw-semibold small text-truncate">{{ ev.title }}</div>
+          <div class="text-muted" style="font-size:.7rem">
+            <span class="cat-chip cc-{{ ev.category }} px-1"
+                  style="border-radius:.3rem">
+              {{ ev.get_category_display }}
+            </span>
+            {% if not ev.all_day %}
+            &nbsp;{{ ev.start_date|time:"H:i" }}
+            {% endif %}
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+      {% else %}
+      <p class="text-muted small text-center py-2 mb-0">
+        No upcoming events
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('.event-card[data-state]');
+  let upcoming = 0, ongoing = 0, past = 0, exam = 0;
+  cards.forEach(c => {
+    if(c.dataset.state === 'upcoming') upcoming++;
+    if(c.dataset.state === 'ongoing')  ongoing++;
+    if(c.dataset.state === 'past')     past++;
+    if(c.dataset.category === 'exam')  exam++;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntUpcoming', upcoming);
+  set('cntOngoing',  ongoing);
+  set('cntPast',     past);
+  set('cntExam',     exam);
+});
+</script>
+
+{% endblock %}

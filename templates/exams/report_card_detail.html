@@ -1,0 +1,561 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Report Card — {{ rc.student.user.get_full_name }}{% endblock %}
+{% block page_title %}Report Card{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ════════════════════════════════════════
+   SCREEN CHROME
+════════════════════════════════════════ */
+.screen-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem}
+.remarks-form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.form-control{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.7rem 1rem;transition:border-color .2s,box-shadow .2s}
+.form-control:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+/* ════════════════════════════════════════
+   PRINTABLE CARD
+════════════════════════════════════════ */
+.rc-paper{
+  background:#fff;
+  border-radius:1rem;
+  box-shadow:0 4px 24px rgba(0,0,0,.1);
+  max-width:820px;
+  margin:0 auto;
+  overflow:hidden;
+  font-family:'Segoe UI',sans-serif;
+  font-size:.875rem;
+}
+
+/* ── School header ── */
+.rc-header{
+  background:linear-gradient(135deg,#1a3c72,#0ea5a0);
+  padding:1.4rem 2rem;
+  color:#fff;
+  display:flex;align-items:center;gap:1.25rem;
+  position:relative;overflow:hidden;
+}
+.rc-header::before{content:"";position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.07)}
+.school-logo{width:54px;height:54px;border-radius:50%;border:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;flex-shrink:0;object-fit:cover}
+
+/* ── Student info strip ── */
+.rc-student-strip{
+  background:#f8f9fb;
+  border-bottom:2px solid #e9ecef;
+  padding:1.1rem 2rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(155px,1fr));
+  gap:.75rem;
+}
+.field-label{font-size:.63rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:.15rem}
+.field-value{font-size:.85rem;font-weight:600;color:#1e293b}
+
+/* ── Body ── */
+.rc-body{padding:1.5rem 2rem}
+
+/* ── Subject table ── */
+.rc-table{width:100%;border-collapse:collapse;font-size:.82rem;margin-bottom:1.25rem}
+.rc-table thead th{
+  background:#1a3c72;color:#fff;
+  padding:.55rem .75rem;font-size:.67rem;
+  text-transform:uppercase;letter-spacing:.05em;
+  font-weight:700;text-align:center;
+  white-space:nowrap;
+}
+.rc-table thead th:first-child,
+.rc-table thead th:nth-child(2){text-align:left}
+.rc-table tbody td{
+  padding:.55rem .75rem;
+  border-bottom:1px solid #f1f5f9;
+  vertical-align:middle;
+}
+.rc-table tbody tr:nth-child(even){background:#f8f9fb}
+.rc-table tbody tr.row-pass  {background:#f0fdf4}
+.rc-table tbody tr.row-fail  {background:#fff8f8}
+.rc-table tbody tr.row-absent{background:#f8f9fb;color:#9ca3af}
+.rc-table tfoot td{
+  background:#1a3c72;color:#fff;
+  padding:.6rem .75rem;font-weight:700;
+  font-size:.78rem;
+}
+
+/* ── Component sub-row ── */
+.comp-row{
+  display:flex;flex-wrap:wrap;gap:.35rem;
+  margin-top:.35rem;
+}
+.comp-pip{
+  background:#f1f5f9;border-radius:.4rem;
+  padding:.1rem .5rem;font-size:.68rem;
+  color:#64748b;font-family:monospace;
+  display:inline-flex;align-items:center;gap:.2rem;
+}
+.comp-pip strong{color:#1e293b}
+
+/* ── Grade label chips ── */
+.gl-chip{border-radius:.4rem;padding:.2rem .6rem;font-size:.72rem;font-weight:700;display:inline-block;text-align:center;min-width:76px}
+.gl-excellent   {background:#dcfce7;color:#15803d}
+.gl-very-good   {background:#dbeafe;color:#1d4ed8}
+.gl-good        {background:#fef9c3;color:#854d0e}
+.gl-satisfactory{background:#fed7aa;color:#c2410c}
+.gl-pass        {background:#e0f2fe;color:#0369a1}
+.gl-fail        {background:#fee2e2;color:#dc2626}
+.gl-absent      {background:#f1f5f9;color:#64748b}
+
+/* ── Status pill ── */
+.pass-pill{background:#dcfce7;color:#15803d;border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+.fail-pill{background:#fee2e2;color:#dc2626;border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+.abs-pill {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+
+/* ── Mini score bar ── */
+.mini-bar{height:4px;background:#e9ecef;border-radius:999px;overflow:hidden;width:50px;display:inline-block;vertical-align:middle;margin-left:.3rem}
+.mini-fill{height:100%;border-radius:999px}
+
+/* ── Summary strip ── */
+.rc-summary{
+  background:linear-gradient(135deg,#1a3c72,#0ea5a0);
+  margin:0 2rem;border-radius:.875rem;
+  padding:1.1rem 1.5rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+  gap:1rem;
+  margin-bottom:1.25rem;
+  color:#fff;text-align:center;
+}
+.sum-num{font-size:1.4rem;font-weight:800;line-height:1}
+.sum-lbl{font-size:.62rem;opacity:.8;text-transform:uppercase;letter-spacing:.06em;margin-top:.2rem}
+
+/* ── Promotion banner ── */
+.rc-promotion{
+  margin:0 2rem 1.25rem;
+  border-radius:.875rem;
+  padding:.9rem 1.5rem;
+  display:flex;align-items:center;gap:.85rem;
+  font-weight:600;
+}
+.rc-promotion.promoted{background:#f0fdf4;border:2px solid #86efac;color:#15803d}
+.rc-promotion.not-promoted{background:#fff1f2;border:2px solid #fca5a5;color:#dc2626}
+.rc-promotion-icon{font-size:1.6rem;flex-shrink:0}
+
+/* ── Grade legend ── */
+.rc-legend{margin:0 2rem 1.25rem;display:flex;flex-wrap:wrap;gap:.5rem}
+.legend-item{display:flex;align-items:center;gap:.3rem;font-size:.68rem;color:#64748b}
+
+/* ── Remarks ── */
+.rc-remarks{margin:0 2rem 1.25rem}
+.rc-remarks-box{background:#f8f9fb;border-radius:.75rem;padding:.85rem 1.1rem;font-size:.82rem;color:#374151;border:1.5px solid #e2e8f0;min-height:54px}
+
+/* ── Signatures ── */
+.rc-signatures{
+  margin:0 2rem;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;
+  padding-top:1rem;border-top:1px solid #e9ecef;
+  margin-bottom:1.25rem;
+}
+.sig-line{border-top:1.5px solid #374151;margin-top:2.5rem;padding-top:.35rem;font-size:.7rem;color:#6b7280;text-align:center}
+
+/* ── Footer ── */
+.rc-footer{background:#f8f9fb;padding:.85rem 2rem;font-size:.7rem;color:#9ca3af;display:flex;justify-content:space-between;border-top:1px solid #e9ecef}
+
+/* ════════════════════════════════════════
+   PRINT
+════════════════════════════════════════ */
+@media print{
+  body *{visibility:hidden!important}
+  .rc-paper,.rc-paper *{visibility:visible!important}
+  .rc-paper{
+    position:fixed!important;top:0;left:0;right:0;
+    box-shadow:none!important;border-radius:0!important;
+    max-width:100%!important;font-size:.8rem!important;
+  }
+  .screen-bar,.remarks-form-card,.topbar,.sidebar,.sidebar-overlay{display:none!important}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Screen bar -->
+<div class="screen-bar">
+  <div class="d-flex align-items-center gap-3">
+    <a href="{% url 'report_card_list' rc.exam.pk %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-arrow-left me-1"></i>All Report Cards
+    </a>
+    <div>
+      <h5 class="fw-bold mb-0">Report Card</h5>
+      <p class="text-muted small mb-0">{{ rc.exam.name }}</p>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button onclick="window.print()"
+            class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-printer me-2"></i>Print
+    </button>
+    <a href="{% url 'student_detail' rc.student.pk %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-person me-2"></i>Student Profile
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════ PRINTABLE CARD ═══════════ -->
+<div class="rc-paper mb-4">
+
+  <!-- School header -->
+  <div class="rc-header">
+    {% if school and school.logo %}
+    <img src="{{ school.logo.url }}" class="school-logo" alt="">
+    {% else %}
+    <div class="school-logo"><i class="bi bi-mortarboard-fill"></i></div>
+    {% endif %}
+    <div style="position:relative;z-index:1;flex:1">
+      <div style="font-size:1.1rem;font-weight:800;color:#fff">
+        {{ school.name|default:"School Name" }}
+      </div>
+      <div style="opacity:.75;font-size:.78rem">
+        {{ school.address|default:"" }}
+      </div>
+      <div style="margin-top:.5rem;font-size:.9rem;font-weight:700;
+                  opacity:1;letter-spacing:.05em;color:#fff">
+        STUDENT REPORT CARD
+      </div>
+    </div>
+    <div style="position:relative;z-index:1;text-align:right;
+                opacity:.85;font-size:.76rem;flex-shrink:0">
+      <div>{{ rc.academic_year }}</div>
+      {% if rc.exam.term %}<div>{{ rc.exam.term }}</div>{% endif %}
+      <div class="mt-1 fw-bold" style="font-size:.85rem">{{ rc.exam.name }}</div>
+    </div>
+  </div>
+
+  <!-- Student info -->
+  <div class="rc-student-strip">
+    <div>
+      <div class="field-label">Student Name</div>
+      <div class="field-value">{{ rc.student.user.get_full_name }}</div>
+    </div>
+    <div>
+      <div class="field-label">Admission No</div>
+      <div class="field-value" style="font-family:monospace">
+        {{ rc.student.admission_number }}
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Class / Section</div>
+      <div class="field-value">{{ rc.section.grade }} — {{ rc.section.name }}</div>
+    </div>
+    <div>
+      <div class="field-label">Class Rank</div>
+      <div class="field-value">
+        {% if rc.rank %}#{{ rc.rank }}{% else %}—{% endif %}
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Academic Year</div>
+      <div class="field-value">{{ rc.academic_year }}</div>
+    </div>
+    <div>
+      <div class="field-label">Exam Period</div>
+      <div class="field-value">
+        {{ rc.exam.start_date|date:"M d" }} – {{ rc.exam.end_date|date:"M d, Y" }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Subject results table -->
+  <div class="rc-body">
+    <table class="rc-table">
+      <thead>
+        <tr>
+          <th style="width:28px">#</th>
+          <th>Subject</th>
+          <!-- Component headers come from first subject's components -->
+          {% with first_sr=subject_results.first %}
+          {% if first_sr %}
+          {% with sched_pk=first_sr.exam_schedule.pk %}
+          {% for comp in comp_data|default:{}  %}
+          {% endfor %}
+          {% with cd=comp_data %}
+          {% for sch_pk, data in cd.items %}
+          {% if forloop.first %}
+          {% for comp in data.components %}
+          <th>{{ comp.get_component_type_display }}<br><span style="opacity:.65;font-weight:400;font-size:.62rem">/{{ comp.max_marks }}</span></th>
+          {% endfor %}
+          {% endif %}
+          {% endfor %}
+          {% endwith %}
+          {% endwith %}
+          {% endif %}
+          {% endwith %}
+          <th>Total<br><span style="opacity:.65;font-weight:400;font-size:.62rem">/100</span></th>
+          <th>Grade</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sr in subject_results %}
+        {% with cd=comp_data|default:{} %}
+        {% with data=cd|default:{} %}
+        <tr class="{% if sr.is_absent %}row-absent{% elif sr.is_pass %}row-pass{% else %}row-fail{% endif %}">
+
+          <td class="text-muted small">{{ forloop.counter }}</td>
+
+          <!-- Subject -->
+          <td>
+            <div class="fw-semibold">{{ sr.exam_schedule.subject.name }}</div>
+            <div style="font-size:.7rem;color:#94a3b8;font-family:monospace">
+              {{ sr.exam_schedule.subject.code }}
+            </div>
+          </td>
+
+          <!-- Component marks -->
+          {% for sch_pk, sdata in comp_data.items %}
+          {% if sch_pk == sr.exam_schedule.pk %}
+          {% for comp in sdata.components %}
+          <td class="text-center">
+            {% if sr.is_absent %}
+            <span style="color:#cbd5e1;font-size:.75rem">—</span>
+            {% else %}
+            {% for cpk, cr in sdata.results.items %}
+            {% if cpk == comp.pk %}
+            <span style="font-family:monospace;font-weight:700;font-size:.82rem">
+              {{ cr.marks_obtained }}
+            </span>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+          </td>
+          {% endfor %}
+          {% endif %}
+          {% endfor %}
+
+          <!-- Total + mini bar -->
+          <td class="text-center">
+            {% if sr.is_absent %}
+            <span style="color:#cbd5e1">—</span>
+            {% else %}
+            <span class="fw-bold"
+                  style="font-family:monospace;
+                  color:{% if sr.total_score >= 50 %}#15803d{% else %}#dc2626{% endif %}">
+              {{ sr.total_score }}
+            </span>
+            <div class="mini-bar">
+              <div class="mini-fill"
+                   style="width:{{ sr.total_score }}%;
+                   background:{% if sr.total_score >= 90 %}#22c55e
+                   {% elif sr.total_score >= 50 %}#0ea5a0
+                   {% else %}#ef4444{% endif %}">
+              </div>
+            </div>
+            {% endif %}
+          </td>
+
+          <!-- Grade label -->
+          <td class="text-center">
+            <span class="gl-chip
+              {% if sr.grade_label == 'Excellent' %}gl-excellent
+              {% elif sr.grade_label == 'Very Good' %}gl-very-good
+              {% elif sr.grade_label == 'Good' %}gl-good
+              {% elif sr.grade_label == 'Satisfactory' %}gl-satisfactory
+              {% elif sr.grade_label == 'Pass' %}gl-pass
+              {% elif sr.grade_label == 'Absent' %}gl-absent
+              {% else %}gl-fail{% endif %}">
+              {{ sr.grade_label }}
+            </span>
+          </td>
+
+          <!-- Status -->
+          <td class="text-center">
+            {% if sr.is_absent %}
+            <span class="abs-pill">Absent</span>
+            {% elif sr.is_pass %}
+            <span class="pass-pill">Pass</span>
+            {% else %}
+            <span class="fail-pill">Fail</span>
+            {% endif %}
+          </td>
+
+        </tr>
+        {% endwith %}
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+
+      <!-- Totals footer row -->
+      <tfoot>
+        <tr>
+          <td colspan="2">
+            Total — {{ rc.total_subjects }} Subject{{ rc.total_subjects|pluralize }}
+          </td>
+          <!-- Empty cells for component columns -->
+          {% with first_sr=subject_results.first %}
+          {% if first_sr %}
+          {% for sch_pk, data in comp_data.items %}
+          {% if forloop.first %}
+          {% for comp in data.components %}
+          <td class="text-center">—</td>
+          {% endfor %}
+          {% endif %}
+          {% endfor %}
+          {% endif %}
+          {% endwith %}
+          <td class="text-center">{{ rc.total_score }}</td>
+          <td class="text-center">{{ rc.overall_average }} avg</td>
+          <td class="text-center">
+            {% if rc.failed_subjects > 0 %}
+            {{ rc.failed_subjects }} failed
+            {% else %}
+            All passed
+            {% endif %}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- Grade legend -->
+    <div class="rc-legend">
+      <span class="legend-item">
+        <span class="gl-chip gl-excellent" style="font-size:.63rem;padding:.12rem .4rem;min-width:0">Excellent</span>90–100
+      </span>
+      <span class="legend-item">
+        <span class="gl-chip gl-very-good" style="font-size:.63rem;padding:.12rem .4rem;min-width:0">Very Good</span>80–89
+      </span>
+      <span class="legend-item">
+        <span class="gl-chip gl-good" style="font-size:.63rem;padding:.12rem .4rem;min-width:0">Good</span>70–79
+      </span>
+      <span class="legend-item">
+        <span class="gl-chip gl-satisfactory" style="font-size:.63rem;padding:.12rem .4rem;min-width:0">Satisfactory</span>60–69
+      </span>
+      <span class="legend-item">
+        <span class="gl-chip gl-pass" style="font-size:.63rem;padding:.12rem .4rem;min-width:0">Pass</span>50–59
+      </span>
+      <span class="legend-item">
+        <span class="gl-chip gl-fail" style="font-size:.63rem;padding:.12rem .4rem;min-width:0">Fail</span>0–49
+      </span>
+      <span class="legend-item ms-2" style="color:#9ca3af">
+        Pass mark: <strong>50/100</strong> per subject
+      </span>
+    </div>
+  </div>
+
+  <!-- Summary strip -->
+  <div class="rc-summary">
+    <div>
+      <div class="sum-num">{{ rc.total_subjects }}</div>
+      <div class="sum-lbl">Subjects</div>
+    </div>
+    <div>
+      <div class="sum-num">{{ rc.total_score }}</div>
+      <div class="sum-lbl">Total Score</div>
+    </div>
+    <div>
+      <div class="sum-num">{{ rc.overall_average }}</div>
+      <div class="sum-lbl">Average / 100</div>
+    </div>
+    <div>
+      <div class="sum-num">{{ rc.overall_grade_label }}</div>
+      <div class="sum-lbl">Overall Grade</div>
+    </div>
+    <div>
+      <div class="sum-num
+        {% if rc.failed_subjects == 0 %}
+        {% elif rc.failed_subjects <= 2 %}style="color:#fef08a"
+        {% endif %}">
+        {{ rc.failed_subjects }}
+      </div>
+      <div class="sum-lbl">Failed Subj.</div>
+    </div>
+    <div>
+      <div class="sum-num">#{{ rc.rank|default:"—" }}</div>
+      <div class="sum-lbl">Class Rank</div>
+    </div>
+  </div>
+
+  <!-- Promotion result -->
+  <div class="rc-promotion {% if rc.is_promoted %}promoted{% else %}not-promoted{% endif %}">
+    <div class="rc-promotion-icon">
+      {% if rc.is_promoted %}
+      <i class="bi bi-arrow-up-circle-fill"></i>
+      {% else %}
+      <i class="bi bi-x-circle-fill"></i>
+      {% endif %}
+    </div>
+    <div>
+      <div style="font-size:.95rem;font-weight:700">
+        {% if rc.is_promoted %}
+          PROMOTED TO NEXT CLASS
+        {% else %}
+          NOT PROMOTED — REPEAT CURRENT CLASS
+        {% endif %}
+      </div>
+      <div style="font-size:.78rem;font-weight:400;opacity:.85;margin-top:.2rem">
+        Average: <strong>{{ rc.overall_average }}/100</strong>
+        &nbsp;·&nbsp;
+        Failed subjects: <strong>{{ rc.failed_subjects }}</strong>
+        {% if not rc.is_promoted %}
+        &nbsp;·&nbsp;
+        Reason:
+        {% if rc.overall_average < 50 %}
+          Average below 50
+        {% elif rc.failed_subjects >= 3 %}
+          Failed {{ rc.failed_subjects }} subjects (maximum allowed: 2)
+        {% endif %}
+        {% else %}
+        {% if rc.failed_subjects > 0 %}
+        &nbsp;·&nbsp;
+        Note: {{ rc.failed_subjects }} failed subject{{ rc.failed_subjects|pluralize }}
+        (1–2 failures still allow promotion)
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Teacher remarks -->
+  <div class="rc-remarks">
+    <div class="fw-semibold small mb-2 text-muted text-uppercase"
+         style="letter-spacing:.06em;font-size:.68rem">
+      <i class="bi bi-chat-left-text me-1"></i>Teacher Remarks
+    </div>
+    <div class="rc-remarks-box">
+      {{ rc.teacher_remarks|default:"—" }}
+    </div>
+  </div>
+
+  <!-- Signatures -->
+  <div class="rc-signatures">
+    <div><div class="sig-line">Class Teacher</div></div>
+    <div><div class="sig-line">Principal / Director</div></div>
+    <div><div class="sig-line">Parent / Guardian</div></div>
+  </div>
+
+  <!-- Footer -->
+  <div class="rc-footer">
+    <span>Printed: {% now "M d, Y" %}</span>
+    <span>{{ school.name|default:"School ERP" }}</span>
+    <span>{{ rc.academic_year }}</span>
+  </div>
+
+</div>
+<!-- END PRINTABLE CARD -->
+
+<!-- Remarks form (screen only) -->
+<div class="remarks-form-card card p-4" style="max-width:820px;margin:0 auto">
+  <h6 class="fw-bold mb-3">
+    <i class="bi bi-chat-left-text me-2 text-primary"></i>
+    Add / Edit Teacher Remarks
+  </h6>
+  <form method="POST" novalidate>
+    {% csrf_token %}
+    {{ form.teacher_remarks }}
+    <div class="d-flex justify-content-end mt-3">
+      <button type="submit"
+              class="btn btn-primary rounded-pill px-4 fw-semibold">
+        <i class="bi bi-check-circle me-2"></i>Save Remarks
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}My Transport{% endblock %}
+{% block page_title %}My Transport{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+
+  /* ── Hero ── */
+  .hero{border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .hero.assigned {background:linear-gradient(135deg,#1a3c72,#0ea5a0)}
+  .hero.unassigned{background:linear-gradient(135deg,#374151,#6b7280)}
+  .hero::before{content:"";position:absolute;top:-35px;right:-35px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .hero-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1.25rem;margin-top:.5rem}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;padding:.7rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:130px;flex-shrink:0;padding-top:.1rem}
+
+  /* ── Stop timeline ── */
+  .stop-line{position:relative;padding-left:1.75rem}
+  .stop-line::before{content:"";position:absolute;left:.6rem;top:8px;bottom:8px;width:2px;background:#e2e8f0;border-radius:999px}
+  .stop-item{position:relative;margin-bottom:.85rem}
+  .stop-item:last-child{margin-bottom:0}
+  .stop-dot{position:absolute;left:-1.35rem;top:.3rem;width:14px;height:14px;border-radius:50%;border:2px solid #fff}
+  .stop-dot.mine {background:#1a3c72;box-shadow:0 0 0 3px #bfdbfe;width:16px;height:16px;left:-1.45rem}
+  .stop-dot.first{background:#1a3c72;box-shadow:0 0 0 2px #bfdbfe}
+  .stop-dot.mid  {background:#9ca3af;box-shadow:0 0 0 2px #e2e8f0}
+  .stop-dot.last {background:#22c55e;box-shadow:0 0 0 2px #86efac}
+  .stop-order-chip{background:#f1f5f9;color:#64748b;border-radius:.4rem;padding:.1rem .45rem;font-size:.68rem;font-weight:700;font-family:monospace}
+  .my-stop-badge{background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.15rem .65rem;font-size:.68rem;font-weight:700}
+
+  /* ── Schedule card ── */
+  .schedule-card{border-radius:1rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:.75rem}
+  .schedule-card.morning  {background:#fef9c3;border:1.5px solid #fde68a}
+  .schedule-card.afternoon{background:#e0f2fe;border:1.5px solid #bae6fd}
+  .sched-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+
+  /* ── Driver card ── */
+  .driver-card{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:1rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem}
+  .driver-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#fff;flex-shrink:0}
+
+  /* ── Fee card ── */
+  .fee-card{background:#f0fdf4;border:1.5px solid #86efac;border-radius:1rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem}
+  .fee-amount{font-size:1.6rem;font-weight:800;font-family:monospace;color:#15803d;line-height:1}
+
+  /* ── Unassigned state ── */
+  .unassigned-card{border:2px dashed #e2e8f0;border-radius:1rem;padding:3rem 2rem;text-align:center;color:#9ca3af}
+
+  .plate-no{font-family:monospace;font-weight:700;background:#f1f5f9;padding:.15rem .55rem;border-radius:.4rem;color:#374151}
+  .time-large{font-size:1.5rem;font-weight:800;font-family:monospace;line-height:1}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">My Transport</h5>
+    <p class="text-muted small mb-0">Your school bus assignment for this year</p>
+  </div>
+</div>
+
+{% if assignment %}
+
+<!-- Hero -->
+<div class="hero assigned">
+  <div style="position:relative;z-index:1">
+    <div style="opacity:.75;font-size:.78rem;margin-bottom:.35rem">
+      <i class="bi bi-bus-front me-1"></i>Transport Assignment
+    </div>
+    <h4 class="fw-bold text-white mb-1">{{ assignment.route.name }}</h4>
+    <div class="hero-meta">
+      <span>
+        <i class="bi bi-geo-alt me-1"></i>
+        {{ assignment.route.start_point }} → {{ assignment.route.end_point }}
+      </span>
+      {% if assignment.stop %}
+      <span>
+        <i class="bi bi-pin-map me-1"></i>
+        Pickup: {{ assignment.stop.stop_name }}
+      </span>
+      {% endif %}
+      <span>
+        <i class="bi bi-calendar me-1"></i>
+        Since {{ assignment.start_date|date:"M d, Y" }}
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Route & schedule -->
+  <div class="col-lg-7">
+
+    <!-- Schedule -->
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-clock me-2 text-primary"></i>Daily Schedule
+      </h6>
+
+      {% if assignment.route.departure_time %}
+      <div class="schedule-card morning">
+        <div class="sched-icon" style="background:#fef9c3">🌅</div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small text-warning-emphasis">Morning Trip</div>
+          <div class="text-muted small">Home → School</div>
+          {% if assignment.stop and assignment.stop.pickup_time %}
+          <div class="text-muted" style="font-size:.75rem;margin-top:.2rem">
+            Pickup at {{ assignment.stop.stop_name }}: {{ assignment.stop.pickup_time|time:"H:i" }}
+          </div>
+          {% endif %}
+        </div>
+        <div class="text-end">
+          <div class="time-large" style="color:#854d0e">
+            {{ assignment.route.departure_time|time:"H:i" }}
+          </div>
+          <div class="text-muted" style="font-size:.7rem">Departure</div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if assignment.route.return_time %}
+      <div class="schedule-card afternoon">
+        <div class="sched-icon" style="background:#e0f2fe">🌇</div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small" style="color:#0369a1">Afternoon Trip</div>
+          <div class="text-muted small">School → Home</div>
+        </div>
+        <div class="text-end">
+          <div class="time-large" style="color:#0369a1">
+            {{ assignment.route.return_time|time:"H:i" }}
+          </div>
+          <div class="text-muted" style="font-size:.7rem">Return</div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if not assignment.route.departure_time and not assignment.route.return_time %}
+      <p class="text-muted small mb-0">
+        <i class="bi bi-info-circle me-1"></i>
+        Schedule not set — contact the school office for timing.
+      </p>
+      {% endif %}
+    </div>
+
+    <!-- Route stops -->
+    {% if assignment.route.stops.exists %}
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-pin-map me-2 text-primary"></i>Route Stops
+      </h6>
+      <div class="stop-line">
+        {% for stop in assignment.route.stops.all %}
+        <div class="stop-item">
+          <div class="stop-dot
+            {% if assignment.stop and stop.pk == assignment.stop.pk %}mine
+            {% elif forloop.first %}first
+            {% elif forloop.last %}last
+            {% else %}mid{% endif %}">
+          </div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="stop-order-chip">{{ stop.stop_order }}</span>
+            <span class="fw-semibold small">{{ stop.stop_name }}</span>
+            {% if stop.pickup_time %}
+            <span class="text-muted" style="font-size:.72rem;font-family:monospace">
+              {{ stop.pickup_time|time:"H:i" }}
+            </span>
+            {% endif %}
+            {% if assignment.stop and stop.pk == assignment.stop.pk %}
+            <span class="my-stop-badge">
+              <i class="bi bi-person-fill me-1"></i>Your Stop
+            </span>
+            {% endif %}
+          </div>
+          {% if stop.landmark %}
+          <div class="text-muted" style="font-size:.7rem;font-style:italic;margin-top:.2rem;padding-left:1.5rem">
+            <i class="bi bi-geo me-1"></i>{{ stop.landmark }}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- RIGHT: Vehicle, driver, fee, info -->
+  <div class="col-lg-5">
+
+    <!-- Vehicle -->
+    {% if assignment.route.vehicle %}
+    <div class="info-card card p-4 mb-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-bus-front me-2 text-primary"></i>Vehicle
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Name</span>
+        <span class="fw-semibold small">
+          {{ assignment.route.vehicle.name }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Type</span>
+        <span class="small">
+          {{ assignment.route.vehicle.get_vehicle_type_display }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Plate No.</span>
+        <span class="plate-no">{{ assignment.route.vehicle.plate_number }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Capacity</span>
+        <span class="small">{{ assignment.route.vehicle.capacity }} seats</span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Driver -->
+    {% if assignment.route.vehicle and assignment.route.vehicle.driver_name %}
+    <div class="driver-card mb-4">
+      <div class="driver-avatar">
+        <i class="bi bi-person-badge"></i>
+      </div>
+      <div>
+        <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:.2rem">
+          Driver
+        </div>
+        <div class="fw-bold">{{ assignment.route.vehicle.driver_name }}</div>
+        {% if assignment.route.vehicle.driver_phone %}
+        <div class="mt-1">
+          <a href="tel:{{ assignment.route.vehicle.driver_phone }}"
+             class="text-primary text-decoration-none small">
+            <i class="bi bi-telephone me-1"></i>
+            {{ assignment.route.vehicle.driver_phone }}
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Monthly fee -->
+    {% if assignment.route.monthly_fee %}
+    <div class="fee-card mb-4">
+      <div>
+        <div class="text-muted small mb-1">Monthly Transport Fee</div>
+        <div class="fee-amount">ETB {{ assignment.route.monthly_fee|floatformat:0 }}</div>
+        <div class="text-success small mt-1">
+          Annual: ETB {{ assignment.route.monthly_fee|floatformat:0 }}/mo × 10 months
+        </div>
+      </div>
+      <i class="bi bi-cash-coin text-success ms-auto fs-2 opacity-50"></i>
+    </div>
+    {% endif %}
+
+    <!-- Assignment info -->
+    <div class="info-card card p-4">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Assignment Details
+      </h6>
+      <div class="info-row">
+        <span class="info-label">Academic Year</span>
+        <span class="small">{{ assignment.academic_year }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Start Date</span>
+        <span class="small">{{ assignment.start_date|date:"M d, Y" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Your Stop</span>
+        <span class="small fw-semibold">
+          {{ assignment.stop.stop_name|default:"Not set" }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Direction</span>
+        <span class="small">
+          {{ assignment.route.get_direction_display }}
+        </span>
+      </div>
+      {% if assignment.notes %}
+      <div class="info-row">
+        <span class="info-label">Notes</span>
+        <span class="small text-muted">{{ assignment.notes }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Rules reminder -->
+<div class="mt-4 p-3 rounded-3 text-center"
+     style="background:#f8f9fb;font-size:.8rem;color:#9ca3af">
+  <i class="bi bi-info-circle me-1"></i>
+  Please be at your stop <strong>5 minutes early</strong>.
+  &nbsp;·&nbsp;
+  Contact the school office for any changes to your transport arrangement.
+  &nbsp;·&nbsp;
+  Emergency: <strong>{{ assignment.route.vehicle.driver_phone|default:"Contact school office" }}</strong>
+</div>
+
+{% else %}
+
+<!-- Unassigned state -->
+<div class="unassigned-card">
+  <i class="bi bi-bus-front d-block fs-1 mb-3 opacity-25"></i>
+  <h5 class="fw-bold text-dark mb-2">No Transport Assigned</h5>
+  <p class="small mb-0">
+    You have not been assigned to a school bus route for the current academic year.
+    <br>Please contact the school office if you need transport.
+  </p>
+</div>
+
+{% endif %}
+
+{% endblock %}

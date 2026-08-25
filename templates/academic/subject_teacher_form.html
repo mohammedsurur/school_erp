@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#92400e}
+  .existing-card{background:#f8f9fb;border-radius:.875rem;padding:1rem 1.25rem;border:1.5px solid #e2e8f0}
+  .subject-code{font-family:monospace;font-size:.78rem;background:#e2e8f0;padding:.2rem .55rem;border-radius:.4rem;color:#475569;font-weight:600}
+  .teacher-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#0ea5a0);color:#fff;font-weight:700;font-size:.82rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'subject_teacher_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if assignment %}Edit existing assignment
+          {% else %}Assign a subject to a teacher for a section{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Edit banner — show existing assignment details -->
+    {% if assignment %}
+    <div class="existing-card mb-4">
+      <div class="d-flex align-items-center gap-3">
+        <div class="teacher-avatar">
+          {{ assignment.teacher.first_name|first|upper }}{{ assignment.teacher.last_name|first|upper }}
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-bold small">{{ assignment.teacher.get_full_name }}</div>
+          <div class="text-muted" style="font-size:.75rem">
+            Teaching
+            <strong>{{ assignment.subject.name }}</strong>
+            <span class="subject-code ms-1">{{ assignment.subject.code }}</span>
+            in
+            <strong>{{ assignment.section }}</strong>
+          </div>
+        </div>
+        <span class="badge rounded-pill bg-warning-subtle text-warning px-3" style="font-size:.72rem">
+          Editing
+        </span>
+      </div>
+    </div>
+    {% else %}
+    <!-- Tip -->
+    <div class="tip-box mb-3">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Tip:</strong> Select the subject, section and teacher for
+      the current academic year. The system will block you if the same
+      subject is already assigned in the same section this year.
+    </div>
+    <!-- Warning -->
+    <div class="warn-box mb-4">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      <strong>Grade match required:</strong> The selected subject must
+      belong to the same grade as the selected section. Mismatched
+      assignments will be rejected.
+    </div>
+    {% endif %}
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Academic Year -->
+        <div class="section-head">
+          <i class="bi bi-calendar2-range me-2"></i>Academic Year
+        </div>
+        <div class="mb-4">
+          <label>Academic Year <span class="req">*</span></label>
+          {{ form.academic_year }}
+          {% if form.academic_year.errors %}
+          <small class="text-danger d-block mt-1">{{ form.academic_year.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Subject & Section -->
+        <div class="section-head">
+          <i class="bi bi-book me-2"></i>Subject & Section
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <label>Subject <span class="req">*</span></label>
+            {{ form.subject }}
+            {% if form.subject.errors %}
+            <small class="text-danger d-block mt-1">{{ form.subject.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">
+              Subject grade must match the section grade below
+            </small>
+          </div>
+          <div class="col-12">
+            <label>Section <span class="req">*</span></label>
+            {{ form.section }}
+            {% if form.section.errors %}
+            <small class="text-danger d-block mt-1">{{ form.section.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Teacher -->
+        <div class="section-head">
+          <i class="bi bi-person-badge me-2"></i>Teacher
+        </div>
+        <div class="mb-4">
+          <label>Assign Teacher <span class="req">*</span></label>
+          {{ form.teacher }}
+          {% if form.teacher.errors %}
+          <small class="text-danger d-block mt-1">{{ form.teacher.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            Only active teachers are listed
+          </small>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'subject_teacher_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if assignment %}Save Changes{% else %}Confirm Assignment{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

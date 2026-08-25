@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Routes{% endblock %}
+{% block page_title %}Routes{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Route icon ── */
+  .route-icon{width:40px;height:40px;border-radius:.875rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;flex-shrink:0}
+
+  /* ── Capacity bar ── */
+  .cap-bar{height:5px;background:#e9ecef;border-radius:999px;overflow:hidden;width:90px;display:inline-block;vertical-align:middle}
+  .cap-fill{height:100%;border-radius:999px}
+
+  /* ── Direction badge ── */
+  .dir-both     {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .dir-morning  {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .dir-afternoon{background:#f0fdf4;color:#15803d;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Status badges ── */
+  .s-active  {background:#dcfce7;color:#15803d;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-inactive{background:#f1f5f9;color:#64748b;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+
+  .fee-mono{font-family:monospace;font-weight:700;font-size:.82rem;color:#15803d}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .row-inactive{opacity:.6}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Routes</h5>
+    <p class="text-muted small mb-0">
+      {{ routes|length }} route{{ routes|length|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'transport_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+    <a href="{% url 'route_create' %}" class="btn btn-add text-white">
+      <i class="bi bi-plus-circle me-2"></i>Add Route
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-signpost-split text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary" id="cntAll">{{ routes|length }}</div>
+        <div class="stat-lbl">Total Routes</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntActive">—</div>
+        <div class="stat-lbl">Active</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#faf5ff">
+        <i class="bi bi-people" style="color:#7c3aed"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#7c3aed" id="cntStudents">—</div>
+        <div class="stat-lbl">Total Students</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-cash-coin text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success fee-mono" id="avgFee">—</div>
+        <div class="stat-lbl">Avg Monthly Fee</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'route_list' %}"
+       class="filter-tab {% if not form.is_active.value %}active{% endif %}">
+      All
+    </a>
+    <a href="?is_active=1"
+       class="filter-tab {% if form.is_active.value == '1' %}active{% endif %}">
+      <i class="bi bi-check-circle me-1"></i>Active
+    </a>
+    <a href="?is_active=0"
+       class="filter-tab {% if form.is_active.value == '0' %}active{% endif %}">
+      <i class="bi bi-x-circle me-1"></i>Inactive
+    </a>
+  </div>
+  <input type="text" id="searchInput"
+         class="search-bar form-control"
+         style="max-width:260px"
+         placeholder="Search route name…"
+         oninput="filterRoutes(this.value)">
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="routeTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Route</th>
+          <th>Vehicle</th>
+          <th>Direction</th>
+          <th>Times</th>
+          <th>Students</th>
+          <th>Monthly Fee</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for route in routes %}
+        <tr data-name="{{ route.name|lower }}"
+            data-active="{{ route.is_active|yesno:'1,0' }}"
+            data-students="{{ route.assigned }}"
+            data-fee="{{ route.monthly_fee }}"
+            class="{% if not route.is_active %}row-inactive{% endif %}">
+
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Route -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="route-icon"><i class="bi bi-bus-front"></i></div>
+              <div>
+                <a href="{% url 'route_detail' route.pk %}"
+                   class="fw-bold small text-decoration-none text-dark">
+                  {{ route.name }}
+                </a>
+                <div class="text-muted" style="font-size:.7rem">
+                  <i class="bi bi-geo-alt me-1"></i>
+                  {{ route.start_point }} → {{ route.end_point }}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Vehicle -->
+          <td>
+            {% if route.vehicle %}
+            <div class="small fw-semibold">{{ route.vehicle.name }}</div>
+            <div class="text-muted" style="font-family:monospace;font-size:.68rem">
+              {{ route.vehicle.plate_number }}
+            </div>
+            {% else %}
+            <span class="text-warning small">
+              <i class="bi bi-exclamation-circle me-1"></i>No vehicle
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- Direction -->
+          <td>
+            <span class="dir-{{ route.direction }}">
+              {% if route.direction == 'both' %}
+              <i class="bi bi-arrow-left-right me-1"></i>Both
+              {% elif route.direction == 'morning' %}
+              <i class="bi bi-sunrise me-1"></i>Morning
+              {% else %}
+              <i class="bi bi-sunset me-1"></i>Afternoon
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Times -->
+          <td>
+            <div class="d-flex flex-column" style="font-size:.75rem;gap:.1rem">
+              {% if route.departure_time %}
+              <span class="text-muted">
+                <i class="bi bi-sunrise me-1 text-warning"></i>
+                {{ route.departure_time|time:"H:i" }}
+              </span>
+              {% endif %}
+              {% if route.return_time %}
+              <span class="text-muted">
+                <i class="bi bi-sunset me-1 text-info"></i>
+                {{ route.return_time|time:"H:i" }}
+              </span>
+              {% endif %}
+              {% if not route.departure_time and not route.return_time %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Students + capacity bar -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="small fw-semibold">
+                {{ route.assigned }}
+                {% if route.vehicle %}/{{ route.vehicle.capacity }}{% endif %}
+              </span>
+              {% if route.vehicle %}
+                {% widthratio route.assigned route.vehicle.capacity 100 as pct %}
+                <div class="cap-bar">
+                  <div class="cap-fill"
+                       style="width:{{ pct }}%;
+                       background:{% if pct >= 90 %}#ef4444{% elif pct >= 70 %}#f59e0b{% else %}#22c55e{% endif %}">
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Monthly fee -->
+          <td>
+            <span class="fee-mono">
+              ETB {{ route.monthly_fee|floatformat:0 }}
+            </span>
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="s-{% if route.is_active %}active{% else %}inactive{% endif %}">
+              {% if route.is_active %}
+              <i class="bi bi-check-circle me-1"></i>Active
+              {% else %}
+              <i class="bi bi-x-circle me-1"></i>Inactive
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'route_detail' route.pk %}"
+                 class="action-icon text-info" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'transport_attendance_mark' route.pk %}"
+                 class="action-icon text-success" title="Mark Attendance">
+                <i class="bi bi-check2-square"></i>
+              </a>
+              <a href="{% url 'route_edit' route.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'route_delete' route.pk %}"
+                 class="action-icon text-danger" title="Delete"
+                 onclick="return confirm('Delete route {{ route.name }}?')">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <i class="bi bi-signpost-split fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No Routes Yet</h6>
+              <p class="small text-muted mb-3">
+                Create routes to organise student transport pickup and drop-off.
+              </p>
+              <a href="{% url 'route_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Create First Route
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function filterRoutes(q){
+  const term = q.toLowerCase().trim();
+  const activeFilter = new URLSearchParams(window.location.search).get('is_active') || '';
+  document.querySelectorAll('#routeTable tbody tr[data-name]').forEach(row => {
+    const nameMatch   = !term || row.dataset.name.includes(term);
+    const activeMatch = !activeFilter || row.dataset.active === activeFilter;
+    row.style.display = (nameMatch && activeMatch) ? '' : 'none';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#routeTable tbody tr[data-active]');
+  let active = 0, students = 0, feeSum = 0, feeCount = 0;
+  rows.forEach(r => {
+    if(r.dataset.active === '1') active++;
+    students += parseInt(r.dataset.students) || 0;
+    const fee = parseFloat(r.dataset.fee) || 0;
+    if(fee > 0){ feeSum += fee; feeCount++; }
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntActive',   active);
+  set('cntStudents', students);
+  set('avgFee', feeCount > 0 ? (feeSum / feeCount).toFixed(0) : '0');
+
+  // Apply active filter
+  const af = new URLSearchParams(window.location.search).get('is_active') || '';
+  if(af){
+    rows.forEach(r => {
+      r.style.display = r.dataset.active === af ? '' : 'none';
+    });
+  }
+});
+</script>
+
+{% endblock %}

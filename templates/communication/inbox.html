@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Inbox{% endblock %}
+{% block page_title %}Inbox{% endblock %}
+
+{% block content %}
+<style>
+  .form-control{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Thread item ── */
+  .thread-item{border:none;border-radius:1rem;box-shadow:0 2px 8px rgba(0,0,0,.05);padding:1rem 1.25rem;margin-bottom:.65rem;display:flex;align-items:center;gap:1rem;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
+  .thread-item:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1);color:inherit}
+  .thread-item.unread{background:#f8faff;border-left:4px solid #1a3c72}
+  .thread-item.read  {background:#fff;border-left:4px solid transparent}
+
+  /* ── Avatar stack ── */
+  .avatar-stack{position:relative;width:44px;height:44px;flex-shrink:0}
+  .avatar-main{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.8rem;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+  .avatar-extra{position:absolute;bottom:-3px;right:-3px;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;font-weight:700;font-size:.55rem;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
+
+  /* ── Thread body ── */
+  .thread-subject{font-weight:700;font-size:.9rem;color:#1e293b;margin-bottom:.2rem}
+  .thread-subject.read{font-weight:500;color:#64748b}
+  .thread-preview{font-size:.78rem;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px}
+
+  /* ── Unread badge ── */
+  .unread-badge{background:#1a3c72;color:#fff;border-radius:999px;font-size:.65rem;font-weight:700;padding:.15rem .55rem;flex-shrink:0;min-width:20px;text-align:center}
+
+  /* ── Time stamp ── */
+  .thread-time{font-size:.72rem;color:#9ca3af;white-space:nowrap;flex-shrink:0}
+  .thread-time.recent{color:#1a3c72;font-weight:600}
+
+  /* ── Participant pills ── */
+  .part-pill{font-size:.68rem;background:#f1f5f9;color:#64748b;border-radius:999px;padding:.1rem .5rem;white-space:nowrap}
+
+  /* ── Search ── */
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s;max-width:300px}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  .empty-state{text-align:center;padding:4rem 2rem;color:#9ca3af}
+  .btn-compose{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s;color:#fff}
+  .btn-compose:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Inbox</h5>
+    <p class="text-muted small mb-0">
+      {{ thread_data|length }} conversation{{ thread_data|length|pluralize }}
+      {% if total_unread %}
+      &nbsp;·&nbsp;
+      <span class="text-primary fw-semibold">
+        {{ total_unread }} unread
+      </span>
+      {% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'comm_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+    <a href="{% url 'new_thread' %}" class="btn-compose">
+      <i class="bi bi-envelope-plus me-2"></i>New Message
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-envelope text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ thread_data|length }}</div>
+        <div class="stat-lbl">Conversations</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-envelope-exclamation text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">{{ total_unread }}</div>
+        <div class="stat-lbl">Unread</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-envelope-check text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntRead">—</div>
+        <div class="stat-lbl">Read</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#faf5ff">
+        <i class="bi bi-chat-dots" style="color:#7c3aed"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#7c3aed" id="cntMessages">—</div>
+        <div class="stat-lbl">Total Messages</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Search -->
+<div class="mb-4 d-flex align-items-center gap-3">
+  <input type="text" id="searchInput"
+         class="search-bar form-control"
+         placeholder="Search conversations…"
+         oninput="filterThreads(this.value)">
+  {% if total_unread %}
+  <button type="button" class="btn btn-outline-primary rounded-pill px-3"
+          style="font-size:.82rem;white-space:nowrap"
+          onclick="showUnreadOnly()">
+    <i class="bi bi-envelope-exclamation me-1"></i>
+    Unread only ({{ total_unread }})
+  </button>
+  <button type="button" class="btn btn-outline-secondary rounded-pill px-3"
+          style="font-size:.82rem" onclick="showAll()">
+    Show all
+  </button>
+  {% endif %}
+</div>
+
+<!-- Thread list -->
+<div id="threadList">
+  {% if thread_data %}
+  {% for td in thread_data %}
+  {% with thread=td.thread unread=td.unread %}
+  <a href="{% url 'thread_detail' thread.pk %}"
+     class="thread-item {% if unread > 0 %}unread{% else %}read{% endif %}"
+     data-subject="{{ thread.subject|lower }}"
+     data-unread="{{ unread }}"
+     data-msgcount="{{ thread.msg_count }}">
+
+    <!-- Avatar stack -->
+    <div class="avatar-stack">
+      {% with others=thread.participants.all %}
+      {% for p in others %}
+      {% if p != request.user and forloop.first %}
+      <div class="avatar-main">
+        {{ p.first_name|first|upper }}{{ p.last_name|first|upper }}
+      </div>
+      {% endif %}
+      {% endfor %}
+      {% if others.count > 2 %}
+      <div class="avatar-extra">+{{ others.count|add:"-1" }}</div>
+      {% endif %}
+      {% endwith %}
+    </div>
+
+    <!-- Thread body -->
+    <div class="flex-grow-1 min-w-0">
+
+      <!-- Subject + participants -->
+      <div class="d-flex align-items-baseline gap-2 flex-wrap mb-1">
+        <span class="thread-subject {% if unread == 0 %}read{% endif %}">
+          {{ thread.subject|default:"(No subject)" }}
+        </span>
+        {% for p in thread.participants.all %}
+        {% if p != request.user %}
+        <span class="part-pill">{{ p.get_full_name }}</span>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Last message preview -->
+      {% if thread.last_message %}
+      <div class="thread-preview">
+        {% if thread.last_message.sender == request.user %}
+        <span class="text-muted" style="font-size:.72rem">You: </span>
+        {% else %}
+        <span class="text-muted" style="font-size:.72rem">
+          {{ thread.last_message.sender.first_name }}:
+        </span>
+        {% endif %}
+        {{ thread.last_message.body|truncatechars:80 }}
+      </div>
+      {% endif %}
+
+      <!-- Message count -->
+      <div class="mt-1 text-muted" style="font-size:.7rem">
+        <i class="bi bi-chat-dots me-1"></i>
+        {{ thread.msg_count }} message{{ thread.msg_count|pluralize }}
+      </div>
+
+    </div>
+
+    <!-- Right: time + unread badge + delete -->
+    <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+      <div class="thread-time {% if thread.updated_at|timesince|slice:':1' == '0' or 'minute' in thread.updated_at|timesince or 'hour' in thread.updated_at|timesince %}recent{% endif %}">
+        {{ thread.updated_at|timesince|truncatechars:12 }} ago
+      </div>
+      {% if unread > 0 %}
+      <span class="unread-badge">{{ unread }}</span>
+      {% endif %}
+      <a href="{% url 'thread_delete' thread.pk %}"
+         class="text-muted mt-1"
+         style="font-size:.72rem;text-decoration:none"
+         onclick="event.preventDefault();event.stopPropagation();
+                  if(confirm('Remove this conversation from your inbox?'))
+                  window.location.href=this.href"
+         title="Remove">
+        <i class="bi bi-trash"></i>
+      </a>
+    </div>
+
+  </a>
+  {% endwith %}
+  {% endfor %}
+
+  <!-- No results (JS) -->
+  <div id="noResults" class="empty-state" style="display:none">
+    <i class="bi bi-search fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No conversations found</h6>
+    <p class="small text-muted mb-0">Try a different search term</p>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-envelope fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">Your inbox is empty</h6>
+    <p class="small text-muted mb-3">
+      Start a conversation with a teacher, staff member or fellow student.
+    </p>
+    <a href="{% url 'new_thread' %}" class="btn btn-primary rounded-pill px-4">
+      <i class="bi bi-envelope-plus me-2"></i>Send First Message
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+// ── Search filter ────────────────────────────
+function filterThreads(q){
+  const term  = q.toLowerCase().trim();
+  const items = document.querySelectorAll('#threadList .thread-item');
+  let visible = 0;
+  items.forEach(item => {
+    const sub   = item.dataset.subject || '';
+    const text  = item.textContent.toLowerCase();
+    const match = !term || sub.includes(term) || text.includes(term);
+    item.style.display = match ? '' : 'none';
+    if(match) visible++;
+  });
+  const noRes = document.getElementById('noResults');
+  if(noRes) noRes.style.display = visible === 0 ? 'block' : 'none';
+}
+
+// ── Unread filter ────────────────────────────
+let showingUnreadOnly = false;
+function showUnreadOnly(){
+  showingUnreadOnly = true;
+  document.querySelectorAll('#threadList .thread-item').forEach(item => {
+    item.style.display = parseInt(item.dataset.unread) > 0 ? '' : 'none';
+  });
+}
+function showAll(){
+  showingUnreadOnly = false;
+  document.querySelectorAll('#threadList .thread-item').forEach(item => {
+    item.style.display = '';
+  });
+  document.getElementById('searchInput').value = '';
+}
+
+// ── Stats ────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const items = document.querySelectorAll('#threadList .thread-item');
+  let read = 0, msgs = 0;
+  items.forEach(item => {
+    if(parseInt(item.dataset.unread) === 0) read++;
+    msgs += parseInt(item.dataset.msgcount) || 0;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntRead',     read);
+  set('cntMessages', msgs);
+});
+</script>
+
+{% endblock %}

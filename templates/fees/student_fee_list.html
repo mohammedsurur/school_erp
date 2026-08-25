@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Student Fees{% endblock %}
+{% block page_title %}Student Fees{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.8rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;color:inherit;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover,.filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  /* ── Summary cards ── */
+  .sum-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .sum-icon{width:48px;height:48px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0}
+  .sum-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .sum-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+
+  /* ── Avatar ── */
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Status badges ── */
+  .s-pending {background:#eff6ff;color:#1d4ed8}
+  .s-partial  {background:#fef9c3;color:#854d0e}
+  .s-paid     {background:#dcfce7;color:#15803d}
+  .s-waived   {background:#f0f9ff;color:#0369a1}
+  .s-overdue  {background:#fee2e2;color:#dc2626}
+
+  /* ── Balance bar ── */
+  .bal-bar{height:5px;background:#e9ecef;border-radius:999px;overflow:hidden;width:70px}
+  .bal-fill{height:100%;border-radius:999px}
+
+  /* ── Row states ── */
+  .row-overdue{background:#fff8f8!important}
+  .row-paid   {background:#f0fdf4!important}
+
+  .amount-mono{font-family:monospace;font-weight:700;font-size:.88rem}
+  .adm-no{font-family:monospace;font-size:.7rem;color:#94a3b8}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Student Fees</h5>
+    <p class="text-muted small mb-0">
+      {{ fees.paginator.count }} fee record{{ fees.paginator.count|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'bulk_assign_fees' %}"
+       class="btn btn-outline-success rounded-pill px-3">
+      <i class="bi bi-people me-1"></i>Bulk Assign
+    </a>
+    <a href="{% url 'fee_structure_list' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-list-check me-1"></i>Structures
+    </a>
+    <a href="{% url 'daily_collection' %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-calendar-day me-1"></i>Daily Collection
+    </a>
+  </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="sum-card">
+      <div class="sum-icon" style="background:#eff6ff">
+        <i class="bi bi-receipt text-primary fs-5"></i>
+      </div>
+      <div>
+        <div class="sum-num text-primary">
+          ETB {{ total_due|floatformat:2 }}
+        </div>
+        <div class="sum-lbl">Total Invoiced</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="sum-card">
+      <div class="sum-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success fs-5"></i>
+      </div>
+      <div>
+        <div class="sum-num text-success">
+          ETB {{ total_paid|floatformat:2 }}
+        </div>
+        <div class="sum-lbl">Total Collected</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="sum-card">
+      <div class="sum-icon" style="background:#fff8f8">
+        <i class="bi bi-exclamation-circle text-danger fs-5"></i>
+      </div>
+      <div>
+        <div class="sum-num text-danger">
+          ETB {{ outstanding|floatformat:2 }}
+        </div>
+        <div class="sum-lbl">Outstanding</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="sum-card">
+      <div class="sum-icon" style="background:#fef9c3">
+        <i class="bi bi-percent text-warning fs-5"></i>
+      </div>
+      <div>
+        <div class="sum-num text-warning" id="collectionRate">—%</div>
+        <div class="sum-lbl">Collection Rate</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="?{% if year_id %}year={{ year_id }}&{% endif %}{% if grade_id %}grade={{ grade_id }}&{% endif %}{% if q %}q={{ q }}{% endif %}"
+     class="filter-tab {% if not status %}active{% endif %}">All</a>
+  <a href="?status=pending{% if year_id %}&year={{ year_id }}{% endif %}{% if grade_id %}&grade={{ grade_id }}{% endif %}"
+     class="filter-tab {% if status == 'pending' %}active{% endif %}">
+    <i class="bi bi-clock me-1"></i>Pending
+  </a>
+  <a href="?status=partial{% if year_id %}&year={{ year_id }}{% endif %}{% if grade_id %}&grade={{ grade_id }}{% endif %}"
+     class="filter-tab {% if status == 'partial' %}active{% endif %}">
+    <i class="bi bi-half me-1"></i>Partial
+  </a>
+  <a href="?status=paid{% if year_id %}&year={{ year_id }}{% endif %}{% if grade_id %}&grade={{ grade_id }}{% endif %}"
+     class="filter-tab {% if status == 'paid' %}active{% endif %}">
+    <i class="bi bi-check-circle me-1"></i>Paid
+  </a>
+  <a href="?status=overdue{% if year_id %}&year={{ year_id }}{% endif %}{% if grade_id %}&grade={{ grade_id }}{% endif %}"
+     class="filter-tab {% if status == 'overdue' %}active{% endif %}">
+    <i class="bi bi-exclamation-circle me-1"></i>Overdue
+  </a>
+  <a href="?status=waived{% if year_id %}&year={{ year_id }}{% endif %}{% if grade_id %}&grade={{ grade_id }}{% endif %}"
+     class="filter-tab {% if status == 'waived' %}active{% endif %}">
+    <i class="bi bi-shield-check me-1"></i>Waived
+  </a>
+</div>
+
+<!-- Filters row -->
+<form method="get" class="mb-4">
+  <div class="row g-3">
+    <div class="col-md-3">
+      <select name="year" class="form-select search-bar" onchange="this.form.submit()">
+        <option value="">All Years</option>
+        {% for year in years %}
+        <option value="{{ year.pk }}"
+          {% if year_id == year.pk|stringformat:'s' %}selected{% endif %}>
+          {{ year.name }}{% if year.is_current %} ★{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select name="grade" class="form-select search-bar" onchange="this.form.submit()">
+        <option value="">All Grades</option>
+        {% for grade in grades %}
+        <option value="{{ grade.pk }}"
+          {% if grade_id == grade.pk|stringformat:'s' %}selected{% endif %}>
+          {{ grade.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <input type="text" name="q" value="{{ q }}"
+             class="form-control search-bar"
+             placeholder="Search by student name or admission no…">
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-outline-primary rounded-pill px-3 flex-grow-1">
+        <i class="bi bi-search"></i>
+      </button>
+      {% if q or grade_id or status %}
+      <a href="?{% if year_id %}year={{ year_id }}{% endif %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+    {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+  </div>
+</form>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Fee Category</th>
+          <th>Grade</th>
+          <th>Amount Due</th>
+          <th>Discount</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Due Date</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fee in fees %}
+        <tr class="{% if fee.status == 'overdue' %}row-overdue{% elif fee.status == 'paid' %}row-paid{% endif %}">
+
+          <td class="text-muted small fw-semibold">
+            {{ fees.start_index|add:forloop.counter0 }}
+          </td>
+
+          <!-- Student -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ fee.student.user.first_name|first|upper }}{{ fee.student.user.last_name|first|upper }}
+              </div>
+              <div>
+                <a href="{% url 'student_fee_detail' fee.pk %}"
+                   class="fw-semibold small text-decoration-none text-dark">
+                  {{ fee.student.user.get_full_name }}
+                </a>
+                <div><span class="adm-no">{{ fee.student.admission_number }}</span></div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Fee category -->
+          <td class="small fw-semibold">
+            {{ fee.fee_structure.fee_category.name }}
+          </td>
+
+          <!-- Grade -->
+          <td>
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-2"
+                  style="font-size:.72rem">
+              {{ fee.fee_structure.grade }}
+            </span>
+          </td>
+
+          <!-- Amount due -->
+          <td>
+            <span class="amount-mono">
+              {{ fee.amount_due|floatformat:2 }}
+            </span>
+          </td>
+
+          <!-- Discount -->
+          <td>
+            {% if fee.discount %}
+            <span class="amount-mono text-info">
+              -{{ fee.discount|floatformat:2 }}
+            </span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Paid -->
+          <td>
+            <span class="amount-mono text-success">
+              {{ fee.amount_paid|floatformat:2 }}
+            </span>
+          </td>
+
+          <!-- Balance + bar -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="amount-mono {% if fee.balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ fee.balance|floatformat:2 }}
+              </span>
+              {% if fee.effective_amount > 0 %}
+              <div class="bal-bar">
+                <div class="bal-fill"
+                     style="width:{% widthratio fee.amount_paid fee.effective_amount 100 %}%;
+                     background:{% if fee.status == 'paid' %}#22c55e{% elif fee.status == 'partial' %}#f59e0b{% else %}#ef4444{% endif %}">
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Due date -->
+          <td class="small">
+            {% if fee.due_date %}
+            <span class="{% if fee.is_overdue %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+              {% if fee.is_overdue %}<i class="bi bi-exclamation-circle me-1"></i>{% endif %}
+              {{ fee.due_date|date:"M d, Y" }}
+            </span>
+            {% else %}
+            <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="badge rounded-pill px-3 s-{{ fee.status }}">
+              {% if fee.status == 'pending'  %}<i class="bi bi-clock me-1"></i>Pending
+              {% elif fee.status == 'partial' %}<i class="bi bi-half me-1"></i>Partial
+              {% elif fee.status == 'paid'    %}<i class="bi bi-check-circle me-1"></i>Paid
+              {% elif fee.status == 'waived'  %}<i class="bi bi-shield-check me-1"></i>Waived
+              {% elif fee.status == 'overdue' %}<i class="bi bi-exclamation-circle me-1"></i>Overdue
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Action -->
+          <td>
+            <a href="{% url 'student_fee_detail' fee.pk %}"
+               class="action-icon text-primary" title="View / Collect">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="11">
+            <div class="empty-state">
+              <i class="bi bi-cash-coin fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No fee records found</h6>
+              <p class="small mb-3">
+                {% if q %}No results for "{{ q }}"
+                {% elif status %}No {{ status }} fees found
+                {% else %}No fees assigned yet — use Bulk Assign to get started{% endif %}
+              </p>
+              <a href="{% url 'bulk_assign_fees' %}"
+                 class="btn btn-success rounded-pill px-4">
+                <i class="bi bi-people me-2"></i>Bulk Assign Fees
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if fees.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if fees.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ fees.previous_page_number }}&q={{ q }}&year={{ year_id }}&grade={{ grade_id }}&status={{ status }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in fees.paginator.page_range %}
+    <li class="page-item {% if fees.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&q={{ q }}&year={{ year_id }}&grade={{ grade_id }}&status={{ status }}">
+        {{ num }}
+      </a>
+    </li>
+    {% endfor %}
+    {% if fees.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ fees.next_page_number }}&q={{ q }}&year={{ year_id }}&grade={{ grade_id }}&status={{ status }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const due  = parseFloat('{{ total_due|floatformat:2 }}'.replace(',',''))  || 0;
+  const paid = parseFloat('{{ total_paid|floatformat:2 }}'.replace(',','')) || 0;
+  const rate = due > 0 ? Math.round(paid / due * 100) : 0;
+  const el   = document.getElementById('collectionRate');
+  if(el) el.textContent = rate + '%';
+});
+</script>
+
+{% endblock %}

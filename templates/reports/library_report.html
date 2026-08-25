@@ -1,0 +1,574 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Library Report{% endblock %}
+{% block page_title %}Library Report{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.82rem;color:#374151;margin-bottom:.3rem;display:block}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+  .stat-sub{font-size:.72rem;margin-top:.2rem}
+
+  /* ── Chart cards ── */
+  .chart-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;height:100%}
+  .chart-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+
+  /* ── Report type selector ── */
+  .rtype-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.6rem 1rem;cursor:pointer;transition:all .2s;background:#fff;font-size:.82rem;font-weight:600;color:#374151;text-align:center;flex:1}
+  .rtype-btn:hover{border-color:#7c3aed;color:#7c3aed}
+  .rtype-btn.selected{border-color:#7c3aed;background:#faf5ff;color:#7c3aed}
+
+  /* ── Status badges ── */
+  .s-issued  {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-returned{background:#dcfce7;color:#15803d;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-overdue {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-lost    {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Table ── */
+  .rep-table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .rep-table tbody td{padding:.75rem 1rem;vertical-align:middle;border-color:#f1f5f9;font-size:.85rem}
+  .rep-table tbody tr{transition:background .15s}
+  .rep-table tbody tr:hover{background:#f8faff}
+  .rep-table tbody tr.overdue-row{background:#fff8f8}
+
+  /* ── View tabs ── */
+  .view-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.8rem;font-weight:600;cursor:pointer;color:#374151;transition:all .2s;white-space:nowrap}
+  .view-tab.active{background:#7c3aed;border-color:#7c3aed;color:#fff}
+  .view-tab:hover:not(.active){background:#faf5ff;border-color:#7c3aed;color:#7c3aed}
+  .view-tab.red.active{background:#dc2626;border-color:#dc2626}
+  .view-tab.red{border-color:#fca5a5;color:#dc2626}
+  .view-tab.red:hover:not(.active){background:#fff1f2}
+
+  /* ── Top book card ── */
+  .top-book{background:#f8f9fb;border-left:4px solid #7c3aed;border-radius:.875rem;padding:.85rem 1.1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.85rem}
+  .book-rank{width:30px;height:30px;border-radius:50%;background:#7c3aed;color:#fff;font-weight:800;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Days badge ── */
+  .days-ok  {color:#15803d;font-weight:700;font-family:monospace}
+  .days-warn{color:#854d0e;font-weight:700;font-family:monospace}
+  .days-bad {color:#dc2626;font-weight:700;font-family:monospace}
+
+  /* ── Fine chip ── */
+  .fine-chip{background:#fee2e2;color:#dc2626;border-radius:.4rem;padding:.1rem .45rem;font-size:.7rem;font-weight:700;font-family:monospace}
+
+  /* ── Leg dot ── */
+  .leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+  .btn-run{border-radius:.875rem;padding:.65rem 1.75rem;font-weight:600;background:linear-gradient(135deg,#4c1d95,#8b5cf6);border:none;color:#fff;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Back + title -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'reports_dashboard' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Reports
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">Library Report</h5>
+    <p class="text-muted small mb-0">
+      Issuances · Overdue · Fines · Top books · Daily trend
+    </p>
+  </div>
+  {% if issuances %}
+  <a href="{% url 'download_pdf' 'library' %}?{{ request.GET.urlencode }}"
+     class="btn btn-outline-primary rounded-pill px-3 ms-auto">
+    <i class="bi bi-download me-1"></i>PDF
+  </a>
+  {% endif %}
+</div>
+
+<!-- Filter form -->
+<div class="filter-bar">
+  <form method="get">
+
+    <!-- Report type selector -->
+    <div class="mb-3">
+      <label>Report Type</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for val, lbl in form.report_type.field.choices %}
+        <div class="rtype-btn
+          {% if form.report_type.value == val or not form.report_type.value and val == 'issuances' %}selected{% endif %}"
+             data-value="{{ val }}"
+             onclick="pickType('{{ val }}',this)">
+          {% if val == 'issuances' %}📖
+          {% elif val == 'overdue'  %}⏰
+          {% elif val == 'fines'   %}💸
+          {% elif val == 'catalog' %}📚
+          {% endif %}
+          {{ lbl }}
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:none">{{ form.report_type }}</div>
+    </div>
+
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label>From Date</label>
+        {{ form.date_from }}
+      </div>
+      <div class="col-md-3">
+        <label>To Date</label>
+        {{ form.date_to }}
+      </div>
+      <div class="col-md-2">
+        <label>Format</label>
+        {{ form.format }}
+      </div>
+      <div class="col-md-4 d-flex gap-2 align-self-end">
+        <button type="submit" class="btn-run flex-grow-1">
+          <i class="bi bi-book me-1"></i>Generate
+        </button>
+        {% if request.GET %}
+        <a href="{% url 'library_report' %}"
+           class="btn btn-outline-secondary rounded-pill px-3">
+          <i class="bi bi-x"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if issuances %}
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#faf5ff">
+        <i class="bi bi-book" style="color:#7c3aed"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#7c3aed">{{ total_issued }}</div>
+        <div class="stat-lbl">Total Issued</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success">{{ total_returned }}</div>
+        <div class="stat-lbl">Returned</div>
+        <div class="stat-sub text-success">
+          {% if total_issued %}
+          {% widthratio total_returned total_issued 100 %}% return rate
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-clock text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">{{ total_overdue }}</div>
+        <div class="stat-lbl">Overdue</div>
+        <div class="stat-sub text-danger">
+          {% if total_issued %}
+          {% widthratio total_overdue total_issued 100 %}% of total
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-cash text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning" style="font-family:monospace">
+          ETB {{ fines_total|floatformat:0 }}
+        </div>
+        <div class="stat-lbl">Pending Fines</div>
+        <div class="stat-sub text-muted">{{ total_lost }} lost books</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts row 1 -->
+<div class="row g-4 mb-4">
+
+  <!-- Doughnut: status distribution -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-pie-chart"></i>Status Distribution
+      </div>
+      <canvas id="pieStatus" height="220"></canvas>
+      <div class="mt-3 d-flex flex-column gap-2" id="statusLegend"></div>
+    </div>
+  </div>
+
+  <!-- Bar: by category -->
+  <div class="col-md-8">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart"></i>Issuances by Book Category
+      </div>
+      <canvas id="barCat" height="220"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Charts row 2: daily trend -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-graph-up"></i>Daily Issuance Trend
+      </div>
+      <canvas id="lineTrend" height="110"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Top borrowed books + Issuance table -->
+<div class="row g-4 mb-4">
+
+  <!-- Top books -->
+  {% if top_books %}
+  <div class="col-xl-4">
+    <div class="info-card card p-4 h-100">
+      <div class="sec-head">
+        <i class="bi bi-trophy me-2 text-warning"></i>Top Borrowed Books
+      </div>
+      {% for book in top_books %}
+      <div class="top-book">
+        <div class="book-rank"
+             style="background:{% if forloop.counter == 1 %}#f59e0b
+             {% elif forloop.counter == 2 %}#9ca3af
+             {% elif forloop.counter == 3 %}#c2410c
+             {% else %}#7c3aed{% endif %}">
+          {{ forloop.counter }}
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="fw-semibold small text-truncate">{{ book.title }}</div>
+          <div class="text-muted" style="font-size:.72rem">
+            {{ book.author_names|default:"Unknown author" }}
+          </div>
+          {% if book.category %}
+          <div class="mt-1">
+            <span style="background:#faf5ff;color:#7c3aed;border-radius:.4rem;
+                          padding:.08rem .4rem;font-size:.65rem;font-weight:700">
+              {{ book.category.name }}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="text-end flex-shrink-0">
+          <div class="fw-bold" style="font-family:monospace;color:#7c3aed;font-size:1rem">
+            {{ book.borrow_count }}
+          </div>
+          <div style="font-size:.65rem;color:#9ca3af">borrows</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Issuance log table -->
+  <div class="col-xl-{% if top_books %}8{% else %}12{% endif %}">
+    <div class="info-card card p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <div class="sec-head mb-0">
+          <i class="bi bi-table me-2"></i>Issuance Log
+          <span class="text-muted fw-normal ms-1">
+            ({{ issuances.paginator.count }} records)
+          </span>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="view-tab active" onclick="filterIss('all',this)">All</span>
+          <span class="view-tab" onclick="filterIss('issued',this)">Issued</span>
+          <span class="view-tab" onclick="filterIss('returned',this)">Returned</span>
+          <span class="view-tab red" onclick="filterIss('overdue',this)">
+            <i class="bi bi-clock me-1"></i>Overdue
+          </span>
+          <span class="view-tab" onclick="filterIss('lost',this)">Lost</span>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table rep-table mb-0" id="issTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Book</th>
+              <th>Category</th>
+              <th>Borrower</th>
+              <th>Issued</th>
+              <th>Due</th>
+              <th>Returned</th>
+              <th>Days</th>
+              <th>Status</th>
+              <th>Fine</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for iss in issuances %}
+            <tr data-status="{{ iss.status }}"
+                class="{% if iss.status == 'overdue' %}overdue-row{% endif %}">
+              <td class="text-muted small">
+                {{ forloop.counter0|add:issuances.start_index }}
+              </td>
+              <td>
+                <div class="fw-semibold small">
+                  {{ iss.book_copy.book.title|truncatechars:30 }}
+                </div>
+                <div class="text-muted" style="font-size:.7rem">
+                  {{ iss.book_copy.book.isbn|default:"" }}
+                </div>
+              </td>
+              <td class="small text-muted">
+                {{ iss.book_copy.book.category.name|default:"—" }}
+              </td>
+              <td>
+                <div class="fw-semibold small">
+                  {{ iss.student.user.get_full_name }}
+                </div>
+                <div class="text-muted" style="font-size:.7rem">
+                  {{ iss.student.current_section.grade|default:"" }}
+                </div>
+              </td>
+              <td class="small">{{ iss.issued_date|date:"M d, Y" }}</td>
+              <td class="small
+                {% if iss.status == 'overdue' %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                {{ iss.due_date|date:"M d, Y"|default:"—" }}
+              </td>
+              <td class="small text-muted">
+                {{ iss.return_date|date:"M d, Y"|default:"—" }}
+              </td>
+              <td>
+                {% if iss.return_date %}
+                  {% with days=iss.issued_date|timesince:iss.return_date %}
+                  <span class="days-ok">{{ days|truncatechars:8 }}</span>
+                  {% endwith %}
+                {% elif iss.status == 'overdue' %}
+                  <span class="days-bad">Overdue</span>
+                {% else %}
+                  <span class="days-warn">Active</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="s-{{ iss.status }}">
+                  {% if iss.status == 'issued'   %}<i class="bi bi-book me-1"></i>Issued
+                  {% elif iss.status == 'returned'%}<i class="bi bi-check me-1"></i>Returned
+                  {% elif iss.status == 'overdue' %}<i class="bi bi-clock me-1"></i>Overdue
+                  {% elif iss.status == 'lost'    %}<i class="bi bi-x me-1"></i>Lost
+                  {% else %}{{ iss.status|title }}
+                  {% endif %}
+                </span>
+              </td>
+              <td>
+                {% if iss.fine_amount %}
+                <span class="fine-chip">ETB {{ iss.fine_amount|floatformat:2 }}</span>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if issuances.has_other_pages %}
+      <nav class="mt-3">
+        <ul class="pagination justify-content-center gap-1 mb-0">
+          {% if issuances.has_previous %}
+          <li class="page-item">
+            <a class="page-link rounded-3"
+               href="?page={{ issuances.previous_page_number }}&{{ request.GET.urlencode }}">
+              <i class="bi bi-arrow-left"></i>
+            </a>
+          </li>
+          {% endif %}
+          {% for num in issuances.paginator.page_range %}
+          <li class="page-item {% if issuances.number == num %}active{% endif %}">
+            <a class="page-link rounded-3"
+               href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
+          </li>
+          {% endfor %}
+          {% if issuances.has_next %}
+          <li class="page-item">
+            <a class="page-link rounded-3"
+               href="?page={{ issuances.next_page_number }}&{{ request.GET.urlencode }}">
+              <i class="bi bi-arrow-right"></i>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const PIE_LABELS   = {{ pie_labels|safe }};
+const PIE_DATA     = {{ pie_data|safe }};
+const PIE_COLORS   = {{ pie_colors|safe }};
+const CAT_LABELS   = {{ cat_labels|safe }};
+const CAT_DATA     = {{ cat_data|safe }};
+const TREND_LABELS = {{ trend_labels|safe }};
+const TREND_DATA   = {{ trend_data|safe }};
+
+// ── Doughnut: status distribution ────────────
+new Chart(document.getElementById('pieStatus'), {
+  type: 'doughnut',
+  data: {
+    labels:   PIE_LABELS,
+    datasets: [{
+      data:            PIE_DATA,
+      backgroundColor: PIE_COLORS,
+      borderWidth:     3,
+      borderColor:     '#fff',
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } }
+    },
+    cutout: '65%',
+  }
+});
+
+// Custom legend
+const legEl = document.getElementById('statusLegend');
+const totl  = PIE_DATA.reduce((a,b) => a+b, 0);
+PIE_LABELS.forEach((lbl, i) => {
+  const pct = totl ? ((PIE_DATA[i]/totl)*100).toFixed(1) : 0;
+  legEl.innerHTML += `
+    <div class="d-flex align-items-center gap-2 justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <div class="leg-dot" style="background:${PIE_COLORS[i]}"></div>
+        <span style="font-size:.78rem">${lbl}</span>
+      </div>
+      <div>
+        <span style="font-family:monospace;font-weight:700;font-size:.78rem">
+          ${PIE_DATA[i]}
+        </span>
+        <span style="font-size:.68rem;color:#9ca3af;margin-left:.25rem">${pct}%</span>
+      </div>
+    </div>`;
+});
+
+// ── Bar: by category ──────────────────────────
+new Chart(document.getElementById('barCat'), {
+  type: 'bar',
+  data: {
+    labels: CAT_LABELS,
+    datasets: [{
+      label:           'Issuances',
+      data:            CAT_DATA,
+      backgroundColor: CAT_DATA.map((_,i) =>
+        ['#7c3aed','#1a3c72','#0ea5a0','#22c55e','#f59e0b','#ef4444',
+         '#f97316','#06b6d4','#8b5cf6','#ec4899'][i % 10]
+      ),
+      borderRadius:    6,
+      borderSkipped:   false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} issuances` } }
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f1f5f9' },
+           ticks: { font: { size: 11 }, precision: 0 } },
+      x: { grid: { display: false },
+           ticks: { font: { size: 10 }, maxRotation: 35 } }
+    }
+  }
+});
+
+// ── Line: daily trend ─────────────────────────
+new Chart(document.getElementById('lineTrend'), {
+  type: 'line',
+  data: {
+    labels: TREND_LABELS,
+    datasets: [{
+      label:           'Issuances',
+      data:            TREND_DATA,
+      borderColor:     '#7c3aed',
+      backgroundColor: 'rgba(124,58,237,.12)',
+      tension:         0.4,
+      fill:            true,
+      pointRadius:     4,
+      pointBackgroundColor: '#7c3aed',
+      borderWidth:     2,
+    }]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} issued` } }
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f1f5f9' },
+           ticks: { font: { size: 11 }, precision: 0 } },
+      x: { grid: { display: false },
+           ticks: { font: { size: 10 }, maxTicksLimit: 14 } }
+    }
+  }
+});
+
+// ── Filter tabs ───────────────────────────────
+function filterIss(status, el){
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#issTable tbody tr').forEach(row => {
+    row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+  });
+}
+
+// ── Report type selector ──────────────────────
+function pickType(val, el){
+  document.querySelectorAll('.rtype-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="report_type"]').value = val;
+}
+</script>
+
+{% else %}
+<div class="info-card card">
+  <div class="empty-state">
+    <i class="bi bi-book fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">Select report type and date range</h6>
+    <p class="small text-muted mb-0">
+      Choose a report type and date range above to generate the library report.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

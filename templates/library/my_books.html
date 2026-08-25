@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}My Books{% endblock %}
+{% block page_title %}My Books{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+
+  /* ── Hero ── */
+  .hero{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .hero::before{content:"";position:absolute;top:-35px;right:-35px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .hero-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+  .avatar-hero{width:56px;height:56px;border-radius:50%;border:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;color:#fff;flex-shrink:0}
+
+  /* ── Stat pills ── */
+  .stat-pill{background:rgba(255,255,255,.15);border-radius:.75rem;padding:.65rem 1rem;text-align:center;min-width:80px}
+  .stat-pill .num{font-size:1.3rem;font-weight:800;line-height:1}
+  .stat-pill .lbl{font-size:.62rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em;margin-top:.15rem}
+
+  /* ── Book card ── */
+  .book-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;display:flex;gap:0;margin-bottom:.85rem;transition:transform .15s,box-shadow .15s}
+  .book-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1)}
+  .book-card.overdue{border-left:4px solid #ef4444;background:#fff8f8}
+  .book-card.due-soon{border-left:4px solid #f59e0b}
+  .book-card.ok{border-left:4px solid #22c55e}
+  .book-card.returned{border-left:4px solid #9ca3af;opacity:.8}
+
+  /* ── Book cover thumb ── */
+  .book-thumb{width:60px;flex-shrink:0;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);font-size:1.3rem;overflow:hidden}
+  .book-thumb img{width:100%;height:100%;object-fit:cover}
+
+  /* ── Book body ── */
+  .book-body{flex:1;padding:1rem 1.25rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap}
+  .book-info{flex:1;min-width:150px}
+  .book-title{font-weight:700;font-size:.9rem;color:#1e293b;margin-bottom:.2rem}
+  .book-author{font-size:.75rem;color:#64748b}
+
+  /* ── Due date area ── */
+  .due-area{text-align:center;flex-shrink:0;min-width:90px}
+  .due-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;font-weight:700;margin-bottom:.25rem}
+  .due-date{font-size:.82rem;font-weight:700}
+  .due-date.over {color:#dc2626}
+  .due-date.soon {color:#f59e0b}
+  .due-date.ok   {color:#15803d}
+  .due-date.grey {color:#9ca3af}
+
+  /* ── Days chip ── */
+  .days-chip{border-radius:.4rem;padding:.18rem .55rem;font-size:.7rem;font-weight:700;font-family:monospace;margin-top:.2rem;display:inline-block}
+  .chip-over{background:#fee2e2;color:#dc2626}
+  .chip-soon{background:#fef9c3;color:#854d0e}
+  .chip-ok  {background:#dcfce7;color:#15803d}
+
+  /* ── Status badges ── */
+  .s-issued  {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-overdue {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-returned{background:#dcfce7;color:#15803d;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-lost    {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+
+  /* ── Reservation card ── */
+  .res-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;border-left:4px solid #f59e0b}
+  .res-book-icon{width:40px;height:52px;border-radius:.5rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.7);font-size:1rem;flex-shrink:0;overflow:hidden}
+  .res-book-icon img{width:100%;height:100%;object-fit:cover}
+
+  /* ── Section head ── */
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between}
+
+  /* ── Empty state ── */
+  .empty-state{text-align:center;padding:2.5rem 2rem;color:#9ca3af}
+
+  .acc-no{font-family:monospace;font-size:.7rem;background:#f1f5f9;padding:.1rem .4rem;border-radius:.3rem;color:#64748b}
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+</style>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3"
+       style="position:relative;z-index:1">
+    <div class="d-flex align-items-center gap-3">
+      {% if student.photo %}
+      <img src="{{ student.photo.url }}" class="avatar-hero"
+           style="object-fit:cover" alt="">
+      {% else %}
+      <div class="avatar-hero">
+        {{ student.user.first_name|first|upper }}{{ student.user.last_name|first|upper }}
+      </div>
+      {% endif %}
+      <div>
+        <h5 class="fw-bold text-white mb-1">My Library Books</h5>
+        <div class="hero-meta">
+          <span><i class="bi bi-person me-1"></i>{{ student.user.get_full_name }}</span>
+          <span><i class="bi bi-hash me-1"></i>{{ student.admission_number }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="stat-pill">
+        <div class="num">{{ active|length }}</div>
+        <div class="lbl">Active</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num">{{ reservations|length }}</div>
+        <div class="lbl">Reserved</div>
+      </div>
+      <div class="stat-pill">
+        <div class="num">{{ history|length }}</div>
+        <div class="lbl">History</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ACTIVE BOOKS ════ -->
+<div class="sec-head">
+  <span>
+    <i class="bi bi-book-half me-2 text-primary"></i>
+    Currently Borrowed
+    {% if active %}
+    <span class="badge rounded-pill bg-primary-subtle text-primary ms-1"
+          style="font-size:.72rem">{{ active|length }}</span>
+    {% endif %}
+  </span>
+</div>
+
+{% if active %}
+{% for iss in active %}
+<div class="book-card
+  {% if iss.is_overdue %}overdue
+  {% elif iss.days_remaining <= 3 %}due-soon
+  {% else %}ok{% endif %}">
+
+  <!-- Cover -->
+  <div class="book-thumb">
+    {% if iss.book_copy.book.cover_image %}
+    <img src="{{ iss.book_copy.book.cover_image.url }}" alt="">
+    {% else %}
+    <i class="bi bi-journal-text"></i>
+    {% endif %}
+  </div>
+
+  <!-- Body -->
+  <div class="book-body">
+
+    <!-- Book info -->
+    <div class="book-info">
+      <div class="book-title">{{ iss.book_copy.book.title }}</div>
+      {% if iss.book_copy.book.author_names %}
+      <div class="book-author">
+        <i class="bi bi-person me-1"></i>{{ iss.book_copy.book.author_names }}
+      </div>
+      {% endif %}
+      <div class="mt-1 d-flex flex-wrap gap-2 align-items-center">
+        <span class="acc-no">{{ iss.book_copy.accession_number }}</span>
+        {% if iss.book_copy.book.category %}
+        <span class="badge bg-primary-subtle text-primary rounded-pill"
+              style="font-size:.68rem">
+          {{ iss.book_copy.book.category }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Dates -->
+    <div class="due-area">
+      <div class="due-label">Issued</div>
+      <div class="due-date grey">{{ iss.issued_date|date:"M d" }}</div>
+    </div>
+
+    <div class="due-area">
+      <div class="due-label">Due Date</div>
+      <div class="due-date
+        {% if iss.is_overdue %}over
+        {% elif iss.days_remaining <= 3 %}soon
+        {% else %}ok{% endif %}">
+        {{ iss.due_date|date:"M d, Y" }}
+      </div>
+      {% if iss.is_overdue %}
+      <span class="days-chip chip-over">
+        {{ iss.days_overdue }}d late
+      </span>
+      {% elif iss.days_remaining <= 3 %}
+      <span class="days-chip chip-soon">
+        {{ iss.days_remaining }}d left
+      </span>
+      {% else %}
+      <span class="days-chip chip-ok">
+        {{ iss.days_remaining }}d left
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Status -->
+    <div class="flex-shrink-0">
+      {% if iss.status == 'overdue' or iss.is_overdue %}
+      <span class="s-overdue">
+        <i class="bi bi-exclamation-circle me-1"></i>Overdue
+      </span>
+      {% else %}
+      <span class="s-issued">
+        <i class="bi bi-box-arrow-right me-1"></i>Borrowed
+      </span>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endfor %}
+
+<!-- Overdue warning -->
+{% for iss in active %}
+{% if iss.is_overdue %}
+<div class="p-3 rounded-3 mb-3"
+     style="background:#fff8f8;border:1.5px solid #fecaca;font-size:.82rem;color:#dc2626">
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  <strong>You have overdue books.</strong>
+  Please return them to the library as soon as possible
+  to avoid additional fines.
+  Contact the librarian if you need an extension.
+</div>
+{% endif %}
+{% endfor %}
+
+{% else %}
+<div class="info-card card mb-4">
+  <div class="empty-state">
+    <i class="bi bi-book fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No Books Currently Borrowed</h6>
+    <p class="small text-muted mb-0">
+      Visit the library to borrow books from our catalog.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+<!-- ════ RESERVATIONS ════ -->
+{% if reservations %}
+<div class="sec-head mt-4">
+  <span>
+    <i class="bi bi-bookmark me-2 text-warning"></i>
+    My Reservations
+    <span class="badge rounded-pill bg-warning-subtle text-warning ms-1"
+          style="font-size:.72rem">{{ reservations|length }}</span>
+  </span>
+</div>
+
+{% for res in reservations %}
+<div class="res-card">
+  <div class="res-book-icon">
+    {% if res.book.cover_image %}
+    <img src="{{ res.book.cover_image.url }}" alt="">
+    {% else %}
+    <i class="bi bi-journal-text"></i>
+    {% endif %}
+  </div>
+  <div class="flex-grow-1 min-w-0">
+    <div class="fw-bold small text-truncate">{{ res.book.title }}</div>
+    {% if res.book.author_names %}
+    <div class="text-muted" style="font-size:.72rem">{{ res.book.author_names }}</div>
+    {% endif %}
+    <div class="d-flex flex-wrap gap-2 mt-1" style="font-size:.72rem;color:#64748b">
+      <span>
+        <i class="bi bi-calendar me-1"></i>
+        Reserved {{ res.reserved_date|date:"M d, Y" }}
+      </span>
+      <span>
+        <i class="bi bi-clock me-1"></i>
+        Expires {{ res.expiry_date|date:"M d, Y" }}
+      </span>
+      {% if res.book.is_available %}
+      <span class="text-success fw-semibold">
+        <i class="bi bi-check-circle me-1"></i>Available now
+      </span>
+      {% else %}
+      <span class="text-muted">
+        <i class="bi bi-hourglass-split me-1"></i>Waiting for copy
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="flex-shrink-0">
+    <span style="background:#fef9c3;color:#854d0e;border-radius:999px;
+                 padding:.2rem .75rem;font-size:.72rem;font-weight:700">
+      <i class="bi bi-bookmark me-1"></i>Reserved
+    </span>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- ════ BORROWING HISTORY ════ -->
+{% if history %}
+<div class="sec-head mt-4">
+  <span>
+    <i class="bi bi-clock-history me-2 text-secondary"></i>
+    Borrowing History
+    <span class="badge rounded-pill bg-secondary-subtle text-secondary ms-1"
+          style="font-size:.72rem">{{ history|length }}</span>
+  </span>
+</div>
+
+{% for iss in history %}
+<div class="book-card returned">
+
+  <!-- Cover -->
+  <div class="book-thumb">
+    {% if iss.book_copy.book.cover_image %}
+    <img src="{{ iss.book_copy.book.cover_image.url }}" alt="">
+    {% else %}
+    <i class="bi bi-journal-text"></i>
+    {% endif %}
+  </div>
+
+  <!-- Body -->
+  <div class="book-body">
+
+    <!-- Book info -->
+    <div class="book-info">
+      <div class="book-title">{{ iss.book_copy.book.title }}</div>
+      {% if iss.book_copy.book.author_names %}
+      <div class="book-author">
+        <i class="bi bi-person me-1"></i>{{ iss.book_copy.book.author_names }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Issued -->
+    <div class="due-area">
+      <div class="due-label">Issued</div>
+      <div class="due-date grey">{{ iss.issued_date|date:"M d, Y" }}</div>
+    </div>
+
+    <!-- Returned -->
+    <div class="due-area">
+      <div class="due-label">Returned</div>
+      <div class="due-date grey">
+        {{ iss.returned_date|date:"M d, Y"|default:"—" }}
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="flex-shrink-0">
+      {% if iss.status == 'returned' %}
+      <span class="s-returned">
+        <i class="bi bi-check-circle me-1"></i>Returned
+      </span>
+      {% elif iss.status == 'lost' %}
+      <span class="s-lost">
+        <i class="bi bi-x-circle me-1"></i>Lost
+      </span>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Library rules reminder -->
+<div class="mt-4 p-3 rounded-3 text-center"
+     style="background:#f8f9fb;font-size:.8rem;color:#9ca3af">
+  <i class="bi bi-info-circle me-1"></i>
+  Loan period: <strong>14 days</strong>
+  &nbsp;·&nbsp;
+  Overdue fine: <strong>ETB 2.00/day</strong>
+  &nbsp;·&nbsp;
+  Max books at once: <strong>2</strong>
+  &nbsp;·&nbsp;
+  Contact the librarian for extensions
+</div>
+
+{% endblock %}

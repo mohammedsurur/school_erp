@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% block title %}Student Dashboard{% endblock %}
+{% block page_title %}Student Dashboard{% endblock %}
+{% block content %}
+
+<style>
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform .2s,box-shadow .2s}
+  .stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+  .stat-icon{width:52px;height:52px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+  .section-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .section-head{padding:1.1rem 1.5rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between}
+  .subject-row{display:flex;align-items:center;gap:.75rem;padding:.75rem 0;border-bottom:1px solid #f8f9fb}
+  .subject-row:last-child{border-bottom:none}
+  .grade-badge{width:42px;height:42px;border-radius:.6rem;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;flex-shrink:0}
+  .period-row{display:flex;align-items:center;gap:.75rem;padding:.65rem 0;border-bottom:1px solid #f8f9fb}
+  .period-row:last-child{border-bottom:none}
+  .progress-thin{height:8px;background:#e9ecef;border-radius:999px;overflow:hidden;margin-top:.4rem}
+  .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1a3c72,#0ea5a0)}
+  .fee-row{display:flex;align-items:center;justify-content:space-between;padding:.7rem 0;border-bottom:1px solid #f8f9fb}
+  .fee-row:last-child{border-bottom:none}
+  .att-ring{width:80px;height:80px;border-radius:50%;border:6px solid #e9ecef;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;position:relative;margin:0 auto 1rem}
+  .att-ring.good{border-color:#22c55e;color:#16a34a}
+  .att-ring.warn{border-color:#f59e0b;color:#d97706}
+  .att-ring.bad{border-color:#ef4444;color:#dc2626}
+</style>
+
+<!-- Welcome Banner -->
+<div style="background:linear-gradient(135deg,#7c3aed,#0ea5a0);border-radius:1.25rem;padding:2rem 2.5rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden">
+  <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)"></div>
+  <h4 class="fw-bold mb-1">Hello, {{ request.user.get_full_name|default:request.user.username }}! 🎓</h4>
+  <p class="opacity-75 mb-2 small">
+    {% if student %}
+    Class: <strong>{{ student.current_section }}</strong> &bull;
+    Admission No: <strong>{{ student.admission_number }}</strong>
+    {% endif %}
+  </p>
+  <p class="opacity-75 mb-0 small">Keep up the great work — you're doing amazing! 💪</p>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#eff6ff"><i class="bi bi-book text-primary fs-3"></i></div>
+        <div>
+          <div style="font-size:1.9rem;font-weight:800;line-height:1;color:#1a3c72">{{ total_subjects|default:"0" }}</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Subjects</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#f0fdf4"><i class="bi bi-check2-circle text-success fs-3"></i></div>
+        <div>
+          <div style="font-size:1.9rem;font-weight:800;line-height:1;color:#16a34a">{{ attendance_percent|default:"0" }}%</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Attendance</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fff7ed"><i class="bi bi-trophy text-warning fs-3"></i></div>
+        <div>
+          <div style="font-size:1.9rem;font-weight:800;line-height:1;color:#d97706">{{ average_marks|default:"0" }}%</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Average Grade</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon" style="background:#fff1f2"><i class="bi bi-cash-coin text-danger fs-3"></i></div>
+        <div>
+          <div style="font-size:1.9rem;font-weight:800;line-height:1;color:#dc2626">${{ fees_due|default:"0" }}</div>
+          <div style="font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b7280">Fees Due</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Today's Timetable -->
+  <div class="col-lg-5">
+    <div class="section-card card h-100">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i>Today's Classes</h6>
+        <span class="text-muted small">{% now "l" %}</span>
+      </div>
+      <div class="p-4">
+        {% if todays_timetable %}
+        {% for slot in todays_timetable %}
+        <div class="period-row">
+          <div style="width:36px;height:36px;border-radius:.5rem;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#1a3c72;flex-shrink:0">P{{ forloop.counter }}</div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold small">{{ slot.subject.name }}</div>
+            <div class="text-muted" style="font-size:.75rem"><i class="bi bi-person me-1"></i>{{ slot.teacher.get_full_name }}</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-semibold small">{{ slot.period.start_time|time:"H:i" }}</div>
+            <div style="font-size:.7rem;color:#9ca3af">{{ slot.period.end_time|time:"H:i" }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-calendar-x fs-1 text-muted opacity-25 d-block mb-2"></i>
+          <p class="text-muted small mb-0">No classes today. Enjoy your day! 🎉</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Results -->
+  <div class="col-lg-7">
+    <div class="section-card card h-100">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-bar-chart me-2 text-success"></i>Recent Exam Results</h6>
+        <a href="#" class="btn btn-sm btn-outline-success rounded-pill">All Results</a>
+      </div>
+      <div class="p-4">
+        {% if recent_results %}
+        {% for result in recent_results|slice:"0:6" %}
+        <div class="subject-row">
+          <div class="grade-badge
+            {% if result.marks >= 80 %}bg-success-subtle text-success
+            {% elif result.marks >= 60 %}bg-primary-subtle text-primary
+            {% elif result.marks >= 50 %}bg-warning-subtle text-warning
+            {% else %}bg-danger-subtle text-danger{% endif %}">
+            {{ result.grade_letter }}
+          </div>
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold small text-truncate">{{ result.subject.name }}</div>
+            <div class="text-muted" style="font-size:.75rem">{{ result.exam.exam_type.name }}</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-bold small">{{ result.marks }}/{{ result.subject.full_marks }}</div>
+            <div style="font-size:.73rem;color:#9ca3af">{{ result.marks|floatformat:0 }}%</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-bar-chart fs-1 text-muted opacity-25 d-block mb-2"></i>
+          <p class="text-muted small mb-0">No exam results yet.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Ring + Fees -->
+  <div class="col-lg-4">
+    <div class="section-card card mb-4">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-check2-circle me-2 text-success"></i>Attendance</h6>
+      </div>
+      <div class="p-4 text-center">
+        <div class="att-ring {% if attendance_percent >= 75 %}good{% elif attendance_percent >= 60 %}warn{% else %}bad{% endif %}">
+          {{ attendance_percent|default:"0" }}%
+        </div>
+        <div class="row g-2">
+          <div class="col-4 text-center">
+            <div class="fw-bold text-success">{{ present_days|default:"0" }}</div>
+            <div class="text-muted" style="font-size:.73rem">Present</div>
+          </div>
+          <div class="col-4 text-center">
+            <div class="fw-bold text-danger">{{ absent_days|default:"0" }}</div>
+            <div class="text-muted" style="font-size:.73rem">Absent</div>
+          </div>
+          <div class="col-4 text-center">
+            <div class="fw-bold text-warning">{{ late_days|default:"0" }}</div>
+            <div class="text-muted" style="font-size:.73rem">Late</div>
+          </div>
+        </div>
+        {% if attendance_percent < 75 %}
+        <div class="mt-3 p-2 rounded-3 bg-danger-subtle text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>Attendance below 75%</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="section-card card">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-cash-coin me-2 text-warning"></i>Fee Status</h6>
+      </div>
+      <div class="p-4">
+        {% if fee_status %}
+        {% for fee in fee_status|slice:"0:4" %}
+        <div class="fee-row">
+          <div>
+            <div class="fw-semibold small">{{ fee.fee_structure.fee_type.name }}</div>
+            <div class="text-muted" style="font-size:.75rem">Due: {{ fee.fee_structure.due_date|date:"M d" }}</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-bold small">${{ fee.net_amount }}</div>
+            {% if fee.is_paid %}
+            <span class="badge bg-success-subtle text-success" style="font-size:.68rem">Paid</span>
+            {% else %}
+            <span class="badge bg-danger-subtle text-danger" style="font-size:.68rem">Due</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-muted small text-center mb-0 py-2">No fee records yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Notice Board + Library -->
+  <div class="col-lg-8">
+    <div class="section-card card mb-4">
+      <div class="section-head">
+        <h6 class="fw-bold mb-0"><i class="bi bi-megaphone me-2 text-danger"></i>Notices</h6>
+      </div>
+      <div class="p-4">
+        {% if notices %}
+        <div class="row g-3">
+          {% for notice in notices|slice:"0:4" %}
+          <div class="col-md-6">
+            <div style="background:#f8f9fb;border-radius:.875rem;padding:1rem;border-left:3px solid #1a3c72">
+              <div class="fw-semibold small mb-1">{{ notice.title }}</div>
+              <div class="text-muted" style="font-size:.75rem">{{ notice.content|truncatechars:60 }}</div>
+              <div class="text-muted mt-1" style="font-size:.7rem"><i class="bi bi-calendar me-1"></i>{{ notice.published_at|date:"M d, Y" }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted small text-center mb-0">No notices posted yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

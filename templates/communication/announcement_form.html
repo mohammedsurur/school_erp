@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  textarea.form-control{resize:vertical;min-height:160px}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Preview card ── */
+  .preview-card{border-radius:1.25rem;padding:1.5rem 1.75rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden;transition:background .4s}
+  .preview-card::before{content:"";position:absolute;top:-35px;right:-35px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .preview-badge{background:rgba(255,255,255,.2);border-radius:999px;padding:.2rem .75rem;font-size:.75rem;font-weight:700;display:inline-block;margin-bottom:.5rem}
+  .preview-title{font-size:1.15rem;font-weight:800;line-height:1.3;margin-bottom:.5rem;min-height:1.5rem}
+  .preview-body{opacity:.8;font-size:.82rem;line-height:1.6;max-height:80px;overflow:hidden}
+
+  /* ── Priority selector ── */
+  .priority-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.65rem 1.1rem;text-align:center;cursor:pointer;transition:all .2s;background:#fff;flex:1}
+  .priority-btn:hover{border-color:#1a3c72}
+  .priority-btn.selected{border-color:var(--pc);background:var(--pb)}
+  .priority-btn .p-icon{font-size:1.3rem;margin-bottom:.25rem}
+  .priority-btn .p-name{font-size:.8rem;font-weight:700;color:#374151}
+
+  /* ── Audience selector ── */
+  .aud-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.55rem .85rem;cursor:pointer;transition:all .2s;background:#fff;display:flex;align-items:center;gap:.5rem;font-size:.82rem;font-weight:600;color:#374151}
+  .aud-btn:hover{border-color:#1a3c72;color:#1a3c72}
+  .aud-btn.selected{border-color:#1a3c72;background:#eff6ff;color:#1a3c72}
+
+  /* ── Schedule toggle ── */
+  .schedule-zone{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1rem 1.25rem;transition:all .2s}
+  .schedule-zone.open{background:#eff6ff;border-color:#bfdbfe}
+
+  /* ── Char counter ── */
+  .char-counter{font-size:.72rem;color:#9ca3af;text-align:right;margin-top:.25rem}
+  .char-counter.warn{color:#f59e0b}
+  .char-counter.over{color:#ef4444}
+</style>
+
+<div class="row">
+  <div class="col-lg-8">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'announcement_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if announcement %}Edit existing announcement
+          {% else %}Create and publish to your school community{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Live preview -->
+    <div class="preview-card" id="previewCard"
+         style="background:linear-gradient(135deg,#1a3c72,#0ea5a0)">
+      <div style="position:relative;z-index:1">
+        <div class="preview-badge" id="prevPriorityBadge">
+          <i class="bi bi-megaphone me-1"></i>Announcement
+        </div>
+        <div class="preview-title" id="prevTitle">
+          {% if announcement %}{{ announcement.title }}{% else %}Your announcement title…{% endif %}
+        </div>
+        <div class="preview-body" id="prevBody">
+          {% if announcement %}{{ announcement.body|truncatechars:120 }}{% else %}Body preview will appear here…{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Priority -->
+        <div class="section-head">
+          <i class="bi bi-flag me-2"></i>Priority
+        </div>
+        <div class="d-flex gap-2 mb-4">
+          <div class="priority-btn {% if not announcement or announcement.priority == 'normal' %}selected{% endif %}"
+               data-value="normal"
+               style="--pc:#9ca3af;--pb:#f8f9fb"
+               onclick="pickPriority('normal', this)">
+            <div class="p-icon">📢</div>
+            <div class="p-name">Normal</div>
+          </div>
+          <div class="priority-btn {% if announcement.priority == 'urgent' %}selected{% endif %}"
+               data-value="urgent"
+               style="--pc:#f59e0b;--pb:#fef9c3"
+               onclick="pickPriority('urgent', this)">
+            <div class="p-icon">⚠️</div>
+            <div class="p-name">Urgent</div>
+          </div>
+          <div class="priority-btn {% if announcement.priority == 'critical' %}selected{% endif %}"
+               data-value="critical"
+               style="--pc:#ef4444;--pb:#fff1f2"
+               onclick="pickPriority('critical', this)">
+            <div class="p-icon">🚨</div>
+            <div class="p-name">Critical</div>
+          </div>
+        </div>
+        <div style="display:none">{{ form.priority }}</div>
+
+        <!-- Title -->
+        <div class="section-head">
+          <i class="bi bi-type-h1 me-2"></i>Content
+        </div>
+        <div class="mb-3">
+          <label>Title <span class="req">*</span></label>
+          {{ form.title }}
+          {% if form.title.errors %}
+          <small class="text-danger d-block mt-1">{{ form.title.errors.0 }}</small>
+          {% endif %}
+        </div>
+
+        <!-- Body -->
+        <div class="mb-4">
+          <label>Body <span class="req">*</span></label>
+          {{ form.body }}
+          {% if form.body.errors %}
+          <small class="text-danger d-block mt-1">{{ form.body.errors.0 }}</small>
+          {% endif %}
+          <div class="char-counter" id="charCounter">0 characters</div>
+        </div>
+
+        <!-- Audience -->
+        <div class="section-head">
+          <i class="bi bi-people me-2"></i>Audience
+        </div>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          {% for val, label in form.audience.field.choices %}
+          <div class="aud-btn
+            {% if form.audience.value == val or not form.audience.value and val == 'all' %}selected{% endif %}"
+               data-value="{{ val }}"
+               onclick="pickAudience('{{ val }}', this)">
+            {% if val == 'all' %}<i class="bi bi-globe"></i>
+            {% elif val == 'students' %}<i class="bi bi-mortarboard"></i>
+            {% elif val == 'parents' %}<i class="bi bi-people"></i>
+            {% elif val == 'teachers' %}<i class="bi bi-person-badge"></i>
+            {% elif val == 'staff' %}<i class="bi bi-building"></i>
+            {% elif val == 'admin' %}<i class="bi bi-shield-check"></i>
+            {% endif %}
+            {{ label }}
+          </div>
+          {% endfor %}
+        </div>
+        <div style="display:none">{{ form.audience }}</div>
+
+        <!-- Target grade / section -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Target Grade <span class="text-muted fw-normal">(optional)</span></label>
+            {{ form.target_grade }}
+            <small class="text-muted">Leave blank for all grades</small>
+          </div>
+          <div class="col-md-6">
+            <label>Target Section <span class="text-muted fw-normal">(optional)</span></label>
+            {{ form.target_section }}
+          </div>
+        </div>
+
+        <!-- Attachments -->
+        <div class="section-head">
+          <i class="bi bi-paperclip me-2"></i>Attachments
+        </div>
+        <div class="mb-4">
+          <label>Upload Files <span class="text-muted fw-normal">(optional)</span></label>
+          <input type="file" name="file" multiple class="form-control"
+                 accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png">
+          <small class="text-muted">
+            PDF, Word, Excel, Images — hold Ctrl to select multiple files
+          </small>
+          {% if announcement and announcement.attachments.exists %}
+          <div class="mt-2">
+            <div class="text-muted small fw-semibold mb-1">Existing attachments:</div>
+            {% for att in announcement.attachments.all %}
+            <div class="d-flex align-items-center gap-2 mb-1"
+                 style="font-size:.82rem">
+              <i class="bi bi-paperclip text-muted"></i>
+              <a href="{{ att.file.url }}" target="_blank" class="text-primary">
+                {{ att.filename }}
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Scheduling -->
+        <div class="section-head">
+          <i class="bi bi-calendar-clock me-2"></i>Publishing
+        </div>
+
+        <!-- Publish toggle -->
+        <div class="d-flex align-items-center justify-content-between p-3 rounded-3 mb-3"
+             style="background:#f8f9fb;border:1.5px solid #e2e8f0">
+          <div>
+            <div class="fw-semibold small">Publish Immediately</div>
+            <div class="text-muted" style="font-size:.78rem">
+              Toggle off to save as draft
+            </div>
+          </div>
+          {{ form.is_published }}
+        </div>
+
+        <!-- Schedule + expiry -->
+        <div class="schedule-zone mb-4" id="scheduleZone">
+          <div class="fw-semibold small mb-3">
+            <i class="bi bi-calendar-event me-1 text-primary"></i>
+            Schedule & Expiry
+            <span class="text-muted fw-normal">(optional)</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label>Publish Date</label>
+              {{ form.publish_date }}
+              {% if form.publish_date.errors %}
+              <small class="text-danger d-block mt-1">{{ form.publish_date.errors.0 }}</small>
+              {% endif %}
+              <small class="text-muted">Schedule for future publishing</small>
+            </div>
+            <div class="col-md-6">
+              <label>Expiry Date</label>
+              {{ form.expiry_date }}
+              {% if form.expiry_date.errors %}
+              <small class="text-danger d-block mt-1">{{ form.expiry_date.errors.0 }}</small>
+              {% endif %}
+              <small class="text-muted">Auto-hide after this date</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'announcement_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" name="action" value="draft"
+                  class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-save me-2"></i>Save Draft
+          </button>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-megaphone me-2"></i>
+            {% if announcement %}Save Changes{% else %}Post Announcement{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Tips -->
+  <div class="col-lg-4 d-none d-lg-block">
+    <div style="position:sticky;top:1.5rem">
+      <div class="card p-4 mb-3"
+           style="border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-lightbulb me-2 text-warning"></i>Tips
+        </h6>
+        <div class="d-flex flex-column gap-3" style="font-size:.82rem;color:#64748b">
+          <div class="d-flex gap-2">
+            <i class="bi bi-check-circle text-success mt-1 flex-shrink-0"></i>
+            <span>Use <strong>Critical</strong> sparingly — it shows a red banner to recipients</span>
+          </div>
+          <div class="d-flex gap-2">
+            <i class="bi bi-check-circle text-success mt-1 flex-shrink-0"></i>
+            <span>Set an <strong>Expiry Date</strong> for time-sensitive notices so they auto-hide</span>
+          </div>
+          <div class="d-flex gap-2">
+            <i class="bi bi-check-circle text-success mt-1 flex-shrink-0"></i>
+            <span>Use <strong>Target Grade</strong> to send only to a specific class instead of all students</span>
+          </div>
+          <div class="d-flex gap-2">
+            <i class="bi bi-check-circle text-success mt-1 flex-shrink-0"></i>
+            <span>Attach PDFs or images to share documents with your announcement</span>
+          </div>
+          <div class="d-flex gap-2">
+            <i class="bi bi-check-circle text-success mt-1 flex-shrink-0"></i>
+            <span>Schedule a future <strong>Publish Date</strong> to post automatically</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audience summary -->
+      <div class="card p-4"
+           style="border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-people me-2 text-primary"></i>Who will see this?
+        </h6>
+        <div id="audienceSummary" class="text-muted small">
+          Select an audience above
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PRIORITY_GRADIENTS = {
+  normal:   'linear-gradient(135deg,#1a3c72,#0ea5a0)',
+  urgent:   'linear-gradient(135deg,#92400e,#f59e0b)',
+  critical: 'linear-gradient(135deg,#7f1d1d,#dc2626)',
+};
+const PRIORITY_BADGES = {
+  normal:   '<i class="bi bi-megaphone me-1"></i>Announcement',
+  urgent:   '<i class="bi bi-exclamation-triangle me-1"></i>Urgent',
+  critical: '<i class="bi bi-exclamation-circle me-1"></i>Critical',
+};
+const AUDIENCE_DESC = {
+  all:      'Everyone — all students, parents, teachers and staff will see this.',
+  students: 'Students only.',
+  parents:  'Parents only.',
+  teachers: 'All teachers.',
+  staff:    'All staff (teachers, admin, accountants, librarians).',
+  admin:    'Administrators and principal only.',
+};
+
+// ── Priority ─────────────────────────────────
+function pickPriority(val, el){
+  document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="priority"]').value = val;
+  document.getElementById('previewCard').style.background  = PRIORITY_GRADIENTS[val];
+  document.getElementById('prevPriorityBadge').innerHTML   = PRIORITY_BADGES[val];
+}
+
+// ── Audience ─────────────────────────────────
+function pickAudience(val, el){
+  document.querySelectorAll('.aud-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="audience"]').value = val;
+  const sum = document.getElementById('audienceSummary');
+  if(sum) sum.textContent = AUDIENCE_DESC[val] || '';
+}
+
+// ── Live preview ─────────────────────────────
+function updatePreview(){
+  const title = document.querySelector('[name="title"]')?.value.trim() || 'Your announcement title…';
+  const body  = document.querySelector('[name="body"]')?.value.trim()  || 'Body preview will appear here…';
+  document.getElementById('prevTitle').textContent = title;
+  document.getElementById('prevBody').textContent  = body.slice(0, 120) + (body.length > 120 ? '…' : '');
+}
+
+// ── Char counter ─────────────────────────────
+function updateCounter(){
+  const body    = document.querySelector('[name="body"]')?.value || '';
+  const counter = document.getElementById('charCounter');
+  if(!counter) return;
+  const len = body.length;
+  counter.textContent = `${len} character${len !== 1 ? 's' : ''}`;
+  counter.className   = 'char-counter' + (len > 2000 ? ' over' : len > 1500 ? ' warn' : '');
+}
+
+document.querySelector('[name="title"]')?.addEventListener('input', updatePreview);
+document.querySelector('[name="body"]')?.addEventListener('input', () => {
+  updatePreview(); updateCounter();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const pri = document.querySelector('[name="priority"]')?.value || 'normal';
+  document.getElementById('previewCard').style.background = PRIORITY_GRADIENTS[pri];
+  document.getElementById('prevPriorityBadge').innerHTML  = PRIORITY_BADGES[pri];
+
+  const aud = document.querySelector('[name="audience"]')?.value || 'all';
+  const sum = document.getElementById('audienceSummary');
+  if(sum) sum.textContent = AUDIENCE_DESC[aud] || '';
+
+  updatePreview();
+  updateCounter();
+});
+</script>
+
+{% endblock %}

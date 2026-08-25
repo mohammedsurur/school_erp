@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Report Cards — {{ exam.name }}{% endblock %}
+{% block page_title %}Report Cards{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Banner ── */
+  .rc-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1.25rem;padding:1.75rem 2rem;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+  .rc-banner::before{content:"";position:absolute;top:-35px;right:-35px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .banner-meta{opacity:.75;font-size:.82rem;display:flex;flex-wrap:wrap;gap:1rem;margin-top:.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem;text-align:center}
+  .stat-num{font-size:1.8rem;font-weight:800;line-height:1;margin-bottom:.25rem}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover,.filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+
+  /* ── Avatar ── */
+  .avatar-xs{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.72rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* ── Rank badges ── */
+  .rank-1{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;border-radius:999px;padding:.2rem .65rem;font-size:.75rem;font-weight:800}
+  .rank-2{background:linear-gradient(135deg,#9ca3af,#6b7280);color:#fff;border-radius:999px;padding:.2rem .65rem;font-size:.75rem;font-weight:800}
+  .rank-3{background:linear-gradient(135deg,#d97706,#b45309);color:#fff;border-radius:999px;padding:.2rem .65rem;font-size:.75rem;font-weight:800}
+  .rank-n{background:#f1f5f9;color:#64748b;border-radius:999px;padding:.2rem .65rem;font-size:.75rem;font-weight:700}
+
+  /* ── Ethiopian grade label chips ── */
+  .gl-chip{border-radius:.5rem;padding:.25rem .7rem;font-size:.75rem;font-weight:700;display:inline-block;text-align:center;min-width:80px}
+  .gl-excellent   {background:#dcfce7;color:#15803d}
+  .gl-very-good   {background:#dbeafe;color:#1d4ed8}
+  .gl-good        {background:#fef9c3;color:#854d0e}
+  .gl-satisfactory{background:#fed7aa;color:#c2410c}
+  .gl-pass        {background:#e0f2fe;color:#0369a1}
+  .gl-fail        {background:#fee2e2;color:#dc2626}
+
+  /* ── Average bar ── */
+  .avg-bar{height:5px;background:#e9ecef;border-radius:999px;overflow:hidden;width:65px}
+  .avg-fill{height:100%;border-radius:999px}
+
+  /* ── Promotion badges ── */
+  .promoted-badge{background:#dcfce7;color:#15803d;border-radius:999px;padding:.2rem .85rem;font-size:.72rem;font-weight:700}
+  .failed-badge  {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.2rem .85rem;font-size:.72rem;font-weight:700}
+
+  /* ── Row states ── */
+  .row-promoted{background:#f0fdf4!important}
+  .row-failed  {background:#fff8f8!important}
+
+  /* ── Info strip ── */
+  .info-strip{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.82rem;color:#1e40af}
+
+  .adm-no{font-family:monospace;font-size:.7rem;color:#94a3b8}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+  .amount-mono{font-family:monospace;font-weight:700}
+
+  @media print{
+    .topbar,.sidebar,.sidebar-overlay,.rc-banner .d-flex .d-flex{display:none!important}
+    .main-content{margin-left:0!important}
+  }
+</style>
+
+<!-- Banner -->
+<div class="rc-banner">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+    <div style="position:relative;z-index:1">
+      <div style="opacity:.75;font-size:.78rem;margin-bottom:.25rem">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Report Cards
+      </div>
+      <h4 class="fw-bold text-white mb-1">{{ exam.name }}</h4>
+      <div class="banner-meta">
+        <span><i class="bi bi-building me-1"></i>{{ exam.grade }}</span>
+        <span><i class="bi bi-calendar me-1"></i>
+          {{ exam.start_date|date:"M d" }} – {{ exam.end_date|date:"M d, Y" }}
+        </span>
+        <span><i class="bi bi-calendar2-range me-1"></i>{{ exam.academic_year }}</span>
+        {% if exam.is_published %}
+        <span class="badge rounded-pill"
+              style="background:rgba(255,255,255,.2);color:#fff">
+          <i class="bi bi-globe me-1"></i>Published
+        </span>
+        {% else %}
+        <span class="badge rounded-pill"
+              style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)">
+          <i class="bi bi-lock me-1"></i>Unpublished
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0" style="position:relative;z-index:1">
+      <a href="{% url 'exam_publish_toggle' exam.pk %}"
+         class="btn btn-sm rounded-pill px-3 fw-semibold
+         {% if exam.is_published %}btn-warning{% else %}btn-light{% endif %}">
+        {% if exam.is_published %}
+        <i class="bi bi-lock me-1"></i>Unpublish
+        {% else %}
+        <i class="bi bi-globe me-1"></i>Publish
+        {% endif %}
+      </a>
+      <button onclick="window.print()"
+              class="btn btn-outline-light btn-sm rounded-pill px-3">
+        <i class="bi bi-printer me-1"></i>Print
+      </button>
+      <a href="{% url 'exam_detail' exam.pk %}"
+         class="btn btn-light btn-sm rounded-pill px-3 fw-semibold">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-num text-dark">{{ report_cards|length }}</div>
+      <div class="text-muted small">Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-num text-success" id="promotedCount">—</div>
+      <div class="text-muted small">Promoted</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-num text-danger" id="failedCount">—</div>
+      <div class="text-muted small">Not Promoted</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-num text-primary" id="classAvg">—</div>
+      <div class="text-muted small">Class Avg</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-num" style="color:#8b5cf6" id="passRate">—</div>
+      <div class="text-muted small">Promotion %</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="stat-card">
+      <div class="stat-num text-warning" id="topAvg">—</div>
+      <div class="text-muted small">Top Average</div>
+    </div>
+  </div>
+</div>
+
+<!-- Section filter tabs -->
+{% if sections %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="?exam={{ exam.pk }}"
+     class="filter-tab {% if not section_id %}active{% endif %}">
+    All Sections
+  </a>
+  {% for sec in sections %}
+  <a href="?exam={{ exam.pk }}&section={{ sec.pk }}"
+     class="filter-tab {% if section_id == sec.pk|stringformat:'s' %}active{% endif %}">
+    {{ sec.grade }} — {{ sec.name }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Ethiopian grading info strip -->
+<div class="info-strip mb-4">
+  <div class="row align-items-center g-2">
+    <div class="col-auto">
+      <i class="bi bi-info-circle me-1"></i>
+      <strong>Ethiopian Grading System</strong>
+    </div>
+    <div class="col">
+      <div class="d-flex flex-wrap gap-3">
+        <span><strong>Excellent</strong> 90–100</span>
+        <span><strong>Very Good</strong> 80–89</span>
+        <span><strong>Good</strong> 70–79</span>
+        <span><strong>Satisfactory</strong> 60–69</span>
+        <span><strong>Pass</strong> 50–59</span>
+        <span class="text-danger"><strong>Fail</strong> 0–49</span>
+      </div>
+    </div>
+    <div class="col-auto text-end">
+      <span class="badge bg-success rounded-pill me-1">Promoted</span>
+      avg ≥ 50 <strong>and</strong> failed ≤ 2 subjects
+      &nbsp;|&nbsp;
+      <span class="badge bg-danger rounded-pill me-1">Not Promoted</span>
+      avg &lt; 50 <strong>or</strong> failed ≥ 3 subjects
+    </div>
+  </div>
+</div>
+
+<!-- Report cards table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="rcTable">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>Student</th>
+          <th>Section</th>
+          <th>Subjects</th>
+          <th>Total Score</th>
+          <th>Average</th>
+          <th>Failed Subj.</th>
+          <th>Grade</th>
+          <th>Promotion</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rc in report_cards %}
+        <tr class="{% if rc.is_promoted %}row-promoted{% else %}row-failed{% endif %}"
+            data-promoted="{{ rc.is_promoted|yesno:'1,0' }}"
+            data-avg="{{ rc.overall_average }}">
+
+          <!-- Rank -->
+          <td class="text-center">
+            {% if rc.rank == 1 %}
+            <span class="rank-1"><i class="bi bi-trophy"></i> 1</span>
+            {% elif rc.rank == 2 %}
+            <span class="rank-2">2</span>
+            {% elif rc.rank == 3 %}
+            <span class="rank-3">3</span>
+            {% elif rc.rank %}
+            <span class="rank-n">{{ rc.rank }}</span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Student -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {{ rc.student.user.first_name|first|upper }}{{ rc.student.user.last_name|first|upper }}
+              </div>
+              <div>
+                <a href="{% url 'student_detail' rc.student.pk %}"
+                   class="fw-semibold small text-decoration-none text-dark d-block">
+                  {{ rc.student.user.get_full_name }}
+                </a>
+                <span class="adm-no">{{ rc.student.admission_number }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Section -->
+          <td>
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-2"
+                  style="font-size:.72rem">
+              {{ rc.section.grade }} — {{ rc.section.name }}
+            </span>
+          </td>
+
+          <!-- Subjects taken -->
+          <td class="text-center fw-bold">{{ rc.total_subjects }}</td>
+
+          <!-- Total score -->
+          <td class="amount-mono fw-bold">{{ rc.total_score }}</td>
+
+          <!-- Average + bar -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-bold amount-mono
+                {% if rc.overall_average >= 90 %}text-success
+                {% elif rc.overall_average >= 50 %}text-primary
+                {% else %}text-danger{% endif %}">
+                {{ rc.overall_average }}
+              </span>
+              <div class="avg-bar">
+                <div class="avg-fill"
+                     style="width:{{ rc.overall_average }}%;
+                     background:
+                     {% if rc.overall_average >= 90 %}#22c55e
+                     {% elif rc.overall_average >= 50 %}#0ea5a0
+                     {% else %}#ef4444{% endif %}">
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Failed subjects -->
+          <td class="text-center">
+            {% if rc.failed_subjects == 0 %}
+            <span class="fw-bold text-success small">0</span>
+            {% elif rc.failed_subjects <= 2 %}
+            <span class="badge rounded-pill bg-warning-subtle text-warning px-2"
+                  style="font-size:.72rem"
+                  title="1–2 failures: still promoted">
+              {{ rc.failed_subjects }}
+            </span>
+            {% else %}
+            <span class="badge rounded-pill bg-danger-subtle text-danger px-2"
+                  style="font-size:.72rem"
+                  title="3+ failures: not promoted">
+              {{ rc.failed_subjects }}
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- Grade label -->
+          <td>
+            <span class="gl-chip
+              {% if rc.overall_grade_label == 'Excellent' %}gl-excellent
+              {% elif rc.overall_grade_label == 'Very Good' %}gl-very-good
+              {% elif rc.overall_grade_label == 'Good' %}gl-good
+              {% elif rc.overall_grade_label == 'Satisfactory' %}gl-satisfactory
+              {% elif rc.overall_grade_label == 'Pass' %}gl-pass
+              {% else %}gl-fail{% endif %}">
+              {{ rc.overall_grade_label }}
+            </span>
+          </td>
+
+          <!-- Promotion -->
+          <td>
+            {% if rc.is_promoted %}
+            <span class="promoted-badge">
+              <i class="bi bi-arrow-up-circle me-1"></i>Promoted
+            </span>
+            {% else %}
+            <span class="failed-badge">
+              <i class="bi bi-x-circle me-1"></i>Not Promoted
+              {% if rc.failed_subjects >= 3 %}
+              <span style="font-size:.68rem;opacity:.8">({{ rc.failed_subjects }} fails)</span>
+              {% elif rc.overall_average < 50 %}
+              <span style="font-size:.68rem;opacity:.8">(avg {{ rc.overall_average }})</span>
+              {% endif %}
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- Action -->
+          <td>
+            <a href="{% url 'report_card_detail' rc.pk %}"
+               class="btn btn-sm btn-outline-primary rounded-pill px-3"
+               style="font-size:.75rem">
+              <i class="bi bi-eye me-1"></i>View
+            </a>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10">
+            <div class="empty-state">
+              <i class="bi bi-file-earmark-pdf fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No report cards yet</h6>
+              <p class="small text-muted mb-0">
+                Enter results for all subjects first.
+                Report cards are auto-generated after results are saved.
+              </p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#rcTable tbody tr[data-avg]');
+  let promoted = 0, failed = 0, sumAvg = 0, topAvg = 0, total = 0;
+
+  rows.forEach(row => {
+    const avg  = parseFloat(row.dataset.avg) || 0;
+    const prom = row.dataset.promoted === '1';
+    total++;
+    sumAvg += avg;
+    if(avg > topAvg) topAvg = avg;
+    if(prom) promoted++; else failed++;
+  });
+
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = val;
+  };
+  set('promotedCount', promoted);
+  set('failedCount',   failed);
+  set('classAvg',      total > 0 ? (sumAvg / total).toFixed(1) : '—');
+  set('passRate',      total > 0 ? Math.round(promoted / total * 100) + '%' : '—');
+  set('topAvg',        topAvg || '—');
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block page_title %}Book Detail{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.8rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Cover panel ── */
+  .cover-panel{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:2rem;text-align:center;color:#fff;position:relative;overflow:hidden}
+  .cover-panel::before{content:"";position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .cover-img{width:130px;height:170px;border-radius:.75rem;object-fit:cover;box-shadow:0 8px 24px rgba(0,0,0,.3);margin:0 auto 1rem}
+  .cover-placeholder{width:130px;height:170px;border-radius:.75rem;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:3.5rem;color:rgba(255,255,255,.5);margin:0 auto 1rem}
+
+  /* ── Availability ring ── */
+  .avail-ring{width:80px;height:80px;border-radius:50%;border:5px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto}
+  .avail-ring .num{font-size:1.4rem;font-weight:800;line-height:1}
+  .avail-ring .lbl{font-size:.6rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em}
+
+  /* ── Info rows ── */
+  .info-row{display:flex;padding:.65rem 0;border-bottom:1px solid #f1f5f9;font-size:.875rem}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.75rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:120px;flex-shrink:0;padding-top:.1rem}
+
+  /* ── Copy status badges ── */
+  .cs-available{background:#dcfce7;color:#15803d;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .cs-issued   {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .cs-reserved {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .cs-lost     {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .cs-damaged  {background:#fff7ed;color:#c2410c;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Issuance status ── */
+  .s-issued {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-overdue{background:#fee2e2;color:#dc2626;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+  .empty-state{text-align:center;padding:2rem;color:#9ca3af}
+</style>
+
+<!-- Back bar -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'book_list' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Catalog
+  </a>
+  <div class="d-flex gap-2 ms-auto">
+    {% if request.user.role in 'super_admin,principal,admin_staff,librarian' %}
+    <a href="{% url 'copy_add' book.pk %}"
+       class="btn btn-outline-success rounded-pill px-3">
+      <i class="bi bi-plus-circle me-1"></i>Add Copy
+    </a>
+    <a href="{% url 'book_edit' book.pk %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </a>
+    <a href="{% url 'book_delete' book.pk %}"
+       class="btn btn-outline-danger rounded-pill px-3"
+       onclick="return confirm('Delete {{ book.title }}?')">
+      <i class="bi bi-trash me-1"></i>Delete
+    </a>
+    {% endif %}
+    {% if book.is_available %}
+    <a href="{% url 'issue_book' %}"
+       class="btn btn-primary rounded-pill px-3 fw-semibold">
+      <i class="bi bi-box-arrow-right me-1"></i>Issue
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Cover + info -->
+  <div class="col-lg-3">
+
+    <!-- Cover -->
+    <div class="cover-panel mb-4">
+      {% if book.cover_image %}
+      <img src="{{ book.cover_image.url }}"
+           class="cover-img d-block" alt="{{ book.title }}">
+      {% else %}
+      <div class="cover-placeholder d-block">
+        <i class="bi bi-journal-text"></i>
+      </div>
+      {% endif %}
+      <div class="fw-bold" style="font-size:.9rem">{{ book.title }}</div>
+      {% if book.author_names %}
+      <div style="opacity:.75;font-size:.78rem;margin-top:.3rem">
+        {{ book.author_names }}
+      </div>
+      {% endif %}
+
+      <!-- Availability ring -->
+      <div class="mt-3">
+        <div class="avail-ring"
+             style="border-color:{% if book.is_available %}#86efac{% else %}#fca5a5{% endif %};
+                    color:{% if book.is_available %}#86efac{% else %}#fca5a5{% endif %}">
+          <span class="num">{{ book.available_copies }}</span>
+          <span class="lbl">avail.</span>
+        </div>
+        <div style="font-size:.7rem;opacity:.75;margin-top:.4rem">
+          {{ book.total_copies }} total cop{{ book.total_copies|pluralize:"y,ies" }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Book info -->
+    <div class="info-card card p-4">
+      <div class="info-row">
+        <span class="info-label">ISBN</span>
+        <span style="font-family:monospace;font-size:.82rem">
+          {{ book.isbn|default:"—" }}
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Category</span>
+        <span class="small">{{ book.category|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Publisher</span>
+        <span class="small">{{ book.publisher|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Year</span>
+        <span class="small">{{ book.publication_year|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Edition</span>
+        <span class="small">{{ book.edition|default:"—" }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Language</span>
+        <span class="small">{{ book.get_language_display }}</span>
+      </div>
+      {% if book.description %}
+      <div class="mt-3 pt-3" style="border-top:1px solid #f1f5f9;font-size:.82rem;color:#64748b;line-height:1.6">
+        {{ book.description }}
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Copies + issuances + reservations -->
+  <div class="col-lg-9">
+
+    <!-- Copies table -->
+    <div class="info-card card mb-4">
+      <div class="d-flex align-items-center justify-content-between p-4 pb-2">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-collection me-2 text-primary"></i>
+          Copies
+          <span class="badge rounded-pill bg-primary-subtle text-primary ms-1"
+                style="font-size:.72rem">{{ copies|length }}</span>
+        </h6>
+        {% if request.user.role in 'super_admin,principal,admin_staff,librarian' %}
+        <a href="{% url 'copy_add' book.pk %}"
+           class="btn btn-sm btn-outline-success rounded-pill px-3"
+           style="font-size:.78rem">
+          <i class="bi bi-plus-circle me-1"></i>Add Copy
+        </a>
+        {% endif %}
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Accession No</th>
+              <th>Condition</th>
+              <th>Status</th>
+              <th>Acquired</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for copy in copies %}
+            <tr>
+              <td>
+                <span style="font-family:monospace;font-weight:700;font-size:.85rem">
+                  {{ copy.accession_number }}
+                </span>
+              </td>
+              <td class="small text-muted">{{ copy.get_condition_display }}</td>
+              <td>
+                <span class="cs-{{ copy.status }}">
+                  {{ copy.get_status_display }}
+                </span>
+              </td>
+              <td class="small text-muted">
+                {{ copy.acquired_date|date:"M d, Y"|default:"—" }}
+              </td>
+              <td class="small text-muted">
+                {{ copy.notes|truncatechars:30|default:"—" }}
+              </td>
+              <td>
+                <div class="d-flex gap-1">
+                  <a href="{% url 'copy_edit' copy.pk %}"
+                     class="action-icon text-primary" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  {% if copy.status != 'issued' %}
+                  <a href="{% url 'copy_delete' copy.pk %}"
+                     class="action-icon text-danger" title="Delete"
+                     onclick="return confirm('Delete copy {{ copy.accession_number }}?')">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <i class="bi bi-collection fs-1 d-block mb-2 opacity-25"></i>
+                  <p class="small mb-0">No copies added yet</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Active issuances -->
+    {% if issuances %}
+    <div class="info-card card mb-4">
+      <div class="p-4 pb-2">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-box-arrow-right me-2 text-info"></i>
+          Currently Issued
+          <span class="badge rounded-pill bg-info-subtle text-info ms-1"
+                style="font-size:.72rem">{{ issuances|length }}</span>
+        </h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Borrower</th>
+              <th>Copy</th>
+              <th>Issued</th>
+              <th>Due</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for iss in issuances %}
+            <tr {% if iss.is_overdue %}style="background:#fff8f8"{% endif %}>
+              <td>
+                <div class="fw-semibold small">{{ iss.borrower }}</div>
+                {% if iss.student %}
+                <span class="adm-no">{{ iss.student.admission_number }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <span style="font-family:monospace;font-size:.78rem">
+                  {{ iss.book_copy.accession_number }}
+                </span>
+              </td>
+              <td class="small text-muted">{{ iss.issued_date|date:"M d, Y" }}</td>
+              <td class="small {% if iss.is_overdue %}text-danger fw-semibold{% else %}text-muted{% endif %}">
+                {% if iss.is_overdue %}
+                <i class="bi bi-exclamation-circle me-1"></i>
+                {% endif %}
+                {{ iss.due_date|date:"M d, Y" }}
+              </td>
+              <td>
+                <span class="s-{{ iss.status }}">
+                  {{ iss.get_status_display }}
+                </span>
+              </td>
+              <td>
+                <a href="{% url 'return_book' iss.pk %}"
+                   class="btn btn-sm btn-outline-warning rounded-pill px-2"
+                   style="font-size:.72rem">
+                  <i class="bi bi-arrow-return-left me-1"></i>Return
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Pending reservations -->
+    {% if reservations %}
+    <div class="info-card card">
+      <div class="p-4 pb-2">
+        <h6 class="fw-bold mb-0">
+          <i class="bi bi-bookmark me-2 text-warning"></i>
+          Pending Reservations
+          <span class="badge rounded-pill bg-warning-subtle text-warning ms-1"
+                style="font-size:.72rem">{{ reservations|length }}</span>
+        </h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Reserved</th>
+              <th>Expires</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for res in reservations %}
+            <tr>
+              <td>
+                <div class="fw-semibold small">
+                  {{ res.student.user.get_full_name }}
+                </div>
+                <span class="adm-no">{{ res.student.admission_number }}</span>
+              </td>
+              <td class="small text-muted">{{ res.reserved_date|date:"M d, Y" }}</td>
+              <td class="small text-muted">{{ res.expiry_date|date:"M d, Y" }}</td>
+              <td>
+                <div class="d-flex gap-1">
+                  <a href="{% url 'reservation_fulfil' res.pk %}"
+                     class="btn btn-sm btn-outline-success rounded-pill px-2"
+                     style="font-size:.72rem">
+                    <i class="bi bi-check me-1"></i>Fulfil
+                  </a>
+                  <a href="{% url 'reservation_cancel' res.pk %}"
+                     class="btn btn-sm btn-outline-danger rounded-pill px-2"
+                     style="font-size:.72rem"
+                     onclick="return confirm('Cancel this reservation?')">
+                    <i class="bi bi-x"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

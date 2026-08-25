@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}Waive Fee{% endblock %}
+{% block page_title %}Waive Fee{% endblock %}
+
+{% block content %}
+<style>
+  .confirm-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .warn-icon{width:80px;height:80px;border-radius:50%;background:#fff7ed;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:2rem;color:#f59e0b}
+  .info-row{display:flex;align-items:center;padding:.75rem 0;border-bottom:1px solid #f1f5f9}
+  .info-row:last-child{border-bottom:none}
+  .info-label{font-size:.78rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;min-width:130px;flex-shrink:0}
+  .info-value{font-weight:500;color:#1e293b;font-size:.875rem}
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#92400e;text-align:left}
+  .form-control{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus{border-color:#f59e0b;box-shadow:0 0 0 .2rem rgba(245,158,11,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .btn-waive{border-radius:.875rem;padding:.8rem 2rem;font-weight:600;background:linear-gradient(135deg,#d97706,#f59e0b);border:none;transition:opacity .2s,transform .2s}
+  .btn-waive:hover{opacity:.9;transform:translateY(-1px)}
+  .avatar-xs{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.82rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .amount-mono{font-family:monospace;font-weight:700;font-size:.9rem}
+  .s-pending{background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-partial {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-overdue {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5 col-xl-4">
+
+    <div class="confirm-card card p-4 text-center">
+
+      <!-- Warning icon -->
+      <div class="warn-icon">
+        <i class="bi bi-shield-check"></i>
+      </div>
+
+      <h5 class="fw-bold mb-1">Waive This Fee?</h5>
+      <p class="text-muted small mb-4">
+        You are about to waive the following fee for this student.
+        This action <strong>cannot be undone</strong>.
+      </p>
+
+      <!-- Fee summary -->
+      <div class="text-start mb-4" style="background:#f8f9fb;border-radius:.875rem;padding:1rem 1.25rem">
+
+        <!-- Student -->
+        <div class="d-flex align-items-center gap-2 mb-3">
+          {% if sf.student.photo %}
+          <img src="{{ sf.student.photo.url }}" class="avatar-xs" style="object-fit:cover" alt="">
+          {% else %}
+          <div class="avatar-xs">
+            {{ sf.student.user.first_name|first|upper }}{{ sf.student.user.last_name|first|upper }}
+          </div>
+          {% endif %}
+          <div>
+            <div class="fw-bold small">{{ sf.student.user.get_full_name }}</div>
+            <div class="text-muted" style="font-size:.72rem;font-family:monospace">
+              {{ sf.student.admission_number }}
+            </div>
+          </div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Fee Category</span>
+          <span class="info-value">{{ sf.fee_structure.fee_category.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Grade</span>
+          <span class="info-value">{{ sf.fee_structure.grade }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Academic Year</span>
+          <span class="info-value">{{ sf.academic_year }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Amount Due</span>
+          <span class="info-value amount-mono">ETB {{ sf.amount_due|floatformat:2 }}</span>
+        </div>
+        {% if sf.discount %}
+        <div class="info-row">
+          <span class="info-label">Discount</span>
+          <span class="info-value amount-mono text-info">-ETB {{ sf.discount|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+          <span class="info-label">Amount Paid</span>
+          <span class="info-value amount-mono text-success">ETB {{ sf.amount_paid|floatformat:2 }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Balance</span>
+          <span class="info-value amount-mono text-danger fw-bold">ETB {{ sf.balance|floatformat:2 }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Current Status</span>
+          <span class="info-value">
+            <span class="s-{{ sf.status }}">{{ sf.get_status_display }}</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Warning -->
+      <div class="warn-box mb-4">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Important:</strong> Waiving this fee will mark the
+        outstanding balance of
+        <strong>ETB {{ sf.balance|floatformat:2 }}</strong>
+        as fully waived. The student will no longer owe this fee.
+        Any payments already made will remain on record.
+      </div>
+
+      <!-- Waive form -->
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        <div class="text-start mb-4">
+          <label>Reason for Waiver <span class="text-muted fw-normal">(optional)</span></label>
+          <textarea name="reason"
+                    class="form-control"
+                    rows="3"
+                    placeholder="e.g. Scholarship, Financial hardship, Administrative error…"
+                    maxlength="255"></textarea>
+          <small class="text-muted">This reason will be saved on the fee record.</small>
+        </div>
+
+        <div class="d-flex gap-3 justify-content-center">
+          <a href="{% url 'student_fee_detail' sf.pk %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            <i class="bi bi-arrow-left me-2"></i>Cancel
+          </a>
+          <button type="submit" class="btn btn-waive text-white">
+            <i class="bi bi-shield-check me-2"></i>Confirm Waiver
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

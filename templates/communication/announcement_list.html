@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Announcements{% endblock %}
+{% block page_title %}Announcements{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.38rem .95rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .filter-tab.crit{border-color:#fca5a5;color:#dc2626}
+  .filter-tab.crit:hover{background:#fff1f2}
+  .filter-tab.crit.active{background:#dc2626;border-color:#dc2626;color:#fff}
+
+  /* ── Announcement card ── */
+  .ann-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;margin-bottom:.85rem;display:flex;transition:transform .2s,box-shadow .2s}
+  .ann-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+  .ann-stripe{width:5px;flex-shrink:0}
+  .ann-body{padding:1.1rem 1.35rem;flex:1}
+  .ann-card.draft    .ann-stripe{background:#9ca3af}
+  .ann-card.active   .ann-stripe{background:#22c55e}
+  .ann-card.scheduled.ann-stripe{background:#f59e0b}
+  .ann-card.expired  .ann-stripe{background:#e2e8f0}
+  .ann-card.draft   {opacity:.75}
+  .ann-card.expired {opacity:.65}
+
+  /* ── Priority badges ── */
+  .p-normal  {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .p-urgent  {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .p-critical{background:#fee2e2;color:#dc2626;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Status badge ── */
+  .s-active   {background:#dcfce7;color:#15803d;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-draft    {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-scheduled{background:#fef9c3;color:#854d0e;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .s-expired  {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Audience badge ── */
+  .aud-badge{background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+
+  /* ── Attachment chip ── */
+  .att-chip{background:#f1f5f9;color:#64748b;border-radius:.4rem;padding:.12rem .5rem;font-size:.68rem;font-weight:600}
+
+  /* ── Action buttons ── */
+  .action-icon{width:28px;height:28px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s;font-size:.8rem}
+  .action-icon:hover{background:#f1f5f9}
+
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1rem 1.5rem;margin-bottom:1.5rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Announcements</h5>
+    <p class="text-muted small mb-0">
+      {{ announcements.paginator.count }}
+      announcement{{ announcements.paginator.count|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'comm_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+    {% if is_staff_role %}
+    <a href="{% url 'announcement_create' %}" class="btn btn-add text-white">
+      <i class="bi bi-plus-circle me-2"></i>Post Announcement
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_staff_role %}
+<!-- Stat cards (staff only) -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntActive">—</div>
+        <div class="stat-lbl">Active</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f1f5f9">
+        <i class="bi bi-pencil text-secondary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-secondary" id="cntDraft">—</div>
+        <div class="stat-lbl">Drafts</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-clock text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning" id="cntScheduled">—</div>
+        <div class="stat-lbl">Scheduled</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fee2e2">
+        <i class="bi bi-exclamation-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger" id="cntCritical">—</div>
+        <div class="stat-lbl">Critical</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters (staff only) -->
+<div class="filter-bar">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-4">
+      {{ form.q }}
+    </div>
+    <div class="col-md-2">
+      {{ form.audience }}
+    </div>
+    <div class="col-md-2">
+      {{ form.priority }}
+    </div>
+    <div class="col-md-2">
+      {{ form.status }}
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit"
+              class="btn btn-outline-primary rounded-pill px-3 flex-grow-1">
+        <i class="bi bi-search me-1"></i>Filter
+      </button>
+      {% if request.GET %}
+      <a href="{% url 'announcement_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Status filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'announcement_list' %}"
+     class="filter-tab {% if not form.status.value %}active{% endif %}">
+    All
+  </a>
+  <a href="?status=active"
+     class="filter-tab {% if form.status.value == 'active' %}active{% endif %}">
+    <i class="bi bi-check-circle me-1"></i>Active
+  </a>
+  <a href="?status=draft"
+     class="filter-tab {% if form.status.value == 'draft' %}active{% endif %}">
+    <i class="bi bi-pencil me-1"></i>Drafts
+  </a>
+  <a href="?status=scheduled"
+     class="filter-tab {% if form.status.value == 'scheduled' %}active{% endif %}">
+    <i class="bi bi-clock me-1"></i>Scheduled
+  </a>
+  <a href="?status=expired"
+     class="filter-tab {% if form.status.value == 'expired' %}active{% endif %}">
+    <i class="bi bi-x-circle me-1"></i>Expired
+  </a>
+  <a href="?priority=critical"
+     class="filter-tab crit {% if form.priority.value == 'critical' %}active{% endif %}">
+    <i class="bi bi-exclamation-circle me-1"></i>Critical
+  </a>
+</div>
+{% endif %}
+
+<!-- Announcement cards -->
+{% if announcements %}
+<div id="annList" class="mb-4">
+  {% for ann in announcements %}
+  <div class="ann-card {{ ann.status_label }}"
+       data-status="{{ ann.status_label }}"
+       data-priority="{{ ann.priority }}">
+
+    <div class="ann-stripe"></div>
+    <div class="ann-body">
+      <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+
+        <!-- Title + badges -->
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+            <a href="{% url 'announcement_detail' ann.pk %}"
+               class="fw-bold text-dark text-decoration-none"
+               style="font-size:.95rem">
+              {% if ann.priority == 'critical' %}
+              <i class="bi bi-exclamation-circle text-danger me-1"></i>
+              {% elif ann.priority == 'urgent' %}
+              <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+              {% endif %}
+              {{ ann.title }}
+            </a>
+            <span class="p-{{ ann.priority }}">
+              {{ ann.get_priority_display }}
+            </span>
+            <span class="s-{{ ann.status_label }}">
+              {% if ann.status_label == 'active' %}
+              <i class="bi bi-check-circle me-1"></i>Active
+              {% elif ann.status_label == 'draft' %}
+              <i class="bi bi-pencil me-1"></i>Draft
+              {% elif ann.status_label == 'scheduled' %}
+              <i class="bi bi-clock me-1"></i>Scheduled
+              {% elif ann.status_label == 'expired' %}
+              <i class="bi bi-x-circle me-1"></i>Expired
+              {% endif %}
+            </span>
+            <span class="aud-badge">{{ ann.get_audience_display }}</span>
+            {% if ann.target_grade %}
+            <span class="aud-badge" style="background:#f0fdf4;color:#15803d">
+              {{ ann.target_grade }}
+            </span>
+            {% endif %}
+          </div>
+
+          <p class="text-muted small mb-2" style="line-height:1.5">
+            {{ ann.body|truncatechars:150 }}
+          </p>
+
+          <!-- Meta row -->
+          <div class="d-flex flex-wrap gap-3 align-items-center"
+               style="font-size:.72rem;color:#9ca3af">
+            <span>
+              <i class="bi bi-person me-1"></i>
+              {{ ann.created_by.get_full_name|default:"System" }}
+            </span>
+            <span>
+              <i class="bi bi-clock me-1"></i>
+              {{ ann.created_at|date:"M d, Y" }}
+            </span>
+            {% if ann.publish_date and not ann.is_published %}
+            <span class="text-warning">
+              <i class="bi bi-calendar-clock me-1"></i>
+              Publishes {{ ann.publish_date|date:"M d, Y H:i" }}
+            </span>
+            {% endif %}
+            {% if ann.expiry_date %}
+            <span>
+              <i class="bi bi-calendar-x me-1"></i>
+              Expires {{ ann.expiry_date|date:"M d, Y" }}
+            </span>
+            {% endif %}
+            {% if ann.attachments.exists %}
+            <span class="att-chip">
+              <i class="bi bi-paperclip me-1"></i>
+              {{ ann.attachments.count }} attachment{{ ann.attachments.count|pluralize }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Staff actions -->
+        {% if is_staff_role %}
+        <div class="d-flex gap-1 flex-shrink-0">
+          <a href="{% url 'announcement_publish_toggle' ann.pk %}"
+             class="action-icon
+             {% if ann.is_published %}text-warning{% else %}text-success{% endif %}"
+             title="{% if ann.is_published %}Unpublish{% else %}Publish{% endif %}">
+            <i class="bi bi-{% if ann.is_published %}eye-slash{% else %}eye{% endif %}"></i>
+          </a>
+          <a href="{% url 'announcement_edit' ann.pk %}"
+             class="action-icon text-primary" title="Edit">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <a href="{% url 'announcement_delete' ann.pk %}"
+             class="action-icon text-danger" title="Delete"
+             onclick="return confirm('Delete this announcement?')">
+            <i class="bi bi-trash"></i>
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if announcements.has_other_pages %}
+<nav>
+  <ul class="pagination justify-content-center gap-1">
+    {% if announcements.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ announcements.previous_page_number }}&status={{ form.status.value|default:'' }}&priority={{ form.priority.value|default:'' }}&q={{ form.q.value|default:'' }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in announcements.paginator.page_range %}
+    <li class="page-item {% if announcements.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&status={{ form.status.value|default:'' }}&q={{ form.q.value|default:'' }}">
+        {{ num }}
+      </a>
+    </li>
+    {% endfor %}
+    {% if announcements.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ announcements.next_page_number }}&status={{ form.status.value|default:'' }}&q={{ form.q.value|default:'' }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="card" style="border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+  <div class="empty-state">
+    <i class="bi bi-megaphone fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">No Announcements Found</h6>
+    <p class="small text-muted mb-3">
+      {% if request.GET.q %}
+      No results for "<strong>{{ request.GET.q }}</strong>"
+      {% elif request.GET.status %}
+      No <strong>{{ request.GET.status }}</strong> announcements
+      {% else %}
+      No announcements have been posted yet
+      {% endif %}
+    </p>
+    {% if is_staff_role %}
+    <a href="{% url 'announcement_create' %}"
+       class="btn btn-primary rounded-pill px-4">
+      <i class="bi bi-plus-circle me-2"></i>Post First Announcement
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const cards = document.querySelectorAll('#annList .ann-card[data-status]');
+  let active = 0, draft = 0, scheduled = 0, critical = 0;
+  cards.forEach(c => {
+    if(c.dataset.status   === 'active')    active++;
+    if(c.dataset.status   === 'draft')     draft++;
+    if(c.dataset.status   === 'scheduled') scheduled++;
+    if(c.dataset.priority === 'critical')  critical++;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntActive',    active);
+  set('cntDraft',     draft);
+  set('cntScheduled', scheduled);
+  set('cntCritical',  critical);
+});
+</script>
+
+{% endblock %}

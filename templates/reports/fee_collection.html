@@ -1,0 +1,566 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Fee Collection{% endblock %}
+{% block page_title %}Fee Collection Report{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.82rem;color:#374151;margin-bottom:.3rem;display:block}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.5rem;font-weight:800;line-height:1;margin-bottom:.15rem;font-family:monospace}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+  .stat-sub{font-size:.72rem;margin-top:.2rem}
+
+  /* ── Chart cards ── */
+  .chart-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;height:100%}
+  .chart-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem}
+
+  /* ── Period selector ── */
+  .period-btn{border:2px solid #e2e8f0;border-radius:.875rem;padding:.5rem .9rem;cursor:pointer;transition:all .2s;background:#fff;font-size:.78rem;font-weight:600;color:#374151;text-align:center;flex:1}
+  .period-btn:hover{border-color:#1a3c72;color:#1a3c72}
+  .period-btn.selected{border-color:#1a3c72;background:#eff6ff;color:#1a3c72}
+
+  /* ── Table ── */
+  .rep-table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .rep-table tbody td{padding:.75rem 1rem;vertical-align:middle;border-color:#f1f5f9;font-size:.85rem}
+  .rep-table tbody tr{transition:background .15s}
+  .rep-table tbody tr:hover{background:#f8faff}
+
+  /* ── Method badge ── */
+  .method-cash{background:#f0fdf4;color:#15803d;border-radius:.5rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700}
+  .method-bank{background:#eff6ff;color:#1d4ed8;border-radius:.5rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700}
+  .method-mobile{background:#faf5ff;color:#7c3aed;border-radius:.5rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700}
+  .method-other{background:#f1f5f9;color:#374151;border-radius:.5rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700}
+
+  /* ── Amount chip ── */
+  .amount-chip{font-family:monospace;font-weight:700;font-size:.92rem;color:#15803d}
+
+  /* ── Summary row ── */
+  .summary-row{background:#f8faff;border-top:2px solid #e2e8f0;font-weight:700}
+
+  /* ── Category legend item ── */
+  .leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+  /* ── View tabs ── */
+  .view-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.8rem;font-weight:600;cursor:pointer;color:#374151;transition:all .2s;white-space:nowrap}
+  .view-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .view-tab:hover:not(.active){background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+
+  /* ── Custom range zone ── */
+  .custom-zone{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.875rem;padding:1rem 1.25rem;transition:all .3s}
+  .custom-zone.open{background:#eff6ff;border-color:#bfdbfe}
+
+  .btn-run{border-radius:.875rem;padding:.65rem 1.75rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;color:#fff;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Back + title -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'reports_dashboard' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Reports
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">Fee Collection Report</h5>
+    <p class="text-muted small mb-0">
+      By category · Daily trend · By grade · Payment log
+    </p>
+  </div>
+  {% if payments %}
+  <div class="d-flex gap-2 ms-auto">
+    <a href="{% url 'download_pdf' 'fee_collection' %}?{{ request.GET.urlencode }}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-download me-1"></i>PDF
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filter form -->
+<div class="filter-bar">
+  <form method="get" novalidate>
+
+    <!-- Period selector -->
+    <div class="mb-3">
+      <label>Period</label>
+      <div class="d-flex flex-wrap gap-2">
+        {% for val, lbl in form.period.field.choices %}
+        <div class="period-btn
+          {% if form.period.value == val or not form.period.value and val == 'monthly' %}selected{% endif %}"
+             data-value="{{ val }}"
+             onclick="pickPeriod('{{ val }}',this)">
+          {% if val == 'daily' %}📅
+          {% elif val == 'monthly' %}🗓️
+          {% elif val == 'term' %}📆
+          {% elif val == 'annual' %}📊
+          {% else %}⚙️{% endif %}
+          {{ lbl }}
+        </div>
+        {% endfor %}
+      </div>
+      <div style="display:none">{{ form.period }}</div>
+    </div>
+
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label>Academic Year</label>
+        {{ form.academic_year }}
+      </div>
+      <div class="col-md-2">
+        <label>Fee Category</label>
+        {{ form.fee_category }}
+      </div>
+      <div class="col-md-2">
+        <label>Grade</label>
+        {{ form.grade }}
+      </div>
+      <div class="col-md-1 d-flex align-items-end pb-1">
+        <div class="form-check">
+          {{ form.include_outstanding }}
+          <label class="form-check-label small"
+                 for="{{ form.include_outstanding.id_for_label }}">
+            Outstanding
+          </label>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <label>Format</label>
+        {{ form.format }}
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn-run flex-grow-1">
+          <i class="bi bi-cash-coin me-1"></i>Generate
+        </button>
+        {% if request.GET %}
+        <a href="{% url 'fee_collection' %}"
+           class="btn btn-outline-secondary rounded-pill px-3">
+          <i class="bi bi-x"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Custom date range -->
+    <div class="custom-zone mt-3 {% if form.period.value == 'custom' %}open{% endif %}"
+         id="customZone"
+         style="{% if form.period.value != 'custom' %}display:none{% endif %}">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label>From Date</label>
+          {{ form.date_from }}
+        </div>
+        <div class="col-md-3">
+          <label>To Date</label>
+          {{ form.date_to }}
+        </div>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+{% if payments %}
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-cash-coin text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success">
+          ETB {{ total_collected|floatformat:0 }}
+        </div>
+        <div class="stat-lbl">Total Collected</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-receipt text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ payment_count }}</div>
+        <div class="stat-lbl">Transactions</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-exclamation-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">
+          ETB {{ outstanding|floatformat:0 }}
+        </div>
+        <div class="stat-lbl">Outstanding</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-calculator text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning">
+          {% if payment_count %}
+          ETB {{ total_collected|floatformat:0 }}
+          {% else %}—{% endif %}
+        </div>
+        <div class="stat-lbl">Avg per Transaction</div>
+        <div class="stat-sub text-muted">
+          {% if payment_count %}
+          ETB {% widthratio total_collected payment_count 1 %} avg
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts row 1: pie + bar daily trend -->
+<div class="row g-4 mb-4">
+
+  <!-- Pie/Doughnut: by category -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-pie-chart"></i>Collection by Category
+      </div>
+      <canvas id="pieCat" height="220"></canvas>
+      <!-- Legend -->
+      <div class="mt-3 d-flex flex-column gap-2" id="catLegend"></div>
+    </div>
+  </div>
+
+  <!-- Line: daily trend -->
+  <div class="col-md-8">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-graph-up-arrow"></i>Daily Collection Trend (ETB)
+      </div>
+      <canvas id="lineDaily" height="220"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Charts row 2: by grade horizontal bar -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart-horizontal"></i>Collection by Grade (ETB)
+      </div>
+      <canvas id="barGrade" height="120"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Payment log table -->
+<div class="info-card card p-4">
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div class="sec-head mb-0">
+      <i class="bi bi-table me-2"></i>Payment Log
+      <span class="text-muted fw-normal ms-1">({{ payments.paginator.count }} records)</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <span class="view-tab active" onclick="filterPay('all',this)">All</span>
+      <span class="view-tab" onclick="filterPay('cash',this)">💵 Cash</span>
+      <span class="view-tab" onclick="filterPay('bank',this)">🏦 Bank</span>
+      <span class="view-tab" onclick="filterPay('mobile',this)">📱 Mobile</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table rep-table mb-0" id="payTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Student</th>
+          <th>Grade</th>
+          <th>Category</th>
+          <th>Method</th>
+          <th>Reference</th>
+          <th class="text-end">Amount (ETB)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pay in payments %}
+        <tr data-method="{{ pay.payment_method|default:'other' }}">
+          <td class="text-muted small">
+            {{ forloop.counter0|add:payments.start_index }}
+          </td>
+          <td class="small fw-semibold">
+            {{ pay.paid_date|date:"M d, Y" }}
+          </td>
+          <td>
+            <div class="fw-semibold small">
+              {{ pay.student_fee.student.user.get_full_name }}
+            </div>
+            <div class="text-muted" style="font-size:.7rem">
+              {{ pay.student_fee.student.student_id }}
+            </div>
+          </td>
+          <td class="small text-muted">
+            {{ pay.student_fee.student.current_section.grade|default:"—" }}
+          </td>
+          <td class="small">
+            {{ pay.student_fee.fee_structure.fee_category.name|default:"—" }}
+          </td>
+          <td>
+            <span class="method-{{ pay.payment_method|default:'other' }}">
+              {{ pay.payment_method|default:"Other"|title }}
+            </span>
+          </td>
+          <td class="small text-muted font-monospace">
+            {{ pay.reference_number|default:"—" }}
+          </td>
+          <td class="text-end">
+            <span class="amount-chip">
+              {{ pay.amount|floatformat:2 }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <!-- Summary row -->
+      <tfoot>
+        <tr class="summary-row">
+          <td colspan="7" class="text-end text-muted small">Total Collected:</td>
+          <td class="text-end">
+            <span class="amount-chip" style="font-size:1rem">
+              {{ total_collected|floatformat:2 }}
+            </span>
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if payments.has_other_pages %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center gap-1 mb-0">
+      {% if payments.has_previous %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ payments.previous_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+      </li>
+      {% endif %}
+      {% for num in payments.paginator.page_range %}
+      <li class="page-item {% if payments.number == num %}active{% endif %}">
+        <a class="page-link rounded-3"
+           href="?page={{ num }}&{{ request.GET.urlencode }}">
+          {{ num }}
+        </a>
+      </li>
+      {% endfor %}
+      {% if payments.has_next %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ payments.next_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const CAT_LABELS  = {{ cat_labels|safe }};
+const CAT_DATA    = {{ cat_data|safe }};
+const CAT_COLORS  = {{ cat_colors|safe }};
+const DAY_LABELS  = {{ daily_labels|safe }};
+const DAY_DATA    = {{ daily_data|safe }};
+const GRD_LABELS  = {{ grade_labels|safe }};
+const GRD_DATA    = {{ grade_data|safe }};
+
+// ── Doughnut: by category ─────────────────────
+const pieCatChart = new Chart(document.getElementById('pieCat'), {
+  type: 'doughnut',
+  data: {
+    labels:   CAT_LABELS,
+    datasets: [{
+      data:            CAT_DATA,
+      backgroundColor: CAT_COLORS,
+      borderWidth:     3,
+      borderColor:     '#fff',
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ETB ${ctx.parsed.toLocaleString()}`
+        }
+      }
+    },
+    cutout: '62%',
+  }
+});
+
+// Build custom legend
+const legEl = document.getElementById('catLegend');
+CAT_LABELS.forEach((lbl, i) => {
+  const total = CAT_DATA.reduce((a, b) => a + b, 0);
+  const pct   = total ? ((CAT_DATA[i] / total) * 100).toFixed(1) : 0;
+  legEl.innerHTML += `
+    <div class="d-flex align-items-center gap-2 justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <div class="leg-dot" style="background:${CAT_COLORS[i]}"></div>
+        <span style="font-size:.78rem">${lbl}</span>
+      </div>
+      <div class="text-end">
+        <span style="font-size:.78rem;font-family:monospace;font-weight:700;color:#15803d">
+          ETB ${CAT_DATA[i].toLocaleString()}
+        </span>
+        <span style="font-size:.68rem;color:#9ca3af;margin-left:.3rem">${pct}%</span>
+      </div>
+    </div>`;
+});
+
+// ── Line: daily collection ────────────────────
+new Chart(document.getElementById('lineDaily'), {
+  type: 'line',
+  data: {
+    labels: DAY_LABELS,
+    datasets: [{
+      label:           'ETB Collected',
+      data:            DAY_DATA,
+      borderColor:     '#22c55e',
+      backgroundColor: 'rgba(34,197,94,.12)',
+      tension:         0.4,
+      fill:            true,
+      pointRadius:     4,
+      pointBackgroundColor: '#22c55e',
+      borderWidth:     2,
+    }]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ETB ${ctx.parsed.y.toLocaleString()}`
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          font: { size: 11 },
+          callback: v => 'ETB ' + v.toLocaleString()
+        }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 10 }, maxTicksLimit: 12 }
+      }
+    }
+  }
+});
+
+// ── Horizontal bar: by grade ──────────────────
+new Chart(document.getElementById('barGrade'), {
+  type: 'bar',
+  data: {
+    labels: GRD_LABELS,
+    datasets: [{
+      label: 'ETB Collected',
+      data:  GRD_DATA,
+      backgroundColor: GRD_DATA.map((_, i) =>
+        ['#1a3c72','#0ea5a0','#22c55e','#f59e0b','#8b5cf6','#ef4444','#f97316'][i % 7]
+      ),
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: ctx => ` ETB ${ctx.parsed.x.toLocaleString()}` }
+      }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          font: { size: 11 },
+          callback: v => 'ETB ' + v.toLocaleString()
+        }
+      },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+// ── Payment method filter ─────────────────────
+function filterPay(method, el) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#payTable tbody tr').forEach(row => {
+    row.style.display = (method === 'all' || row.dataset.method === method) ? '' : 'none';
+  });
+}
+
+// ── Period selector ───────────────────────────
+function pickPeriod(val, el) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.querySelector('[name="period"]').value = val;
+  const zone = document.getElementById('customZone');
+  if (val === 'custom') {
+    zone.style.display = '';
+    setTimeout(() => zone.classList.add('open'), 10);
+  } else {
+    zone.classList.remove('open');
+    setTimeout(() => zone.style.display = 'none', 300);
+  }
+}
+</script>
+
+{% else %}
+<div class="info-card card">
+  <div class="empty-state">
+    <i class="bi bi-cash-coin fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">Select a period and click Generate</h6>
+    <p class="small text-muted mb-0">
+      Choose the period, academic year and optional filters above to generate the fee collection report.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

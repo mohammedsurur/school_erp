@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Add Component — {{ schedule.subject }}{% endblock %}
+{% block page_title %}Add Component{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .req{color:#ef4444}
+
+  /* ── Quick-pick buttons ── */
+  .quick-btn{border:1.5px solid #e2e8f0;border-radius:.75rem;padding:.65rem 1rem;text-align:center;cursor:pointer;transition:all .2s;background:#fff}
+  .quick-btn:hover{border-color:#1a3c72;background:#eff6ff}
+  .quick-btn.selected{border-color:#1a3c72;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff}
+  .quick-btn .type{font-weight:700;font-size:.85rem}
+  .quick-btn .range{font-size:.72rem;opacity:.75;margin-top:.15rem}
+  .quick-btn .default{font-size:.7rem;opacity:.6;margin-top:.1rem}
+
+  /* ── Existing components ── */
+  .existing-comp{display:flex;align-items:center;justify-content:space-between;padding:.55rem .75rem;background:#f8f9fb;border-radius:.65rem;margin-bottom:.4rem;font-size:.82rem}
+  .colour-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'component_list' schedule.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">Add Component</h5>
+        <p class="text-muted small mb-0">
+          {{ schedule.subject.name }} —
+          {{ schedule.section.grade }} {{ schedule.section.name }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Ethiopian System:</strong>
+      All components must sum to exactly <strong>100</strong>.
+      Remaining: <strong class="{% if remaining > 0 %}text-warning{% else %}text-success{% endif %}">
+        {{ remaining }} marks
+      </strong>
+      {% if remaining == 0 %}
+      — Already complete!
+      {% endif %}
+    </div>
+
+    <!-- Existing components -->
+    {% if components %}
+    <div class="form-card card p-4 mb-4">
+      <div class="section-head">
+        <i class="bi bi-check-circle me-2"></i>Already Added
+      </div>
+      {% for comp in components %}
+      <div class="existing-comp">
+        <div class="d-flex align-items-center gap-2">
+          <div class="colour-dot"
+               style="background:
+               {% if comp.component_type == 'quiz' %}#3b82f6
+               {% elif comp.component_type == 'mid_term' %}#8b5cf6
+               {% elif comp.component_type == 'final' %}#0ea5a0
+               {% elif comp.component_type == 'assignment' %}#f59e0b
+               {% else %}#22c55e{% endif %}">
+          </div>
+          <span class="fw-semibold">{{ comp.get_component_type_display }}</span>
+        </div>
+        <span style="font-family:monospace;font-weight:700;color:#1a3c72">
+          {{ comp.max_marks }} marks
+        </span>
+      </div>
+      {% endfor %}
+      <div class="d-flex justify-content-between mt-2 pt-2"
+           style="border-top:1px solid #f1f5f9;font-size:.82rem">
+        <span class="text-muted fw-semibold">Total so far</span>
+        <span class="fw-bold
+          {% if total == 100 %}text-success
+          {% elif total > 0 %}text-warning
+          {% else %}text-danger{% endif %}"
+              style="font-family:monospace">
+          {{ total }}/100
+        </span>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Quick-pick component type -->
+        <div class="section-head">
+          <i class="bi bi-grid me-2"></i>Quick Select Component
+        </div>
+        <div class="row g-2 mb-3" id="quickPicks">
+          <div class="col-6 col-md-4">
+            <div class="quick-btn" onclick="quickPick('quiz', 10)">
+              <div class="type">📝 Quiz</div>
+              <div class="range">Range: 5 – 10</div>
+              <div class="default">Default: 10</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="quick-btn" onclick="quickPick('mid_term', 30)">
+              <div class="type">📖 Mid-Term</div>
+              <div class="range">Range: 20 – 30</div>
+              <div class="default">Default: 30</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="quick-btn" onclick="quickPick('final', 50)">
+              <div class="type">📋 Final Exam</div>
+              <div class="range">Range: 40 – 50</div>
+              <div class="default">Default: 50</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="quick-btn" onclick="quickPick('assignment', 10)">
+              <div class="type">📁 Assignment</div>
+              <div class="range">Range: 10 – 20</div>
+              <div class="default">Default: 10</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-4">
+            <div class="quick-btn" onclick="quickPick('attendance', 5)">
+              <div class="type">✅ Attendance</div>
+              <div class="range">Range: 5 – 10</div>
+              <div class="default">Default: 5</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form fields -->
+        <div class="section-head mt-4">
+          <i class="bi bi-sliders me-2"></i>Component Details
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label>Component Type <span class="req">*</span></label>
+            {{ form.component_type }}
+            {% if form.component_type.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.component_type.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+          <div class="col-md-3">
+            <label>Max Marks <span class="req">*</span></label>
+            {{ form.max_marks }}
+            {% if form.max_marks.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.max_marks.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+          <div class="col-md-3">
+            <label>Order</label>
+            {{ form.order }}
+            {% if form.order.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.order.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Range hint (updated by JS) -->
+        <div class="mb-4 p-3 rounded-3"
+             style="background:#f8f9fb;border:1.5px solid #e2e8f0;font-size:.82rem"
+             id="rangeHint">
+          <i class="bi bi-info-circle me-2 text-primary"></i>
+          Select a component type to see the allowed range.
+        </div>
+
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'component_list' schedule.pk %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-plus-circle me-2"></i>Add Component
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const RANGES = {
+  quiz:       { lo: 5,  hi: 10, default: 10,  label: 'Quiz' },
+  mid_term:   { lo: 20, hi: 30, default: 30,  label: 'Mid-Term Exam' },
+  final:      { lo: 40, hi: 50, default: 50,  label: 'Final Exam' },
+  assignment: { lo: 10, hi: 20, default: 10,  label: 'Assignment' },
+  attendance: { lo: 5,  hi: 10, default: 5,   label: 'Attendance + Exercise Book' },
+};
+
+const typeSel  = document.querySelector('[name="component_type"]');
+const marksInp = document.querySelector('[name="max_marks"]');
+const hintEl   = document.getElementById('rangeHint');
+const orderInp = document.querySelector('[name="order"]');
+
+function quickPick(type, defaultMark){
+  // Set selects + inputs
+  typeSel.value  = type;
+  marksInp.value = defaultMark;
+  // Highlight picked button
+  document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  // Update hint
+  updateHint(type);
+  // Auto order
+  const existing = {{ components|length }};
+  orderInp.value = existing + 1;
+}
+
+function updateHint(type){
+  const r = RANGES[type];
+  if(!r){ hintEl.innerHTML = '<i class="bi bi-info-circle me-2 text-primary"></i>Select a component type to see the allowed range.'; return; }
+  hintEl.innerHTML = `
+    <i class="bi bi-rulers me-2 text-primary"></i>
+    <strong>${r.label}</strong>:
+    allowed range <strong>${r.lo} – ${r.hi} marks</strong>
+    &nbsp;·&nbsp; default: <strong>${r.default}</strong>
+    &nbsp;·&nbsp; remaining budget: <strong>{{ remaining }}</strong>
+  `;
+}
+
+typeSel?.addEventListener('change', () => updateHint(typeSel.value));
+document.addEventListener('DOMContentLoaded', () => {
+  if(typeSel?.value) updateHint(typeSel.value);
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Report Card{% endblock %}
+{% block page_title %}Report Card{% endblock %}
+
+{% block content %}
+<style>
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.82rem;color:#374151;margin-bottom:.3rem;display:block}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+  .stat-sub{font-size:.72rem;margin-top:.2rem}
+
+  /* ── Chart cards ── */
+  .chart-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;height:100%}
+  .chart-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin-bottom:1.25rem}
+
+  /* ── Grade badges ── */
+  .grade-excellent   {background:#dcfce7;color:#15803d}
+  .grade-very-good   {background:#d1fae5;color:#065f46}
+  .grade-good        {background:#eff6ff;color:#1d4ed8}
+  .grade-satisfactory{background:#fef9c3;color:#854d0e}
+  .grade-pass        {background:#fff7ed;color:#c2410c}
+  .grade-fail        {background:#fee2e2;color:#dc2626}
+  .grade-badge{border-radius:999px;padding:.2rem .75rem;font-size:.7rem;font-weight:700;white-space:nowrap}
+
+  /* ── Table ── */
+  .rep-table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .rep-table tbody td{padding:.75rem 1rem;vertical-align:middle;border-color:#f1f5f9;font-size:.85rem}
+  .rep-table tbody tr{transition:background .15s}
+  .rep-table tbody tr:hover{background:#f8faff}
+
+  /* ── Score bar ── */
+  .score-bar{height:6px;border-radius:999px;background:#e2e8f0;overflow:hidden}
+  .score-fill{height:100%;border-radius:999px;transition:width .6s}
+
+  /* ── Promoted badge ── */
+  .promo-yes{background:#dcfce7;color:#15803d;border-radius:999px;padding:.15rem .6rem;font-size:.7rem;font-weight:700}
+  .promo-no {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.15rem .6rem;font-size:.7rem;font-weight:700}
+
+  .btn-run{border-radius:.875rem;padding:.65rem 1.75rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;color:#fff;transition:opacity .2s,transform .2s}
+  .btn-run:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Back + title -->
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'reports_dashboard' %}"
+     class="btn btn-outline-secondary rounded-pill px-3">
+    <i class="bi bi-arrow-left me-1"></i>Reports
+  </a>
+  <div>
+    <h5 class="fw-bold mb-0">Report Card</h5>
+    <p class="text-muted small mb-0">
+      Ethiopian grading · Pass ≥ 50 · Promotion: avg ≥ 50 and failed subjects ≤ 2
+    </p>
+  </div>
+  {% if cards %}
+  <a href="{% url 'download_pdf' 'report_card' %}?{{ request.GET.urlencode }}"
+     class="btn btn-outline-primary rounded-pill px-3 ms-auto">
+    <i class="bi bi-download me-1"></i>Download PDF
+  </a>
+  {% endif %}
+</div>
+
+<!-- Filter form -->
+<div class="filter-bar">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <label>Academic Year</label>
+      {{ form.academic_year }}
+    </div>
+    <div class="col-md-3">
+      <label>Exam <span style="color:#ef4444">*</span></label>
+      {{ form.exam }}
+    </div>
+    <div class="col-md-2">
+      <label>Grade</label>
+      {{ form.grade }}
+    </div>
+    <div class="col-md-2">
+      <label>Section</label>
+      {{ form.section }}
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button type="submit" class="btn-run flex-grow-1">
+        <i class="bi bi-bar-chart me-1"></i>Generate
+      </button>
+      {% if request.GET %}
+      <a href="{% url 'report_card' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+    {% if form.student %}
+    <div class="col-md-4">
+      <label>Student (optional — blank = all)</label>
+      {{ form.student }}
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+{% if cards %}
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-people text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ total_students }}</div>
+        <div class="stat-lbl">Total Students</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success">{{ promoted }}</div>
+        <div class="stat-lbl">Promoted</div>
+        <div class="stat-sub text-success">
+          {% if total_students %}
+          {{ promoted|floatformat:0 }}/{{ total_students }}
+          ({% widthratio promoted total_students 100 %}%)
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-x-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">{{ not_promoted }}</div>
+        <div class="stat-lbl">Not Promoted</div>
+        <div class="stat-sub text-danger">
+          {% if total_students %}
+          ({% widthratio not_promoted total_students 100 %}%)
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#faf5ff">
+        <i class="bi bi-bar-chart" style="color:#7c3aed"></i>
+      </div>
+      <div>
+        <div class="stat-num" style="color:#7c3aed">{{ avg_score }}</div>
+        <div class="stat-lbl">Class Average</div>
+        <div class="stat-sub text-muted">out of 100</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="row g-4 mb-4">
+
+  <!-- Pie: grade distribution -->
+  <div class="col-md-4">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-pie-chart me-2"></i>Grade Distribution
+      </div>
+      <canvas id="pieGrade" height="230"></canvas>
+    </div>
+  </div>
+
+  <!-- Bar: subject averages -->
+  <div class="col-md-8">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart me-2"></i>Average Score by Subject
+      </div>
+      <canvas id="barSubject" height="230"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Score distribution bar -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-title">
+        <i class="bi bi-bar-chart-steps me-2"></i>Score Distribution (Buckets)
+      </div>
+      <canvas id="barBuckets" height="120"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="info-card card p-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="sec-head mb-0">
+      <i class="bi bi-table me-2"></i>Report Cards
+      <span class="text-primary ms-2">{{ exam.name }}</span>
+    </div>
+    <span class="text-muted small">{{ cards.paginator.count }} students</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table rep-table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student</th>
+          <th>Grade / Section</th>
+          <th>Average</th>
+          <th>Score Bar</th>
+          <th>Grade</th>
+          <th>Failed Subjects</th>
+          <th>Promoted</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in cards %}
+        <tr>
+          <td class="text-muted small">
+            {{ forloop.counter0|add:cards.start_index }}
+          </td>
+          <td>
+            <div class="fw-semibold">
+              {{ card.student.user.get_full_name }}
+            </div>
+            <div class="text-muted" style="font-size:.72rem">
+              {{ card.student.student_id }}
+            </div>
+          </td>
+          <td class="small">
+            {{ card.student.current_section.grade }}
+            {% if card.student.current_section %}
+            — {{ card.student.current_section.name }}
+            {% endif %}
+          </td>
+          <td>
+            <span class="fw-bold" style="font-family:monospace;font-size:.95rem">
+              {{ card.average_score|floatformat:1 }}
+            </span>
+          </td>
+          <td style="min-width:100px">
+            <div class="score-bar">
+              <div class="score-fill"
+                   style="width:{{ card.average_score }}%;
+                   background:{% if card.average_score >= 80 %}#22c55e
+                   {% elif card.average_score >= 60 %}#0ea5a0
+                   {% elif card.average_score >= 50 %}#f59e0b
+                   {% else %}#ef4444{% endif %}">
+              </div>
+            </div>
+          </td>
+          <td>
+            {% with s=card.average_score|floatformat:0|add:0 %}
+            {% if card.average_score >= 90 %}
+            <span class="grade-badge grade-excellent">Excellent</span>
+            {% elif card.average_score >= 80 %}
+            <span class="grade-badge grade-very-good">Very Good</span>
+            {% elif card.average_score >= 70 %}
+            <span class="grade-badge grade-good">Good</span>
+            {% elif card.average_score >= 60 %}
+            <span class="grade-badge grade-satisfactory">Satisfactory</span>
+            {% elif card.average_score >= 50 %}
+            <span class="grade-badge grade-pass">Pass</span>
+            {% else %}
+            <span class="grade-badge grade-fail">Fail</span>
+            {% endif %}
+            {% endwith %}
+          </td>
+          <td class="text-center">
+            <span class="fw-semibold
+              {% if card.failed_subjects > 2 %}text-danger
+              {% elif card.failed_subjects > 0 %}text-warning
+              {% else %}text-success{% endif %}">
+              {{ card.failed_subjects }}
+            </span>
+          </td>
+          <td>
+            {% if card.is_promoted %}
+            <span class="promo-yes">
+              <i class="bi bi-check me-1"></i>Yes
+            </span>
+            {% else %}
+            <span class="promo-no">
+              <i class="bi bi-x me-1"></i>No
+            </span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">
+            {{ card.teacher_remarks|default:"—"|truncatechars:30 }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if cards.has_other_pages %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center gap-1 mb-0">
+      {% if cards.has_previous %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ cards.previous_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+      </li>
+      {% endif %}
+      {% for num in cards.paginator.page_range %}
+      <li class="page-item {% if cards.number == num %}active{% endif %}">
+        <a class="page-link rounded-3"
+           href="?page={{ num }}&{{ request.GET.urlencode }}">
+          {{ num }}
+        </a>
+      </li>
+      {% endfor %}
+      {% if cards.has_next %}
+      <li class="page-item">
+        <a class="page-link rounded-3"
+           href="?page={{ cards.next_page_number }}&{{ request.GET.urlencode }}">
+          <i class="bi bi-arrow-right"></i>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const PIE_LABELS   = {{ pie_labels|safe }};
+const PIE_DATA     = {{ pie_data|safe }};
+const PIE_COLORS   = {{ pie_colors|safe }};
+const BAR_LABELS   = {{ bar_labels|safe }};
+const BAR_DATA     = {{ bar_data|safe }};
+const BUCKET_LABELS= {{ bucket_labels|safe }};
+const BUCKET_DATA  = {{ bucket_data|safe }};
+
+// ── Pie: grade distribution ───────────────────
+new Chart(document.getElementById('pieGrade'), {
+  type: 'doughnut',
+  data: {
+    labels:   PIE_LABELS,
+    datasets: [{
+      data:            PIE_DATA,
+      backgroundColor: PIE_COLORS,
+      borderWidth:     3,
+      borderColor:     '#fff',
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 14, font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.parsed} students`
+        }
+      }
+    },
+    cutout: '65%',
+  }
+});
+
+// ── Bar: subject averages ─────────────────────
+new Chart(document.getElementById('barSubject'), {
+  type: 'bar',
+  data: {
+    labels:   BAR_LABELS,
+    datasets: [{
+      label:           'Average Score',
+      data:            BAR_DATA,
+      backgroundColor: BAR_DATA.map(v =>
+        v >= 80 ? '#22c55e' :
+        v >= 60 ? '#0ea5a0' :
+        v >= 50 ? '#f59e0b' : '#ef4444'
+      ),
+      borderRadius:    6,
+      borderSkipped:   false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` Score: ${ctx.parsed.y}` } }
+    },
+    scales: {
+      y: {
+        beginAtZero: true, max: 100,
+        grid: { color: '#f1f5f9' },
+        ticks: { font: { size: 11 } }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 10 }, maxRotation: 35 }
+      }
+    }
+  }
+});
+
+// ── Bar: score buckets ────────────────────────
+new Chart(document.getElementById('barBuckets'), {
+  type: 'bar',
+  data: {
+    labels:   BUCKET_LABELS,
+    datasets: [{
+      label: 'Students',
+      data:  BUCKET_DATA,
+      backgroundColor: [
+        '#22c55e','#0ea5a0','#1a3c72','#f59e0b','#f97316','#ef4444'
+      ],
+      borderRadius:  8,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} students` } }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: '#f1f5f9' },
+        ticks: { font: { size: 11 }, precision: 0 }
+      },
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+</script>
+
+{% else %}
+<!-- Empty state -->
+<div class="info-card card">
+  <div class="empty-state">
+    <i class="bi bi-card-list fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">Select filters and click Generate</h6>
+    <p class="small text-muted mb-0">
+      Choose an Academic Year and Exam above to generate the report card report.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

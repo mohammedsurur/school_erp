@@ -1,0 +1,395 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Book Issuances{% endblock %}
+{% block page_title %}Book Issuances{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .filter-tab.overdue.active{background:#dc2626;border-color:#dc2626;color:#fff}
+  .filter-tab.overdue{border-color:#fca5a5;color:#dc2626}
+  .filter-tab.overdue:hover{background:#fff1f2}
+
+  /* ── Status badges ── */
+  .s-issued  {background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-overdue {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-returned{background:#dcfce7;color:#15803d;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+  .s-lost    {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.2rem .75rem;font-size:.72rem;font-weight:700}
+
+  /* ── Row states ── */
+  .row-overdue{background:#fff8f8!important}
+  .row-returned{background:#f0fdf4!important}
+
+  /* ── Due date ── */
+  .due-ok    {color:#15803d;font-weight:500}
+  .due-soon  {color:#854d0e;font-weight:600}
+  .due-over  {color:#dc2626;font-weight:700}
+
+  /* ── Days overdue chip ── */
+  .overdue-chip{background:#fee2e2;color:#dc2626;border-radius:.4rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700;font-family:monospace}
+
+  /* ── Days remaining chip ── */
+  .days-ok  {background:#dcfce7;color:#15803d;border-radius:.4rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700;font-family:monospace}
+  .days-soon{background:#fef9c3;color:#854d0e;border-radius:.4rem;padding:.12rem .5rem;font-size:.7rem;font-weight:700;font-family:monospace}
+
+  .avatar-xs{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.68rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+  .acc-no{font-family:monospace;font-size:.72rem;color:#64748b;background:#f1f5f9;padding:.1rem .4rem;border-radius:.35rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Book Issuances</h5>
+    <p class="text-muted small mb-0">
+      {{ issuances.paginator.count }}
+      record{{ issuances.paginator.count|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'issue_book' %}"
+       class="btn btn-primary rounded-pill px-3 fw-semibold">
+      <i class="bi bi-box-arrow-right me-2"></i>Issue Book
+    </a>
+    <a href="{% url 'library_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a href="?status=issued" class="text-decoration-none">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#eff6ff">
+          <i class="bi bi-box-arrow-right text-primary"></i>
+        </div>
+        <div>
+          <div class="stat-num text-primary" id="cntIssued">—</div>
+          <div class="stat-lbl">Issued</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="?status=overdue" class="text-decoration-none">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fff8f8">
+          <i class="bi bi-exclamation-circle text-danger"></i>
+        </div>
+        <div>
+          <div class="stat-num text-danger" id="cntOverdue">—</div>
+          <div class="stat-lbl">Overdue</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="?status=returned" class="text-decoration-none">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#f0fdf4">
+          <i class="bi bi-check-circle text-success"></i>
+        </div>
+        <div>
+          <div class="stat-num text-success" id="cntReturned">—</div>
+          <div class="stat-lbl">Returned</div>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="?status=lost" class="text-decoration-none">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#f8f9fb">
+          <i class="bi bi-x-circle text-secondary"></i>
+        </div>
+        <div>
+          <div class="stat-num text-secondary" id="cntLost">—</div>
+          <div class="stat-lbl">Lost</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Status filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a href="{% url 'issuance_list' %}"
+     class="filter-tab {% if not form.status.value %}active{% endif %}">
+    All
+  </a>
+  <a href="?status=issued"
+     class="filter-tab {% if form.status.value == 'issued' %}active{% endif %}">
+    <i class="bi bi-box-arrow-right me-1"></i>Issued
+  </a>
+  <a href="?status=overdue"
+     class="filter-tab overdue {% if form.status.value == 'overdue' %}active{% endif %}">
+    <i class="bi bi-exclamation-circle me-1"></i>Overdue
+  </a>
+  <a href="?status=returned"
+     class="filter-tab {% if form.status.value == 'returned' %}active{% endif %}">
+    <i class="bi bi-check-circle me-1"></i>Returned
+  </a>
+  <a href="?status=lost"
+     class="filter-tab {% if form.status.value == 'lost' %}active{% endif %}">
+    <i class="bi bi-x-circle me-1"></i>Lost
+  </a>
+</div>
+
+<!-- Search & date filters -->
+<form method="get" class="mb-4">
+  <div class="row g-3">
+    <div class="col-md-5">
+      <input type="text" name="q" value="{{ form.q.value|default:'' }}"
+             class="search-bar form-control"
+             placeholder="Search by borrower name, book title or accession no…">
+    </div>
+    <div class="col-md-2">
+      <input type="date" name="date_from"
+             value="{{ form.date_from.value|default:'' }}"
+             class="search-bar form-control"
+             placeholder="From date">
+    </div>
+    <div class="col-md-2">
+      <input type="date" name="date_to"
+             value="{{ form.date_to.value|default:'' }}"
+             class="search-bar form-control"
+             placeholder="To date">
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button type="submit"
+              class="btn btn-outline-primary rounded-pill px-3 flex-grow-1">
+        <i class="bi bi-search me-1"></i>Filter
+      </button>
+      {% if request.GET %}
+      <a href="{% url 'issuance_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+    {% if form.status.value %}
+    <input type="hidden" name="status" value="{{ form.status.value }}">
+    {% endif %}
+  </div>
+</form>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="issTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Borrower</th>
+          <th>Book</th>
+          <th>Copy</th>
+          <th>Issued</th>
+          <th>Due Date</th>
+          <th>Returned</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for iss in issuances %}
+        <tr class="
+          {% if iss.status == 'overdue' %}row-overdue
+          {% elif iss.status == 'returned' %}row-returned
+          {% endif %}"
+            data-status="{{ iss.status }}">
+
+          <!-- # -->
+          <td class="text-muted small fw-semibold">
+            {{ issuances.start_index|add:forloop.counter0 }}
+          </td>
+
+          <!-- Borrower -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {% if iss.student %}
+                  {{ iss.student.user.first_name|first|upper }}{{ iss.student.user.last_name|first|upper }}
+                {% elif iss.staff %}
+                  {{ iss.staff.user.first_name|first|upper }}{{ iss.staff.user.last_name|first|upper }}
+                {% endif %}
+              </div>
+              <div>
+                <div class="fw-semibold small">{{ iss.borrower }}</div>
+                {% if iss.student %}
+                <span class="adm-no">{{ iss.student.admission_number }}</span>
+                {% else %}
+                <span class="adm-no">Staff</span>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+
+          <!-- Book -->
+          <td>
+            <a href="{% url 'book_detail' iss.book_copy.book.pk %}"
+               class="fw-semibold small text-decoration-none text-dark">
+              {{ iss.book_copy.book.title|truncatechars:35 }}
+            </a>
+          </td>
+
+          <!-- Copy accession -->
+          <td><span class="acc-no">{{ iss.book_copy.accession_number }}</span></td>
+
+          <!-- Issued date -->
+          <td class="small text-muted">{{ iss.issued_date|date:"M d, Y" }}</td>
+
+          <!-- Due date -->
+          <td>
+            {% if iss.status == 'returned' %}
+            <span class="small text-muted">{{ iss.due_date|date:"M d, Y" }}</span>
+            {% elif iss.is_overdue %}
+            <div class="due-over small">
+              <i class="bi bi-exclamation-circle me-1"></i>
+              {{ iss.due_date|date:"M d, Y" }}
+            </div>
+            <span class="overdue-chip">{{ iss.days_overdue }}d late</span>
+            {% elif iss.days_remaining <= 3 %}
+            <div class="due-soon small">
+              <i class="bi bi-clock me-1"></i>
+              {{ iss.due_date|date:"M d, Y" }}
+            </div>
+            <span class="days-soon">{{ iss.days_remaining }}d left</span>
+            {% else %}
+            <div class="due-ok small">{{ iss.due_date|date:"M d, Y" }}</div>
+            <span class="days-ok">{{ iss.days_remaining }}d left</span>
+            {% endif %}
+          </td>
+
+          <!-- Returned date -->
+          <td class="small text-muted">
+            {{ iss.returned_date|date:"M d, Y"|default:"—" }}
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="s-{{ iss.status }}">
+              {% if iss.status == 'issued'   %}<i class="bi bi-box-arrow-right me-1"></i>Issued
+              {% elif iss.status == 'overdue'  %}<i class="bi bi-exclamation-circle me-1"></i>Overdue
+              {% elif iss.status == 'returned' %}<i class="bi bi-check-circle me-1"></i>Returned
+              {% elif iss.status == 'lost'     %}<i class="bi bi-x-circle me-1"></i>Lost
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Action -->
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'issuance_detail' iss.pk %}"
+                 class="btn btn-sm btn-outline-primary rounded-pill px-2"
+                 style="font-size:.72rem" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              {% if iss.status in 'issued,overdue' %}
+              <a href="{% url 'return_book' iss.pk %}"
+                 class="btn btn-sm btn-outline-warning rounded-pill px-2"
+                 style="font-size:.72rem" title="Return">
+                <i class="bi bi-arrow-return-left"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <i class="bi bi-box-arrow-right fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No issuances found</h6>
+              <p class="small text-muted mb-3">
+                {% if request.GET.q %}
+                No results for "<strong>{{ request.GET.q }}</strong>"
+                {% elif form.status.value %}
+                No <strong>{{ form.status.value }}</strong> issuances found
+                {% else %}
+                No books have been issued yet
+                {% endif %}
+              </p>
+              <a href="{% url 'issue_book' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-box-arrow-right me-2"></i>Issue First Book
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if issuances.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if issuances.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ issuances.previous_page_number }}&status={{ form.status.value }}&q={{ form.q.value|default:'' }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in issuances.paginator.page_range %}
+    <li class="page-item {% if issuances.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&status={{ form.status.value }}&q={{ form.q.value|default:'' }}">
+        {{ num }}
+      </a>
+    </li>
+    {% endfor %}
+    {% if issuances.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ issuances.next_page_number }}&status={{ form.status.value }}&q={{ form.q.value|default:'' }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows     = document.querySelectorAll('#issTable tbody tr[data-status]');
+  const counts   = { issued: 0, overdue: 0, returned: 0, lost: 0 };
+  rows.forEach(r => {
+    const s = r.dataset.status;
+    if(counts[s] !== undefined) counts[s]++;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntIssued',   counts.issued);
+  set('cntOverdue',  counts.overdue);
+  set('cntReturned', counts.returned);
+  set('cntLost',     counts.lost);
+});
+</script>
+
+{% endblock %}

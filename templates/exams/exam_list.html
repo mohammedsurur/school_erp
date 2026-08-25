@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Exams{% endblock %}
+{% block page_title %}Exams{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;color:inherit;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover,.filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  /* Exam type badge colours */
+  .type-quiz      {background:#f0fdf4;color:#15803d}
+  .type-mid_term  {background:#eff6ff;color:#1d4ed8}
+  .type-final     {background:#faf5ff;color:#7e22ce}
+  .type-assignment{background:#fff7ed;color:#c2410c}
+  .type-practical {background:#fef9c3;color:#854d0e}
+  .type-makeup    {background:#fdf2f8;color:#9d174d}
+
+  /* Status pill */
+  .status-pill{border-radius:999px;padding:.25rem .85rem;font-size:.72rem;font-weight:700;display:inline-flex;align-items:center;gap:.35rem}
+  .pill-upcoming  {background:#eff6ff;color:#1d4ed8}
+  .pill-ongoing   {background:#fef9c3;color:#854d0e}
+  .pill-completed {background:#f0fdf4;color:#15803d}
+  .pill-published {background:#dcfce7;color:#15803d}
+
+  /* Stat chips */
+  .chip{background:#f1f5f9;border-radius:.5rem;padding:.2rem .6rem;font-size:.75rem;font-weight:600;color:#475569;display:inline-flex;align-items:center;gap:.3rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Exams</h5>
+    <p class="text-muted small mb-0">
+      {{ exams|length }} exam{{ exams|length|pluralize }} configured
+    </p>
+  </div>
+  <a href="{% url 'exam_create' %}" class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Create Exam
+  </a>
+</div>
+
+<!-- Year filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  {% for year in years %}
+  <a href="?year={{ year.pk }}{% if grade_id %}&grade={{ grade_id }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
+     class="filter-tab {% if year_id == year.pk|stringformat:'s' %}active{% endif %}">
+    {{ year.name }}
+    {% if year.is_current %}
+    <i class="bi bi-check-circle-fill ms-1" style="font-size:.7rem"></i>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Grade filter + Search -->
+<div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+  <a href="?{% if year_id %}year={{ year_id }}{% endif %}"
+     class="filter-tab {% if not grade_id %}active{% endif %}">
+    All Grades
+  </a>
+  {% for grade in grades %}
+  <a href="?{% if year_id %}year={{ year_id }}&{% endif %}grade={{ grade.pk }}{% if q %}&q={{ q }}{% endif %}"
+     class="filter-tab {% if grade_id == grade.pk|stringformat:'s' %}active{% endif %}">
+    {{ grade.name }}
+  </a>
+  {% endfor %}
+
+  <form method="get" class="d-flex gap-2 ms-auto">
+    {% if year_id  %}<input type="hidden" name="year"  value="{{ year_id }}">{% endif %}
+    {% if grade_id %}<input type="hidden" name="grade" value="{{ grade_id }}">{% endif %}
+    <input type="text" name="q" value="{{ q }}"
+           class="form-control search-bar"
+           placeholder="Search exam name…"
+           style="max-width:240px">
+    <button type="submit" class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-search"></i>
+    </button>
+    {% if q %}
+    <a href="?{% if year_id %}year={{ year_id }}&{% endif %}{% if grade_id %}grade={{ grade_id }}{% endif %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-x"></i>
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Exam</th>
+          <th>Type</th>
+          <th>Grade</th>
+          <th>Term</th>
+          <th>Date</th>
+          <th>Subjects</th>
+          <th>Status</th>
+          <th>Results</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for exam in exams %}
+        <tr>
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Exam name -->
+          <td>
+            <a href="{% url 'exam_detail' exam.pk %}"
+               class="fw-bold text-decoration-none text-dark">
+              {{ exam.name }}
+            </a>
+            <div class="text-muted" style="font-size:.72rem">
+              {{ exam.academic_year }}
+            </div>
+          </td>
+
+          <!-- Type -->
+          <td>
+            <span class="badge rounded-pill px-3 type-{{ exam.exam_type }}">
+              {{ exam.get_exam_type_display }}
+            </span>
+          </td>
+
+          <!-- Grade -->
+          <td>
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-3">
+              {{ exam.grade }}
+            </span>
+          </td>
+
+          <!-- Term -->
+          <td class="small text-muted">
+            {{ exam.term|default:"—" }}
+          </td>
+
+          <!-- Date range -->
+          <td>
+            <div class="small fw-semibold">{{ exam.start_date|date:"M d" }}</div>
+            <div class="text-muted" style="font-size:.72rem">
+              to {{ exam.end_date|date:"M d, Y" }}
+            </div>
+          </td>
+
+          <!-- Subjects scheduled -->
+          <td>
+            <span class="chip">
+              <i class="bi bi-book"></i>
+              {{ exam.schedule_count }} subject{{ exam.schedule_count|pluralize }}
+            </span>
+          </td>
+
+          <!-- Status -->
+          <td>
+            {% if exam.is_published %}
+              <span class="status-pill pill-published">
+                <i class="bi bi-globe"></i>Published
+              </span>
+            {% elif exam.is_completed %}
+              <span class="status-pill pill-completed">
+                <i class="bi bi-check-circle"></i>Completed
+              </span>
+            {% elif exam.start_date <= today %}
+              <span class="status-pill pill-ongoing">
+                <i class="bi bi-clock"></i>Ongoing
+              </span>
+            {% else %}
+              <span class="status-pill pill-upcoming">
+                <i class="bi bi-calendar"></i>Upcoming
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Results entered -->
+          <td>
+            {% if exam.result_count %}
+            <span class="chip" style="background:#f0fdf4;color:#15803d">
+              <i class="bi bi-check-circle"></i>
+              {{ exam.result_count }}
+            </span>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'exam_detail' exam.pk %}"
+                 class="action-icon text-primary" title="View">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'exam_edit' exam.pk %}"
+                 class="action-icon text-success" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'exam_publish_toggle' exam.pk %}"
+                 class="action-icon {% if exam.is_published %}text-warning{% else %}text-info{% endif %}"
+                 title="{% if exam.is_published %}Unpublish{% else %}Publish Results{% endif %}"
+                 onclick="return confirm('{% if exam.is_published %}Unpublish{% else %}Publish{% endif %} results for {{ exam.name }}?')">
+                <i class="bi bi-{% if exam.is_published %}eye-slash{% else %}globe{% endif %}"></i>
+              </a>
+              <a href="{% url 'exam_delete' exam.pk %}"
+                 class="action-icon text-danger" title="Delete"
+                 onclick="return confirm('Delete {{ exam.name }}? All results will be lost.')">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10">
+            <div class="empty-state">
+              <i class="bi bi-file-earmark-text fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No exams found</h6>
+              <p class="small mb-3">
+                {% if q %}No results for "{{ q }}"
+                {% else %}No exams configured for this period{% endif %}
+              </p>
+              <a href="{% url 'exam_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Create First Exam
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

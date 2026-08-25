@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block title %}Promote Students{% endblock %}
+{% block page_title %}Student Promotion{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.55rem .85rem;transition:border-color .2s,box-shadow .2s;font-size:.85rem}
+  .form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .year-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.5rem 2rem;color:#fff;margin-bottom:1.5rem}
+  .year-arrow{font-size:1.5rem;opacity:.7}
+  .grade-block{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;margin-bottom:1.25rem}
+  .grade-head{background:#f8f9fb;padding:.85rem 1.25rem;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between}
+  .student-row{display:flex;align-items:center;gap:.85rem;padding:.75rem 1.25rem;border-bottom:1px solid #f8f9fb;transition:background .15s}
+  .student-row:last-child{border-bottom:none}
+  .student-row:hover{background:#f8faff}
+  .avatar-xs{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.78rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;object-fit:cover}
+  .adm-no{font-family:monospace;font-size:.72rem;background:#f1f5f9;padding:.15rem .45rem;border-radius:.35rem;color:#475569}
+  .btn-promote{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#16a34a,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-promote:hover{opacity:.9;transform:translateY(-1px)}
+  .warn-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#92400e}
+  .no-next-year{background:#fff1f2;border:1px solid #fecaca;border-radius:.875rem;padding:1.25rem;text-align:center}
+  .empty-grade{text-align:center;padding:1.5rem;color:#9ca3af}
+</style>
+
+<!-- Year Banner -->
+<div class="year-banner">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+      <p class="opacity-75 mb-1 small text-uppercase fw-semibold">
+        <i class="bi bi-arrow-up-circle me-2"></i>Student Promotion
+      </p>
+      <h5 class="fw-bold mb-0">Promote to Next Academic Year</h5>
+    </div>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+      <div class="text-center">
+        <div class="fw-bold">{{ current_year.name|default:"Current Year" }}</div>
+        <div class="opacity-75 small">From</div>
+      </div>
+      <div class="year-arrow"><i class="bi bi-arrow-right"></i></div>
+      <div class="text-center">
+        <div class="fw-bold">{{ next_year.name|default:"Next Year" }}</div>
+        <div class="opacity-75 small">To</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- No next year warning -->
+{% if not next_year %}
+<div class="no-next-year mb-4">
+  <i class="bi bi-exclamation-circle text-danger fs-1 d-block mb-3"></i>
+  <h6 class="fw-bold text-dark">No Next Academic Year Found</h6>
+  <p class="text-muted small mb-3">
+    You must create the next academic year before promoting students.
+  </p>
+  <a href="{% url 'academic_year_create' %}" class="btn btn-primary rounded-pill px-4">
+    <i class="bi bi-plus-circle me-2"></i>Create Academic Year
+  </a>
+</div>
+{% else %}
+
+<!-- Warning -->
+<div class="warn-box mb-4">
+  <i class="bi bi-exclamation-triangle me-2"></i>
+  <strong>Important:</strong> Select the <strong>destination section</strong> for each student.
+  Students without a selected section will <strong>not</strong> be promoted.
+  This action creates new enrollments in <strong>{{ next_year.name }}</strong>.
+</div>
+
+{% if current_enrollments %}
+<form method="POST"
+      onsubmit="return confirm('Promote selected students to {{ next_year.name }}?')">
+  {% csrf_token %}
+
+  <!-- Group by grade -->
+  {% regroup current_enrollments by section.grade as grade_groups %}
+
+  {% for group in grade_groups %}
+  <div class="grade-block">
+    <div class="grade-head">
+      <div class="fw-bold">
+        <i class="bi bi-building me-2 text-primary"></i>{{ group.grouper }}
+      </div>
+      <span class="badge rounded-pill bg-primary-subtle text-primary px-3">
+        {{ group.list|length }} student{{ group.list|length|pluralize }}
+      </span>
+    </div>
+
+    {% for enr in group.list %}
+    <div class="student-row">
+
+      <!-- Avatar -->
+      {% if enr.student.photo %}
+      <img src="{{ enr.student.photo.url }}" class="avatar-xs" style="object-fit:cover" alt="">
+      {% else %}
+      <div class="avatar-xs">
+        {{ enr.student.user.first_name|first|upper }}{{ enr.student.user.last_name|first|upper }}
+      </div>
+      {% endif %}
+
+      <!-- Name & admission -->
+      <div class="flex-grow-1 min-w-0">
+        <div class="fw-semibold small text-truncate">{{ enr.student.user.get_full_name }}</div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="adm-no">{{ enr.student.admission_number }}</span>
+          <span class="text-muted" style="font-size:.73rem">
+            {{ enr.section.grade }} — {{ enr.section.name }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Destination section -->
+      <div style="min-width:160px">
+        <select name="section_{{ enr.pk }}" class="form-select">
+          <option value="">— Skip —</option>
+          {% for grade in grades %}
+          <optgroup label="{{ grade.name }}">
+            {% for sec in grade.sections.all %}
+            <option value="{{ sec.pk }}">{{ grade.name }} — {{ sec.name }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <!-- Submit -->
+  <div class="d-flex gap-3 justify-content-end mt-4">
+    <a href="{% url 'enrollment_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
+      Cancel
+    </a>
+    <button type="submit" class="btn btn-promote text-white">
+      <i class="bi bi-arrow-up-circle me-2"></i>Promote Selected Students
+    </button>
+  </div>
+
+</form>
+
+{% else %}
+<div class="form-card card p-5 text-center">
+  <i class="bi bi-people fs-1 text-muted opacity-25 d-block mb-3"></i>
+  <h6 class="fw-bold text-dark">No Students to Promote</h6>
+  <p class="text-muted small mb-0">
+    All students in <strong>{{ current_year.name }}</strong> have already been promoted
+    or there are no active enrollments.
+  </p>
+</div>
+{% endif %}
+
+{% endif %}
+
+{% endblock %}

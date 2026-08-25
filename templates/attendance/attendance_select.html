@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}Mark Attendance{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .step-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.5rem;display:flex;align-items:flex-start;gap:1rem;transition:box-shadow .2s}
+  .step-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .quick-btn{border:1.5px solid #e2e8f0;border-radius:.875rem;padding:.65rem 1.25rem;font-size:.85rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;display:flex;align-items:center;gap:.5rem}
+  .quick-btn:hover{border-color:#1a3c72;color:#1a3c72;background:#f8faff}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <!-- Page heading -->
+    <div class="mb-4">
+      <h5 class="fw-bold mb-1">Mark Attendance</h5>
+      <p class="text-muted small mb-0">
+        Select a class section and date to begin marking
+      </p>
+    </div>
+
+    <!-- How it works -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div>
+            <div class="fw-semibold small">Select Section</div>
+            <div class="text-muted" style="font-size:.78rem">
+              Pick the class you are marking for
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div>
+            <div class="fw-semibold small">Pick Date</div>
+            <div class="text-muted" style="font-size:.78rem">
+              Defaults to today — cannot be future
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div>
+            <div class="fw-semibold small">Mark Students</div>
+            <div class="text-muted" style="font-size:.78rem">
+              Present / Absent / Late / Excused
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Tip:</strong> If attendance was already marked for the
+      selected date, existing records will be shown and can be
+      <strong>edited</strong>. All students default to
+      <strong>Present</strong> on first mark.
+    </div>
+
+    <!-- Form -->
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Section -->
+        <div class="section-head">
+          <i class="bi bi-building me-2"></i>Class Section
+        </div>
+        <div class="mb-4">
+          <label>Section <span class="req">*</span></label>
+          {{ form.section }}
+          {% if form.section.errors %}
+          <small class="text-danger d-block mt-1">
+            {{ form.section.errors.0 }}
+          </small>
+          {% endif %}
+          <small class="text-muted">
+            Only sections in the current academic year are shown
+          </small>
+        </div>
+
+        <!-- Date -->
+        <div class="section-head">
+          <i class="bi bi-calendar-date me-2"></i>Date
+        </div>
+        <div class="mb-4">
+          <label>Attendance Date <span class="req">*</span></label>
+          {{ form.date }}
+          {% if form.date.errors %}
+          <small class="text-danger d-block mt-1">
+            {{ form.date.errors.0 }}
+          </small>
+          {% endif %}
+          <small class="text-muted">
+            Cannot be a future date
+          </small>
+        </div>
+
+        <!-- Quick date shortcuts -->
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          <button type="button" class="quick-btn" onclick="setDate(0)">
+            <i class="bi bi-calendar-check text-success"></i> Today
+          </button>
+          <button type="button" class="quick-btn" onclick="setDate(-1)">
+            <i class="bi bi-calendar-minus text-warning"></i> Yesterday
+          </button>
+          <button type="button" class="quick-btn" onclick="setDate(-2)">
+            <i class="bi bi-calendar2 text-secondary"></i> 2 Days Ago
+          </button>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'attendance_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            View Records
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-arrow-right-circle me-2"></i>Proceed to Mark
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Quick links -->
+    <div class="mt-4 d-flex flex-wrap gap-2">
+      <a href="{% url 'attendance_list' %}"
+         class="quick-btn">
+        <i class="bi bi-list-check text-primary"></i> All Records
+      </a>
+      <a href="{% url 'attendance_report' %}"
+         class="quick-btn">
+        <i class="bi bi-bar-chart text-success"></i> Attendance Report
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function setDate(daysOffset){
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  const yyyy = d.getFullYear();
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getDate()).padStart(2, '0');
+  const dateInput = document.querySelector('[name="date"]');
+  if(dateInput) dateInput.value = `${yyyy}-${mm}-${dd}`;
+}
+// Default to today on load
+document.addEventListener('DOMContentLoaded', () => {
+  const dateInput = document.querySelector('[name="date"]');
+  if(dateInput && !dateInput.value) setDate(0);
+});
+</script>
+
+{% endblock %}

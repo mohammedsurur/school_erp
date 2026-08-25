@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load academic_extras %} 
+
+{% block title %}Timetable{% endblock %}
+{% block page_title %}Timetable{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Layout ── */
+  .tt-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+
+  /* ── Timetable grid ── */
+  .tt-table{border-collapse:separate;border-spacing:4px;width:100%;table-layout:fixed}
+  .tt-table th{
+    background:linear-gradient(135deg,#1a3c72,#0ea5a0);
+    color:#fff;font-size:.75rem;text-transform:uppercase;
+    letter-spacing:.06em;font-weight:700;
+    padding:.85rem .75rem;border-radius:.5rem;text-align:center
+  }
+  .tt-table .period-col{
+    background:#f8f9fb;color:#374151;
+    font-size:.75rem;font-weight:700;
+    text-align:center;border-radius:.5rem;
+    padding:.75rem .5rem;min-width:90px;
+    border:1.5px solid #e9ecef
+  }
+  .tt-table .period-col .time{
+    font-family:monospace;font-size:.68rem;
+    color:#9ca3af;font-weight:500;margin-top:.2rem
+  }
+
+  /* ── Cells ── */
+  .tt-cell{
+    border-radius:.65rem;padding:.6rem .75rem;
+    vertical-align:top;min-width:120px;
+    position:relative;border:1.5px solid transparent
+  }
+  .tt-cell.filled{
+    background:#f0f7ff;border-color:#bfdbfe;cursor:default
+  }
+  .tt-cell.empty{
+    background:#fafafa;border:1.5px dashed #e2e8f0;
+    text-align:center;vertical-align:middle;cursor:pointer;
+    transition:background .2s,border-color .2s
+  }
+  .tt-cell.empty:hover{
+    background:#eff6ff;border-color:#93c5fd
+  }
+  .tt-cell.empty .add-hint{
+    color:#c7d2fe;font-size:1.1rem;display:block;margin-bottom:.15rem
+  }
+  .tt-cell.empty .add-text{
+    font-size:.65rem;color:#c7d2fe;font-weight:600
+  }
+
+  /* ── Entry card inside cell ── */
+  .entry-subject{
+    font-weight:700;font-size:.78rem;color:#1e293b;
+    line-height:1.2;margin-bottom:.3rem
+  }
+  .entry-teacher{
+    font-size:.7rem;color:#64748b;
+    display:flex;align-items:center;gap:.3rem
+  }
+  .entry-room{
+    font-size:.67rem;color:#94a3b8;margin-top:.2rem;
+    display:flex;align-items:center;gap:.3rem
+  }
+  .entry-delete{
+    position:absolute;top:4px;right:4px;
+    width:20px;height:20px;border-radius:50%;
+    background:rgba(239,68,68,.1);border:none;
+    color:#ef4444;font-size:.6rem;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .2s;cursor:pointer;
+    text-decoration:none
+  }
+  .tt-cell.filled:hover .entry-delete{opacity:1}
+
+  /* ── Day header colours ── */
+  .day-MON{background:linear-gradient(135deg,#1a3c72,#1e4d9e)!important}
+  .day-TUE{background:linear-gradient(135deg,#0e7490,#0ea5a0)!important}
+  .day-WED{background:linear-gradient(135deg,#15803d,#16a34a)!important}
+  .day-THU{background:linear-gradient(135deg,#b45309,#d97706)!important}
+  .day-FRI{background:linear-gradient(135deg,#7c3aed,#8b5cf6)!important}
+
+  /* ── Section selector ── */
+  .section-selector{
+    background:#fff;border-radius:1rem;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);
+    padding:1.25rem 1.5rem;margin-bottom:1.5rem
+  }
+  .no-section{
+    text-align:center;padding:4rem 2rem;color:#9ca3af
+  }
+  .legend-dot{
+    width:12px;height:12px;border-radius:3px;flex-shrink:0
+  }
+
+  /* ── Print ── */
+  @media print{
+    .topbar,.sidebar,.sidebar-overlay,.btn-add,
+    .section-selector .col-auto,
+    .entry-delete{display:none!important}
+    .main-content{margin-left:0!important}
+    .tt-cell.empty{display:none}
+  }
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Class Timetable</h5>
+    <p class="text-muted small mb-0">
+      {% if current_year %}{{ current_year.name }}{% endif %}
+      — Weekly schedule grid
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if section %}
+    <button onclick="window.print()"
+            class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-printer me-1"></i>Print
+    </button>
+    <a href="{% url 'timetable_entry_create' %}?section={{ section.pk }}"
+       class="btn btn-add text-white">
+      <i class="bi bi-plus-circle me-2"></i>Add Entry
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Section selector -->
+<div class="section-selector">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-5">
+      <label class="fw-semibold small mb-1">
+        <i class="bi bi-building me-1 text-primary"></i>Select Class / Section
+      </label>
+      <select name="section" class="form-select search-bar" onchange="this.form.submit()">
+        <option value="">— Choose a section —</option>
+        {% regroup sections by grade as grade_groups %}
+        {% for group in grade_groups %}
+        <optgroup label="{{ group.grouper }}">
+          {% for sec in group.list %}
+          <option value="{{ sec.pk }}"
+            {% if section_id == sec.pk|stringformat:'s' %}selected{% endif %}>
+            {{ sec.grade }} — {{ sec.name }}
+            {% if sec.class_teacher %} ({{ sec.class_teacher.get_full_name }}){% endif %}
+          </option>
+          {% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </div>
+    {% if section %}
+    <div class="col-auto">
+      <div class="d-flex align-items-center gap-3 py-2">
+        <div>
+          <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em">Class Teacher</div>
+          <div class="fw-semibold small">
+            {% if section.class_teacher %}
+            {{ section.class_teacher.get_full_name }}
+            {% else %}
+            <span class="text-muted">Not assigned</span>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em">Capacity</div>
+          <div class="fw-semibold small">{{ section.capacity }} students</div>
+        </div>
+        <div>
+          <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.05em">Periods</div>
+          <div class="fw-semibold small">{{ periods|length }} / day</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+{% if section %}
+
+<!-- Legend -->
+<div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+  <span class="text-muted small fw-semibold">Days:</span>
+  {% for day in days %}
+  <div class="d-flex align-items-center gap-1">
+    <div class="legend-dot" style="background:
+      {% if day == 'MON' %}#1a3c72
+      {% elif day == 'TUE' %}#0e7490
+      {% elif day == 'WED' %}#15803d
+      {% elif day == 'THU' %}#b45309
+      {% else %}#7c3aed{% endif %}">
+    </div>
+    <span class="small text-muted">{{ day }}</span>
+  </div>
+  {% endfor %}
+  <span class="ms-2 text-muted small">
+    <i class="bi bi-plus-circle text-primary me-1"></i>Click empty cell to add
+  </span>
+  <span class="text-muted small">
+    <i class="bi bi-x-circle text-danger me-1"></i>Hover filled cell to remove
+  </span>
+</div>
+
+<!-- Timetable grid -->
+<div class="tt-card card">
+  <div class="table-responsive p-3">
+    <table class="tt-table">
+      <thead>
+        <tr>
+          <!-- Period column header -->
+          <th style="width:100px;background:#f1f5f9;color:#374151">
+            <i class="bi bi-clock"></i>
+          </th>
+          <!-- Day headers -->
+          {% for day in days %}
+          <th class="day-{{ day }}">{{ day }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for period in periods %}
+        <tr>
+          <!-- Period info -->
+          <td class="period-col">
+            <div class="fw-bold">{{ period.name }}</div>
+            <div class="time">
+              {{ period.start_time|time:"H:i" }}–{{ period.end_time|time:"H:i" }}
+            </div>
+          </td>
+
+          <!-- Day cells -->
+          {% for day in days %}
+          {% with entry=timetable|dictlookup:day|dictlookup:period.pk %}
+          {% if entry %}
+          <!-- Filled cell -->
+          <td class="tt-cell filled">
+            <div class="entry-subject">{{ entry.subject.name }}</div>
+            <div class="entry-teacher">
+              <i class="bi bi-person" style="font-size:.65rem"></i>
+              {{ entry.teacher.get_full_name }}
+            </div>
+            {% if entry.room %}
+            <div class="entry-room">
+              <i class="bi bi-geo-alt" style="font-size:.65rem"></i>
+              {{ entry.room }}
+            </div>
+            {% endif %}
+            <!-- Delete button -->
+            <a href="{% url 'timetable_entry_delete' entry.pk %}"
+               class="entry-delete"
+               onclick="return confirm('Remove {{ entry.subject.name }} from this slot?')"
+               title="Remove entry">
+              <i class="bi bi-x-lg"></i>
+            </a>
+          </td>
+          {% else %}
+          <!-- Empty cell -->
+          <td class="tt-cell empty"
+              onclick="window.location='{% url 'timetable_entry_create' %}?section={{ section.pk }}&day={{ day }}&period={{ period.pk }}'">
+            <i class="bi bi-plus-circle-dotted add-hint"></i>
+            <span class="add-text">Add</span>
+          </td>
+          {% endif %}
+          {% endwith %}
+          {% endfor %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="text-center py-4">
+              <i class="bi bi-clock fs-1 text-muted opacity-25 d-block mb-2"></i>
+              <p class="text-muted small mb-0">
+                No periods configured.
+                <a href="{% url 'period_create' %}">Add periods first</a>.
+              </p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<!-- No section selected -->
+<div class="tt-card card">
+  <div class="no-section">
+    <i class="bi bi-table fs-1 d-block mb-3 opacity-25"></i>
+    <h6 class="fw-bold text-dark">Select a Section</h6>
+    <p class="small text-muted mb-0">
+      Choose a class section above to view or edit its weekly timetable.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

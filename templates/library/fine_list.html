@@ -1,0 +1,370 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Library Fines{% endblock %}
+{% block page_title %}Library Fines{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:48px;height:48px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.4rem 1rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .filter-tab.pending.active{background:#dc2626;border-color:#dc2626}
+  .filter-tab.pending{border-color:#fca5a5;color:#dc2626}
+  .filter-tab.pending:hover{background:#fff1f2}
+
+  /* ── Status badges ── */
+  .s-pending{background:#fee2e2;color:#dc2626;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-paid   {background:#dcfce7;color:#15803d;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .s-waived {background:#e0f2fe;color:#0369a1;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+
+  /* ── Row states ── */
+  .row-pending{background:#fff8f8!important}
+  .row-paid   {background:#f0fdf4!important}
+
+  /* ── Amount chip ── */
+  .amount-mono{font-family:monospace;font-weight:700;font-size:.9rem}
+  .amount-pending{color:#dc2626}
+  .amount-paid   {color:#15803d}
+  .amount-waived {color:#0369a1}
+
+  /* ── Days overdue chip ── */
+  .days-chip{background:#fff7ed;color:#c2410c;border-radius:.4rem;padding:.1rem .5rem;font-size:.7rem;font-weight:700;font-family:monospace}
+
+  /* ── Action buttons ── */
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+
+  .avatar-xs{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.68rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .adm-no{font-family:monospace;font-size:.68rem;color:#94a3b8}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Library Fines</h5>
+    <p class="text-muted small mb-0">
+      {{ fines.paginator.count }}
+      fine{{ fines.paginator.count|pluralize }} total
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'issuance_list' %}?status=overdue"
+       class="btn btn-outline-danger rounded-pill px-3">
+      <i class="bi bi-exclamation-circle me-1"></i>Overdue Books
+    </a>
+    <a href="{% url 'library_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-exclamation-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger amount-mono">
+          ETB {{ total_pending|floatformat:2 }}
+        </div>
+        <div class="stat-lbl">Pending Fines</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success amount-mono">
+          ETB {{ total_paid|floatformat:2 }}
+        </div>
+        <div class="stat-lbl">Collected</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-receipt text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger" id="pendingCount">—</div>
+        <div class="stat-lbl">Unpaid Records</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0f9ff">
+        <i class="bi bi-shield-check text-info"></i>
+      </div>
+      <div>
+        <div class="stat-num text-info" id="waivedCount">—</div>
+        <div class="stat-lbl">Waived</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter tabs -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'fine_list' %}"
+     class="filter-tab {% if not status %}active{% endif %}">
+    All
+  </a>
+  <a href="?status=pending"
+     class="filter-tab pending {% if status == 'pending' %}active{% endif %}">
+    <i class="bi bi-exclamation-circle me-1"></i>Pending
+  </a>
+  <a href="?status=paid"
+     class="filter-tab {% if status == 'paid' %}active{% endif %}">
+    <i class="bi bi-check-circle me-1"></i>Paid
+  </a>
+  <a href="?status=waived"
+     class="filter-tab {% if status == 'waived' %}active{% endif %}">
+    <i class="bi bi-shield-check me-1"></i>Waived
+  </a>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="fineTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Borrower</th>
+          <th>Book</th>
+          <th>Days Late</th>
+          <th>Rate/Day</th>
+          <th>Fine Amount</th>
+          <th>Status</th>
+          <th>Paid On</th>
+          <th>Collected By</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fine in fines %}
+        <tr class="{% if fine.status == 'pending' %}row-pending
+                   {% elif fine.status == 'paid' %}row-paid{% endif %}"
+            data-status="{{ fine.status }}">
+
+          <!-- # -->
+          <td class="text-muted small fw-semibold">
+            {{ fines.start_index|add:forloop.counter0 }}
+          </td>
+
+          <!-- Borrower -->
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-xs">
+                {% if fine.issuance.student %}
+                {{ fine.issuance.student.user.first_name|first|upper }}{{ fine.issuance.student.user.last_name|first|upper }}
+                {% elif fine.issuance.staff %}
+                {{ fine.issuance.staff.user.first_name|first|upper }}{{ fine.issuance.staff.user.last_name|first|upper }}
+                {% endif %}
+              </div>
+              <div>
+                <div class="fw-semibold small">
+                  {{ fine.issuance.borrower }}
+                </div>
+                {% if fine.issuance.student %}
+                <span class="adm-no">
+                  {{ fine.issuance.student.admission_number }}
+                </span>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+
+          <!-- Book -->
+          <td>
+            <a href="{% url 'issuance_detail' fine.issuance.pk %}"
+               class="fw-semibold small text-decoration-none text-dark">
+              {{ fine.issuance.book_copy.book.title|truncatechars:30 }}
+            </a>
+            <div class="text-muted" style="font-size:.68rem;font-family:monospace">
+              Due: {{ fine.issuance.due_date|date:"M d, Y" }}
+            </div>
+          </td>
+
+          <!-- Days overdue -->
+          <td class="text-center">
+            <span class="days-chip">
+              {{ fine.days_overdue }}d
+            </span>
+          </td>
+
+          <!-- Rate per day -->
+          <td class="small text-muted amount-mono">
+            ETB {{ fine.fine_per_day|floatformat:2 }}
+          </td>
+
+          <!-- Fine amount -->
+          <td>
+            <span class="amount-mono
+              {% if fine.status == 'pending' %}amount-pending
+              {% elif fine.status == 'paid' %}amount-paid
+              {% else %}amount-waived{% endif %}">
+              ETB {{ fine.total_amount|floatformat:2 }}
+            </span>
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="s-{{ fine.status }}">
+              {% if fine.status == 'pending' %}
+              <i class="bi bi-exclamation-circle me-1"></i>Pending
+              {% elif fine.status == 'paid' %}
+              <i class="bi bi-check-circle me-1"></i>Paid
+              {% else %}
+              <i class="bi bi-shield-check me-1"></i>Waived
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Paid date -->
+          <td class="small text-muted">
+            {{ fine.paid_date|date:"M d, Y"|default:"—" }}
+          </td>
+
+          <!-- Collected by -->
+          <td class="small text-muted">
+            {{ fine.collected_by.get_full_name|default:"—" }}
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1 align-items-center">
+              <a href="{% url 'issuance_detail' fine.issuance.pk %}"
+                 class="action-icon text-primary" title="View Issuance">
+                <i class="bi bi-eye"></i>
+              </a>
+              {% if fine.status == 'pending' %}
+              <a href="{% url 'fine_pay' fine.pk %}"
+                 class="action-icon text-success" title="Collect Fine">
+                <i class="bi bi-cash-coin"></i>
+              </a>
+              <a href="{% url 'fine_waive' fine.pk %}"
+                 class="action-icon text-info" title="Waive Fine">
+                <i class="bi bi-shield-check"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10">
+            <div class="empty-state">
+              <i class="bi bi-cash-coin fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No Fines Found</h6>
+              <p class="small text-muted mb-0">
+                {% if status %}
+                No <strong>{{ status }}</strong> fines at this time.
+                {% else %}
+                No overdue fines have been generated yet.
+                {% endif %}
+              </p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+
+      <!-- Footer totals (only when results exist) -->
+      {% if fines %}
+      <tfoot>
+        <tr style="background:#f8f9fb;border-top:2px solid #e9ecef">
+          <td colspan="5"
+              class="text-muted small text-uppercase fw-semibold"
+              style="padding:.85rem 1rem;letter-spacing:.05em">
+            Page Total ({{ fines|length }} records)
+          </td>
+          <td style="padding:.85rem 1rem">
+            <span class="amount-mono fw-bold" id="pageTotal">—</span>
+          </td>
+          <td colspan="4" style="padding:.85rem 1rem"></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if fines.has_other_pages %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center gap-1">
+    {% if fines.has_previous %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ fines.previous_page_number }}&status={{ status }}">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+    </li>
+    {% endif %}
+    {% for num in fines.paginator.page_range %}
+    <li class="page-item {% if fines.number == num %}active{% endif %}">
+      <a class="page-link rounded-3"
+         href="?page={{ num }}&status={{ status }}">{{ num }}</a>
+    </li>
+    {% endfor %}
+    {% if fines.has_next %}
+    <li class="page-item">
+      <a class="page-link rounded-3"
+         href="?page={{ fines.next_page_number }}&status={{ status }}">
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#fineTable tbody tr[data-status]');
+  let pending = 0, waived = 0, pageTotal = 0;
+
+  rows.forEach(row => {
+    const s   = row.dataset.status;
+    const amt = parseFloat(
+      row.querySelector('.amount-mono')?.textContent.replace('ETB ','') || 0
+    );
+    if(s === 'pending') pending++;
+    if(s === 'waived')  waived++;
+    pageTotal += isNaN(amt) ? 0 : amt;
+  });
+
+  const set = (id, val) => {
+    const el = document.getElementById(id); if(el) el.textContent = val;
+  };
+  set('pendingCount', pending || '0');
+  set('waivedCount',  waived  || '0');
+  set('pageTotal', 'ETB ' + pageTotal.toFixed(2));
+});
+</script>
+
+{% endblock %}

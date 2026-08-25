@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .preview-card{background:#f8f9fb;border-radius:.875rem;padding:1.25rem;border:1.5px solid #e2e8f0;transition:all .3s}
+  .preview-time{font-family:monospace;font-size:1.5rem;font-weight:700;color:#1a3c72;line-height:1}
+  .preview-sep{color:#0ea5a0;font-size:1.2rem;margin:0 .5rem}
+  .duration-badge{background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;border-radius:999px;padding:.3rem 1rem;font-size:.8rem;font-weight:700;display:inline-block;margin-top:.75rem}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-xl-5">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'period_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if period %}Edit period time slot{% else %}Add a new daily schedule period{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Tip:</strong> Periods must <strong>not overlap</strong> with
+      each other. The system checks automatically and will block you if
+      two periods share any time. Use the order number to control how
+      periods are sorted in the timetable.
+    </div>
+
+    <!-- Live preview card -->
+    <div class="preview-card mb-4 text-center">
+      <div class="text-muted small fw-semibold mb-2 text-uppercase"
+           style="letter-spacing:.06em;font-size:.7rem">
+        <i class="bi bi-eye me-1"></i>Period Preview
+      </div>
+      <div class="fw-bold mb-1" id="previewName" style="font-size:1rem;color:#1e293b">
+        {{ period.name|default:"Period Name" }}
+      </div>
+      <div class="d-flex align-items-center justify-content-center">
+        <span class="preview-time" id="previewStart">
+          {{ period.start_time|time:"H:i"|default:"--:--" }}
+        </span>
+        <span class="preview-sep">→</span>
+        <span class="preview-time" id="previewEnd">
+          {{ period.end_time|time:"H:i"|default:"--:--" }}
+        </span>
+      </div>
+      <div class="duration-badge" id="previewDuration">
+        <i class="bi bi-clock me-1"></i>
+        <span id="durationVal">— min</span>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Name & Order -->
+        <div class="section-head">
+          <i class="bi bi-tag me-2"></i>Period Details
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-8">
+            <label>Period Name <span class="req">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <small class="text-danger d-block mt-1">{{ form.name.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">e.g. Period 1, Break, Lunch, Period 5</small>
+          </div>
+          <div class="col-md-4">
+            <label>Order <span class="req">*</span></label>
+            {{ form.order }}
+            {% if form.order.errors %}
+            <small class="text-danger d-block mt-1">{{ form.order.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Sort position</small>
+          </div>
+        </div>
+
+        <!-- Time -->
+        <div class="section-head">
+          <i class="bi bi-clock me-2"></i>Time Slot
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Start Time <span class="req">*</span></label>
+            {{ form.start_time }}
+            {% if form.start_time.errors %}
+            <small class="text-danger d-block mt-1">{{ form.start_time.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>End Time <span class="req">*</span></label>
+            {{ form.end_time }}
+            {% if form.end_time.errors %}
+            <small class="text-danger d-block mt-1">{{ form.end_time.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'period_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if period %}Save Changes{% else %}Create Period{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const nameInput  = document.querySelector('[name="name"]');
+const startInput = document.querySelector('[name="start_time"]');
+const endInput   = document.querySelector('[name="end_time"]');
+
+function updatePreview(){
+  const name  = nameInput?.value  || 'Period Name';
+  const start = startInput?.value || '--:--';
+  const end   = endInput?.value   || '--:--';
+
+  document.getElementById('previewName').textContent  = name;
+  document.getElementById('previewStart').textContent = start;
+  document.getElementById('previewEnd').textContent   = end;
+
+  // Calculate duration
+  if(startInput?.value && endInput?.value){
+    const [sh, sm] = startInput.value.split(':').map(Number);
+    const [eh, em] = endInput.value.split(':').map(Number);
+    const diff = (eh * 60 + em) - (sh * 60 + sm);
+    document.getElementById('durationVal').textContent =
+      diff > 0 ? diff + ' min' : '— min';
+  } else {
+    document.getElementById('durationVal').textContent = '— min';
+  }
+}
+
+nameInput?.addEventListener('input',  updatePreview);
+startInput?.addEventListener('input', updatePreview);
+endInput?.addEventListener('input',   updatePreview);
+updatePreview();
+</script>
+
+{% endblock %}

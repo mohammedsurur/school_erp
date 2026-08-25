@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Communication{% endblock %}
+{% block page_title %}Communication{% endblock %}
+
+{% block content %}
+<style>
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.8rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem;transition:transform .2s,box-shadow .2s;text-decoration:none;color:inherit}
+  .stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.1);color:inherit}
+  .stat-icon{width:52px;height:52px;border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.75rem;color:#9ca3af;font-weight:500}
+
+  /* ── Priority badges ── */
+  .p-normal  {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .p-urgent  {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+  .p-critical{background:#fee2e2;color:#dc2626;border-radius:999px;padding:.18rem .65rem;font-size:.7rem;font-weight:700}
+
+  /* ── Audience badge ── */
+  .aud-badge{background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+
+  /* ── Announcement card ── */
+  .ann-card{border:none;border-radius:.875rem;box-shadow:0 2px 8px rgba(0,0,0,.05);padding:1rem 1.25rem;margin-bottom:.65rem;display:flex;align-items:flex-start;gap:.85rem;transition:transform .15s,box-shadow .15s;border-left:4px solid}
+  .ann-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.09)}
+  .ann-card.critical{border-left-color:#ef4444;background:#fff8f8}
+  .ann-card.urgent  {border-left-color:#f59e0b;background:#fffbeb}
+  .ann-card.normal  {border-left-color:#e2e8f0;background:#fff}
+  .ann-icon{width:38px;height:38px;border-radius:.75rem;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+
+  /* ── Section header ── */
+  .sec-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between}
+
+  /* ── Event pill ── */
+  .event-pill{border:none;border-radius:.875rem;padding:.85rem 1rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.85rem;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.05);transition:transform .15s}
+  .event-pill:hover{transform:translateY(-1px)}
+  .event-date{min-width:48px;text-align:center;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:.75rem;padding:.4rem;color:#fff;flex-shrink:0}
+  .event-day{font-size:1.2rem;font-weight:800;line-height:1}
+  .event-mon{font-size:.6rem;text-transform:uppercase;letter-spacing:.06em;opacity:.85}
+
+  /* ── Category dot ── */
+  .cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block}
+
+  /* ── Notif item ── */
+  .notif-item{display:flex;align-items:flex-start;gap:.75rem;padding:.75rem 0;border-bottom:1px solid #f1f5f9}
+  .notif-item:last-child{border-bottom:none}
+  .notif-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+  .notif-unread .notif-title{font-weight:700}
+  .unread-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:.35rem}
+
+  /* ── Message thread item ── */
+  .thread-item{display:flex;align-items:center;gap:.75rem;padding:.75rem 0;border-bottom:1px solid #f1f5f9;text-decoration:none;color:inherit;transition:background .15s}
+  .thread-item:last-child{border-bottom:none}
+  .thread-item:hover{background:#f8faff;border-radius:.5rem;padding-left:.5rem}
+  .thread-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.75rem;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .unread-badge{background:#ef4444;color:#fff;border-radius:999px;font-size:.65rem;font-weight:700;padding:.1rem .45rem;flex-shrink:0}
+
+  .event-cat-academic {background:#eff6ff;color:#1d4ed8}
+  .event-cat-exam     {background:#fee2e2;color:#dc2626}
+  .event-cat-holiday  {background:#f0fdf4;color:#15803d}
+  .event-cat-sport    {background:#fff7ed;color:#c2410c}
+  .event-cat-cultural {background:#faf5ff;color:#7c3aed}
+  .event-cat-meeting  {background:#f0f9ff;color:#0369a1}
+  .event-cat-other    {background:#f1f5f9;color:#64748b}
+  .event-cat-chip{border-radius:999px;padding:.15rem .6rem;font-size:.68rem;font-weight:700}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Communication</h5>
+    <p class="text-muted small mb-0">
+      <i class="bi bi-clock me-1"></i>{% now "l, F d, Y" %}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if request.user.role in 'super_admin,principal,admin_staff' %}
+    <a href="{% url 'announcement_create' %}"
+       class="btn btn-primary rounded-pill px-3 fw-semibold">
+      <i class="bi bi-megaphone me-2"></i>Post Announcement
+    </a>
+    <a href="{% url 'event_create' %}"
+       class="btn btn-outline-success rounded-pill px-3">
+      <i class="bi bi-calendar-plus me-1"></i>Add Event
+    </a>
+    {% endif %}
+    <a href="{% url 'new_thread' %}"
+       class="btn btn-outline-primary rounded-pill px-3">
+      <i class="bi bi-envelope-plus me-1"></i>New Message
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'announcement_list' %}" class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-megaphone text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">
+          {{ active_announcements|length }}
+        </div>
+        <div class="stat-lbl">Active Announcements</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'inbox' %}" class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-envelope text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">{{ unread_messages }}</div>
+        <div class="stat-lbl">Unread Messages</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'notification_list' %}" class="stat-card">
+      <div class="stat-icon" style="background:#fff7ed">
+        <i class="bi bi-bell text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning">{{ unread_notifs }}</div>
+        <div class="stat-lbl">Notifications</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'event_list' %}" class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-calendar-event text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success">{{ upcoming_events|length }}</div>
+        <div class="stat-lbl">Upcoming Events</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- LEFT: Announcements + Notifications -->
+  <div class="col-lg-8">
+
+    <!-- Active announcements -->
+    <div class="mb-4">
+      <div class="sec-head">
+        <span>
+          <i class="bi bi-megaphone me-2 text-primary"></i>
+          Active Announcements
+        </span>
+        <a href="{% url 'announcement_list' %}"
+           class="text-primary small fw-semibold text-decoration-none">
+          View All
+        </a>
+      </div>
+
+      {% if active_announcements %}
+      {% for ann in active_announcements %}
+      <a href="{% url 'announcement_detail' ann.pk %}"
+         class="ann-card {{ ann.priority }} text-decoration-none">
+
+        <div class="ann-icon
+          {% if ann.priority == 'critical' %}
+          " style="background:#fee2e2;color:#ef4444">
+          <i class="bi bi-exclamation-circle"></i>
+          {% elif ann.priority == 'urgent' %}
+          " style="background:#fef9c3;color:#f59e0b">
+          <i class="bi bi-exclamation-triangle"></i>
+          {% else %}
+          " style="background:#eff6ff;color:#1d4ed8">
+          <i class="bi bi-megaphone"></i>
+          {% endif %}
+        </div>
+
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="fw-bold small text-dark">{{ ann.title }}</span>
+            <span class="p-{{ ann.priority }}">
+              {{ ann.get_priority_display }}
+            </span>
+            <span class="aud-badge">{{ ann.get_audience_display }}</span>
+          </div>
+          <p class="text-muted small mb-1" style="line-height:1.5">
+            {{ ann.body|truncatechars:100 }}
+          </p>
+          <div class="text-muted" style="font-size:.7rem">
+            <i class="bi bi-person me-1"></i>
+            {{ ann.created_by.get_full_name|default:"System" }}
+            &nbsp;·&nbsp;
+            <i class="bi bi-clock me-1"></i>
+            {{ ann.created_at|timesince }} ago
+          </div>
+        </div>
+
+        <i class="bi bi-chevron-right text-muted flex-shrink-0"></i>
+      </a>
+      {% endfor %}
+      {% else %}
+      <div class="info-card card p-4 text-center text-muted">
+        <i class="bi bi-megaphone d-block fs-1 mb-2 opacity-25"></i>
+        <p class="small mb-0">No active announcements</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Recent notifications -->
+    <div class="info-card card p-4">
+      <div class="sec-head">
+        <span>
+          <i class="bi bi-bell me-2 text-warning"></i>
+          Recent Notifications
+        </span>
+        <div class="d-flex gap-2 align-items-center">
+          {% if unread_notifs %}
+          <a href="{% url 'notification_mark_all_read' %}"
+             class="text-muted small text-decoration-none">
+            Mark all read
+          </a>
+          {% endif %}
+          <a href="{% url 'notification_list' %}"
+             class="text-primary small fw-semibold text-decoration-none">
+            View All
+          </a>
+        </div>
+      </div>
+
+      {% if recent_notifs %}
+      {% for notif in recent_notifs %}
+      <a href="{% url 'notification_mark_read' notif.pk %}"
+         class="notif-item text-decoration-none
+         {% if not notif.is_read %}notif-unread{% endif %}">
+
+        <div class="notif-icon
+          {% if notif.notif_type == 'announcement' %}
+          " style="background:#eff6ff;color:#1d4ed8">
+          <i class="bi bi-megaphone"></i>
+          {% elif notif.notif_type == 'fee' %}
+          " style="background:#fef9c3;color:#854d0e">
+          <i class="bi bi-cash-coin"></i>
+          {% elif notif.notif_type == 'exam' %}
+          " style="background:#f0fdf4;color:#15803d">
+          <i class="bi bi-journal-check"></i>
+          {% elif notif.notif_type == 'message' %}
+          " style="background:#f0f9ff;color:#0369a1">
+          <i class="bi bi-envelope"></i>
+          {% elif notif.notif_type == 'library' %}
+          " style="background:#faf5ff;color:#7c3aed">
+          <i class="bi bi-book"></i>
+          {% elif notif.notif_type == 'transport' %}
+          " style="background:#fff7ed;color:#c2410c">
+          <i class="bi bi-bus-front"></i>
+          {% else %}
+          " style="background:#f1f5f9;color:#64748b">
+          <i class="bi bi-bell"></i>
+          {% endif %}
+        </div>
+
+        <div class="flex-grow-1 min-w-0">
+          <div class="notif-title small text-dark text-truncate">
+            {{ notif.title }}
+          </div>
+          {% if notif.body %}
+          <div class="text-muted" style="font-size:.75rem;line-height:1.4">
+            {{ notif.body|truncatechars:70 }}
+          </div>
+          {% endif %}
+          <div class="text-muted" style="font-size:.68rem;margin-top:.2rem">
+            {{ notif.created_at|timesince }} ago
+          </div>
+        </div>
+
+        {% if not notif.is_read %}
+        <div class="unread-dot"></div>
+        {% endif %}
+      </a>
+      {% endfor %}
+
+      {% else %}
+      <p class="text-muted small text-center py-2 mb-0">
+        No notifications yet
+      </p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Upcoming events + Quick actions -->
+  <div class="col-lg-4">
+
+    <!-- Quick actions -->
+    <div class="info-card card p-4 mb-4">
+      <div class="sec-head">
+        <span><i class="bi bi-lightning me-2 text-warning"></i>Quick Actions</span>
+      </div>
+      <div class="d-flex flex-column gap-2">
+        {% if request.user.role in 'super_admin,principal,admin_staff' %}
+        <a href="{% url 'announcement_create' %}"
+           class="btn btn-primary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-megaphone me-2"></i>Post Announcement
+        </a>
+        <a href="{% url 'event_create' %}"
+           class="btn btn-outline-success rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-calendar-plus me-2"></i>Create Event
+        </a>
+        {% endif %}
+        <a href="{% url 'new_thread' %}"
+           class="btn btn-outline-primary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-envelope-plus me-2"></i>Send Message
+        </a>
+        <a href="{% url 'inbox' %}"
+           class="btn btn-outline-secondary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-inbox me-2"></i>View Inbox
+          {% if unread_messages %}
+          <span class="badge bg-danger rounded-pill ms-1">
+            {{ unread_messages }}
+          </span>
+          {% endif %}
+        </a>
+        <a href="{% url 'announcement_list' %}"
+           class="btn btn-outline-secondary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-megaphone me-2"></i>All Announcements
+        </a>
+        <a href="{% url 'event_list' %}"
+           class="btn btn-outline-secondary rounded-3 text-start px-3"
+           style="font-size:.83rem">
+          <i class="bi bi-calendar-event me-2"></i>Events Calendar
+        </a>
+      </div>
+    </div>
+
+    <!-- Upcoming events -->
+    <div class="info-card card p-4">
+      <div class="sec-head">
+        <span>
+          <i class="bi bi-calendar-event me-2 text-success"></i>
+          Upcoming Events
+        </span>
+        <a href="{% url 'event_list' %}"
+           class="text-primary small fw-semibold text-decoration-none">
+          View All
+        </a>
+      </div>
+
+      {% if upcoming_events %}
+      {% for event in upcoming_events %}
+      <a href="{% url 'event_detail' event.pk %}"
+         class="event-pill text-decoration-none">
+
+        <!-- Date box -->
+        <div class="event-date">
+          <div class="event-day">{{ event.start_date|date:"d" }}</div>
+          <div class="event-mon">{{ event.start_date|date:"M" }}</div>
+        </div>
+
+        <!-- Event info -->
+        <div class="flex-grow-1 min-w-0">
+          <div class="fw-semibold small text-dark text-truncate">
+            {{ event.title }}
+          </div>
+          <div class="d-flex flex-wrap gap-1 mt-1">
+            <span class="event-cat-chip event-cat-{{ event.category }}">
+              {{ event.get_category_display }}
+            </span>
+            {% if event.location %}
+            <span class="text-muted" style="font-size:.68rem">
+              <i class="bi bi-geo-alt me-1"></i>{{ event.location|truncatechars:20 }}
+            </span>
+            {% endif %}
+          </div>
+          {% if not event.all_day %}
+          <div class="text-muted" style="font-size:.68rem;margin-top:.15rem">
+            <i class="bi bi-clock me-1"></i>{{ event.start_date|time:"H:i" }}
+          </div>
+          {% endif %}
+        </div>
+
+      </a>
+      {% endfor %}
+
+      {% else %}
+      <p class="text-muted small text-center py-2 mb-0">
+        No upcoming events
+      </p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

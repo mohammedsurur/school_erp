@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Vehicles{% endblock %}
+{% block page_title %}Vehicles{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700;white-space:nowrap}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+
+  /* ── Stat cards ── */
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.85rem}
+  .stat-icon{width:44px;height:44px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+  .stat-num{font-size:1.4rem;font-weight:800;line-height:1;margin-bottom:.1rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500}
+
+  /* ── Vehicle icon ── */
+  .vehicle-icon{width:42px;height:42px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#fff;flex-shrink:0}
+  .vi-bus    {background:linear-gradient(135deg,#1a3c72,#0ea5a0)}
+  .vi-minibus{background:linear-gradient(135deg,#7c3aed,#a78bfa)}
+  .vi-van    {background:linear-gradient(135deg,#0369a1,#06b6d4)}
+
+  /* ── Status badges ── */
+  .vs-active     {background:#dcfce7;color:#15803d;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .vs-maintenance{background:#fef9c3;color:#854d0e;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+  .vs-inactive   {background:#f1f5f9;color:#64748b;border-radius:999px;padding:.22rem .8rem;font-size:.72rem;font-weight:700}
+
+  /* ── Capacity bar ── */
+  .cap-mini{height:5px;background:#e9ecef;border-radius:999px;overflow:hidden;width:80px}
+  .cap-fill{height:100%;border-radius:999px}
+
+  /* ── Row states ── */
+  .row-maintenance{background:#fefce8!important}
+  .row-inactive   {opacity:.65}
+
+  /* ── Filter tabs ── */
+  .filter-tab{border:1.5px solid #e2e8f0;border-radius:999px;padding:.35rem .9rem;font-size:.82rem;font-weight:500;text-decoration:none;color:#374151;transition:all .2s;white-space:nowrap}
+  .filter-tab:hover{background:#f8faff;border-color:#1a3c72;color:#1a3c72}
+  .filter-tab.active{background:#1a3c72;border-color:#1a3c72;color:#fff}
+  .filter-tab.warn.active{background:#f59e0b;border-color:#f59e0b}
+  .filter-tab.warn{border-color:#fbbf24;color:#854d0e}
+
+  .plate-no{font-family:monospace;font-weight:700;font-size:.85rem;background:#f1f5f9;padding:.15rem .55rem;border-radius:.4rem;color:#374151;letter-spacing:.05em}
+  .search-bar{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.65rem 1rem;font-size:.875rem;transition:border-color .2s,box-shadow .2s}
+  .search-bar:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Vehicles</h5>
+    <p class="text-muted small mb-0">
+      {{ vehicles|length }} vehicle{{ vehicles|length|pluralize }}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'transport_dashboard' %}"
+       class="btn btn-outline-secondary rounded-pill px-3">
+      <i class="bi bi-grid me-1"></i>Dashboard
+    </a>
+    <a href="{% url 'vehicle_create' %}" class="btn btn-add text-white">
+      <i class="bi bi-plus-circle me-2"></i>Add Vehicle
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-truck text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary" id="cntAll">{{ vehicles|length }}</div>
+        <div class="stat-lbl">Total Vehicles</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success" id="cntActive">—</div>
+        <div class="stat-lbl">Active</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-wrench text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning" id="cntMaint">—</div>
+        <div class="stat-lbl">Maintenance</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f1f5f9">
+        <i class="bi bi-people text-secondary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-secondary" id="cntCapacity">—</div>
+        <div class="stat-lbl">Total Capacity</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter tabs + search -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'vehicle_list' %}"
+       class="filter-tab {% if not request.GET.status %}active{% endif %}">
+      All
+    </a>
+    <a href="?status=active"
+       class="filter-tab {% if request.GET.status == 'active' %}active{% endif %}">
+      <i class="bi bi-check-circle me-1"></i>Active
+    </a>
+    <a href="?status=maintenance"
+       class="filter-tab warn {% if request.GET.status == 'maintenance' %}active{% endif %}">
+      <i class="bi bi-wrench me-1"></i>Maintenance
+    </a>
+    <a href="?status=inactive"
+       class="filter-tab {% if request.GET.status == 'inactive' %}active{% endif %}">
+      <i class="bi bi-x-circle me-1"></i>Inactive
+    </a>
+  </div>
+  <input type="text" id="searchInput"
+         class="search-bar form-control"
+         style="max-width:260px"
+         placeholder="Search name or plate…"
+         oninput="filterVehicles(this.value)">
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="vehicleTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Vehicle</th>
+          <th>Type</th>
+          <th>Plate No.</th>
+          <th>Driver</th>
+          <th>Capacity</th>
+          <th>Routes</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vehicles %}
+        <tr data-name="{{ v.name|lower }} {{ v.plate_number|lower }}"
+            data-status="{{ v.status }}"
+            data-capacity="{{ v.capacity }}"
+            class="
+            {% if v.status == 'maintenance' %}row-maintenance
+            {% elif v.status == 'inactive' %}row-inactive
+            {% endif %}">
+
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Vehicle -->
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div class="vehicle-icon
+                {% if v.vehicle_type == 'bus' %}vi-bus
+                {% elif v.vehicle_type == 'minibus' %}vi-minibus
+                {% else %}vi-van{% endif %}">
+                <i class="bi bi-bus-front"></i>
+              </div>
+              <div>
+                <div class="fw-bold">{{ v.name }}</div>
+                <div class="text-muted" style="font-size:.72rem">
+                  {{ v.get_vehicle_type_display }}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Type -->
+          <td class="small text-muted">{{ v.get_vehicle_type_display }}</td>
+
+          <!-- Plate -->
+          <td><span class="plate-no">{{ v.plate_number }}</span></td>
+
+          <!-- Driver -->
+          <td>
+            {% if v.driver_name %}
+            <div class="small fw-semibold">{{ v.driver_name }}</div>
+            {% if v.driver_phone %}
+            <div class="text-muted" style="font-size:.72rem">
+              <i class="bi bi-telephone me-1"></i>{{ v.driver_phone }}
+            </div>
+            {% endif %}
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
+
+          <!-- Capacity -->
+          <td>
+            <div class="fw-semibold small">{{ v.capacity }} seats</div>
+          </td>
+
+          <!-- Routes -->
+          <td>
+            {% if v.route_count %}
+            <span class="badge rounded-pill bg-primary-subtle text-primary px-2">
+              {{ v.route_count }} route{{ v.route_count|pluralize }}
+            </span>
+            {% else %}
+            <span class="text-muted small">No routes</span>
+            {% endif %}
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="vs-{{ v.status }}">
+              {% if v.status == 'active' %}
+              <i class="bi bi-check-circle me-1"></i>Active
+              {% elif v.status == 'maintenance' %}
+              <i class="bi bi-wrench me-1"></i>Maintenance
+              {% else %}
+              <i class="bi bi-x-circle me-1"></i>Inactive
+              {% endif %}
+            </span>
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'vehicle_edit' v.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              {% if not v.routes.exists %}
+              <a href="{% url 'vehicle_delete' v.pk %}"
+                 class="action-icon text-danger" title="Delete"
+                 onclick="return confirm('Delete {{ v.name }}?')">
+                <i class="bi bi-trash"></i>
+              </a>
+              {% else %}
+              <span class="action-icon text-muted"
+                    title="Cannot delete — assigned to routes"
+                    style="cursor:not-allowed;opacity:.4">
+                <i class="bi bi-trash"></i>
+              </span>
+              {% endif %}
+            </div>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <i class="bi bi-truck fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No Vehicles Yet</h6>
+              <p class="small text-muted mb-3">
+                Register the school's buses, minibuses and vans.
+              </p>
+              <a href="{% url 'vehicle_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add First Vehicle
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Live search
+function filterVehicles(q){
+  const term = q.toLowerCase().trim();
+  const statusFilter = new URLSearchParams(window.location.search).get('status') || '';
+  document.querySelectorAll('#vehicleTable tbody tr[data-name]').forEach(row => {
+    const nameMatch   = !term || row.dataset.name.includes(term);
+    const statusMatch = !statusFilter || row.dataset.status === statusFilter;
+    row.style.display = (nameMatch && statusMatch) ? '' : 'none';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#vehicleTable tbody tr[data-status]');
+  let active = 0, maint = 0, cap = 0;
+  rows.forEach(r => {
+    if(r.dataset.status === 'active')      active++;
+    if(r.dataset.status === 'maintenance') maint++;
+    cap += parseInt(r.dataset.capacity) || 0;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('cntActive', active);
+  set('cntMaint',  maint);
+  set('cntCapacity', cap);
+
+  // Apply status filter on load
+  const status = new URLSearchParams(window.location.search).get('status') || '';
+  if(status){
+    rows.forEach(r => {
+      r.style.display = r.dataset.status === status ? '' : 'none';
+    });
+  }
+});
+</script>
+
+{% endblock %}

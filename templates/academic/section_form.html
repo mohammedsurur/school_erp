@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'section_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if section %}Edit section details{% else %}Add a new class section{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Tip:</strong> Each section belongs to one grade and one
+      academic year. Section name is usually a letter like
+      <strong>A</strong>, <strong>B</strong>, or <strong>C</strong>.
+      A teacher can only be assigned to one section as class teacher.
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Academic Info -->
+        <div class="section-head">
+          <i class="bi bi-building me-2"></i>Class Information
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label>Grade <span class="req">*</span></label>
+            {{ form.grade }}
+            {% if form.grade.errors %}
+            <small class="text-danger d-block mt-1">{{ form.grade.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Section Name <span class="req">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <small class="text-danger d-block mt-1">{{ form.name.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">e.g. A, B, C or East, West</small>
+          </div>
+          <div class="col-md-6">
+            <label>Academic Year <span class="req">*</span></label>
+            {{ form.academic_year }}
+            {% if form.academic_year.errors %}
+            <small class="text-danger d-block mt-1">{{ form.academic_year.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Capacity <span class="req">*</span></label>
+            {{ form.capacity }}
+            {% if form.capacity.errors %}
+            <small class="text-danger d-block mt-1">{{ form.capacity.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Maximum students (1–100)</small>
+          </div>
+        </div>
+
+        <!-- Class Teacher -->
+        <div class="section-head">
+          <i class="bi bi-person-badge me-2"></i>Class Teacher
+        </div>
+        <div class="mb-4">
+          <label>Assign Class Teacher</label>
+          {{ form.class_teacher }}
+          {% if form.class_teacher.errors %}
+          <small class="text-danger d-block mt-1">{{ form.class_teacher.errors.0 }}</small>
+          {% endif %}
+          <small class="text-muted">
+            Optional — only active teachers are shown
+          </small>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'section_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if section %}Save Changes{% else %}Create Section{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

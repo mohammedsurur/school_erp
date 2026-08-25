@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .tip-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.875rem;padding:1rem 1.25rem;font-size:.85rem;color:#1e40af}
+  .marks-preview{background:#f8f9fb;border-radius:.875rem;padding:1rem 1.25rem;margin-top:1rem}
+  .marks-bar{height:8px;background:#e9ecef;border-radius:999px;overflow:hidden;margin-top:.4rem}
+  .marks-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#ef4444,#1a3c72);transition:width .4s}
+  .req{color:#ef4444}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7 col-xl-6">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'subject_list' %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if subject %}Edit subject details{% else %}Add a new subject{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box mb-4">
+      <i class="bi bi-lightbulb me-2"></i>
+      <strong>Tip:</strong> Subject code must be <strong>unique</strong> across all grades
+      (e.g. <strong>MATH9</strong> for Grade 9 Mathematics).
+      Pass mark must always be <strong>less than</strong> full marks.
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Basic Info -->
+        <div class="section-head">
+          <i class="bi bi-book me-2"></i>Subject Information
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-8">
+            <label>Subject Name <span class="req">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <small class="text-danger d-block mt-1">{{ form.name.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">e.g. Mathematics, English Language</small>
+          </div>
+          <div class="col-md-4">
+            <label>Subject Code <span class="req">*</span></label>
+            {{ form.code }}
+            {% if form.code.errors %}
+            <small class="text-danger d-block mt-1">{{ form.code.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Must be unique</small>
+          </div>
+          <div class="col-12">
+            <label>Grade <span class="req">*</span></label>
+            {{ form.grade }}
+            {% if form.grade.errors %}
+            <small class="text-danger d-block mt-1">{{ form.grade.errors.0 }}</small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Marks -->
+        <div class="section-head">
+          <i class="bi bi-bar-chart me-2"></i>Marks Configuration
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label>Pass Mark <span class="req">*</span></label>
+            {{ form.pass_mark }}
+            {% if form.pass_mark.errors %}
+            <small class="text-danger d-block mt-1">{{ form.pass_mark.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Minimum marks to pass</small>
+          </div>
+          <div class="col-md-6">
+            <label>Full Marks <span class="req">*</span></label>
+            {{ form.full_marks }}
+            {% if form.full_marks.errors %}
+            <small class="text-danger d-block mt-1">{{ form.full_marks.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">Maximum achievable marks</small>
+          </div>
+        </div>
+
+        <!-- Live marks preview -->
+        <div class="marks-preview mb-4" id="marksPreview">
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-danger fw-semibold">
+              Pass: <span id="passVal">{{ form.pass_mark.value|default:'0' }}</span>
+            </span>
+            <span class="text-primary fw-semibold">
+              Full: <span id="fullVal">{{ form.full_marks.value|default:'100' }}</span>
+            </span>
+          </div>
+          <div class="marks-bar">
+            <div class="marks-bar-fill" id="marksBarFill"
+                 style="width:{% if form.pass_mark.value and form.full_marks.value %}{% widthratio form.pass_mark.value form.full_marks.value 100 %}{% else %}50{% endif %}%">
+            </div>
+          </div>
+          <div class="text-muted mt-1" style="font-size:.75rem" id="passPercent">
+            Pass threshold: <strong id="pctVal">—</strong>%
+          </div>
+        </div>
+
+        <!-- Type -->
+        <div class="section-head">
+          <i class="bi bi-tag me-2"></i>Subject Type
+        </div>
+        <div class="mb-4">
+          <div class="d-flex align-items-center gap-3 p-3 rounded-3"
+               style="background:#f8f9fb;border:1.5px solid #e2e8f0">
+            {{ form.is_core }}
+            <label class="mb-0" for="{{ form.is_core.id_for_label }}">
+              This is a <strong>Core Subject</strong>
+              <div class="text-muted" style="font-size:.78rem;font-weight:400">
+                Core subjects are compulsory. Elective subjects are optional.
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'subject_list' %}"
+             class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if subject %}Save Changes{% else %}Create Subject{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Live pass mark preview bar
+const passInput = document.querySelector('[name="pass_mark"]');
+const fullInput = document.querySelector('[name="full_marks"]');
+
+function updateBar(){
+  const pass = parseFloat(passInput?.value) || 0;
+  const full = parseFloat(fullInput?.value) || 100;
+  const pct  = full > 0 ? Math.min(100, Math.round(pass / full * 100)) : 0;
+
+  document.getElementById('passVal').textContent = pass;
+  document.getElementById('fullVal').textContent = full;
+  document.getElementById('marksBarFill').style.width = pct + '%';
+  document.getElementById('pctVal').textContent = pct;
+
+  // Colour warning if pass >= full
+  const bar = document.getElementById('marksBarFill');
+  bar.style.background = pct >= 100
+    ? 'linear-gradient(90deg,#dc2626,#ef4444)'
+    : 'linear-gradient(90deg,#ef4444,#1a3c72)';
+}
+
+passInput?.addEventListener('input', updateBar);
+fullInput?.addEventListener('input', updateBar);
+updateBar();
+</script>
+
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Grades{% endblock %}
+{% block page_title %}Grades{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.85rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;border:none;color:inherit;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .grade-badge{width:42px;height:42px;border-radius:.875rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .stat-pill{background:#f1f5f9;border-radius:999px;padding:.25rem .75rem;font-size:.78rem;font-weight:600;color:#475569;display:inline-flex;align-items:center;gap:.35rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Grades</h5>
+    <p class="text-muted small mb-0">
+      {{ grades|length }} grade{{ grades|length|pluralize }} configured
+    </p>
+  </div>
+  <a href="{% url 'grade_create' %}" class="btn btn-add text-white">
+    <i class="bi bi-plus-circle me-2"></i>Add Grade
+  </a>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th style="width:60px">Order</th>
+          <th>Grade</th>
+          <th>Description</th>
+          <th>Sections</th>
+          <th>Subjects</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grade in grades %}
+        <tr>
+          <td>
+            <div class="grade-badge">{{ grade.order }}</div>
+          </td>
+          <td>
+            <span class="fw-bold">{{ grade.name }}</span>
+          </td>
+          <td class="small text-muted">
+            {{ grade.description|default:"—"|truncatechars:60 }}
+          </td>
+          <td>
+            <span class="stat-pill">
+              <i class="bi bi-diagram-3"></i>
+              {{ grade.section_count }} section{{ grade.section_count|pluralize }}
+            </span>
+          </td>
+          <td>
+            <span class="stat-pill">
+              <i class="bi bi-book"></i>
+              {{ grade.subject_count }} subject{{ grade.subject_count|pluralize }}
+            </span>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'grade_edit' grade.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'grade_delete' grade.pk %}"
+                 class="action-icon text-danger" title="Delete"
+                 onclick="return confirm('Delete {{ grade.name }}? This cannot be undone.')">
+                <i class="bi bi-trash"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="bi bi-building fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No grades yet</h6>
+              <p class="small mb-3">
+                Create grades before adding sections and subjects.
+              </p>
+              <a href="{% url 'grade_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add First Grade
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

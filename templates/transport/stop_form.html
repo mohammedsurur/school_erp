@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Route context banner ── */
+  .route-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.1rem 1.5rem;color:#fff;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;position:relative;overflow:hidden}
+  .route-banner::before{content:"";position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .route-icon{width:44px;height:44px;border-radius:.875rem;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#fff;flex-shrink:0}
+
+  /* ── Stop preview ── */
+  .stop-preview{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:1rem;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem}
+  .stop-dot-lg{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0ea5a0,#1a3c72);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1rem;flex-shrink:0;box-shadow:0 0 0 4px #e0f2fe}
+
+  /* ── Existing stops mini-list ── */
+  .existing-stop{display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid #f1f5f9;font-size:.82rem}
+  .existing-stop:last-child{border-bottom:none}
+  .stop-order-chip{background:#eff6ff;color:#1d4ed8;border-radius:.4rem;padding:.12rem .55rem;font-size:.72rem;font-weight:700;font-family:monospace;flex-shrink:0;min-width:28px;text-align:center}
+  .stop-time-chip{font-family:monospace;font-size:.72rem;color:#64748b;background:#f1f5f9;padding:.12rem .4rem;border-radius:.35rem}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-xl-5">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'route_detail' route.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back to Route
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">
+          {% if stop %}Edit stop details{% else %}Add a pickup/drop-off stop{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Route context -->
+    <div class="route-banner">
+      <div class="route-icon">
+        <i class="bi bi-bus-front"></i>
+      </div>
+      <div style="position:relative;z-index:1">
+        <div style="opacity:.7;font-size:.72rem;margin-bottom:.2rem">
+          Adding stop to
+        </div>
+        <div class="fw-bold">{{ route.name }}</div>
+        <div style="opacity:.75;font-size:.78rem;margin-top:.2rem">
+          <i class="bi bi-geo-alt me-1"></i>
+          {{ route.start_point }} → {{ route.end_point }}
+          &nbsp;·&nbsp;
+          {{ route.stops.count }} stop{{ route.stops.count|pluralize }} existing
+        </div>
+      </div>
+    </div>
+
+    <!-- Stop preview -->
+    <div class="stop-preview">
+      <div class="stop-dot-lg" id="prevOrder">
+        {% if stop %}{{ stop.stop_order }}{% else %}?{% endif %}
+      </div>
+      <div>
+        <div class="fw-bold" id="prevName" style="font-size:.95rem;color:#1e293b">
+          {% if stop %}{{ stop.stop_name }}{% else %}Stop Name{% endif %}
+        </div>
+        <div class="text-muted small mt-1" id="prevLandmark">
+          {% if stop and stop.landmark %}
+          <i class="bi bi-geo me-1"></i>{{ stop.landmark }}
+          {% else %}
+          Landmark will appear here
+          {% endif %}
+        </div>
+        <div class="mt-1" id="prevTime"
+             style="{% if not stop or not stop.pickup_time %}display:none{% endif %}">
+          <span class="stop-time-chip" id="prevTimeVal">
+            {% if stop and stop.pickup_time %}{{ stop.pickup_time|time:"H:i" }}{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Stop details -->
+        <div class="section-head">
+          <i class="bi bi-pin-map me-2"></i>Stop Details
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-8">
+            <label>Stop Name <span class="req">*</span></label>
+            {{ form.stop_name }}
+            {% if form.stop_name.errors %}
+            <small class="text-danger d-block mt-1">{{ form.stop_name.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <label>Stop Order <span class="req">*</span></label>
+            {{ form.stop_order }}
+            {% if form.stop_order.errors %}
+            <small class="text-danger d-block mt-1">{{ form.stop_order.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">1 = first pickup</small>
+          </div>
+          <div class="col-md-5">
+            <label>Pickup Time</label>
+            {{ form.pickup_time }}
+            {% if form.pickup_time.errors %}
+            <small class="text-danger d-block mt-1">{{ form.pickup_time.errors.0 }}</small>
+            {% endif %}
+          </div>
+          <div class="col-md-7">
+            <label>Landmark</label>
+            {{ form.landmark }}
+            {% if form.landmark.errors %}
+            <small class="text-danger d-block mt-1">{{ form.landmark.errors.0 }}</small>
+            {% endif %}
+            <small class="text-muted">
+              Nearby landmark to help identify the stop
+            </small>
+          </div>
+        </div>
+
+        <!-- Existing stops on this route -->
+        {% with stops=route.stops.all %}
+        {% if stops %}
+        <div class="section-head">
+          <i class="bi bi-list-ol me-2"></i>Existing Stops on This Route
+        </div>
+        <div class="mb-4">
+          {% for s in stops %}
+          <div class="existing-stop
+            {% if stop and s.pk == stop.pk %}
+            " style="background:#eff6ff;border-radius:.5rem;padding:.5rem .75rem;margin-bottom:.25rem;border-bottom:none">
+            {% else %}">
+            {% endif %}
+            <span class="stop-order-chip">{{ s.stop_order }}</span>
+            <span class="fw-semibold flex-grow-1">{{ s.stop_name }}</span>
+            {% if s.pickup_time %}
+            <span class="stop-time-chip">{{ s.pickup_time|time:"H:i" }}</span>
+            {% endif %}
+            {% if stop and s.pk == stop.pk %}
+            <span class="badge bg-primary-subtle text-primary rounded-pill"
+                  style="font-size:.65rem">Editing</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'route_detail' route.pk %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if stop %}Save Changes{% else %}Add Stop{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const nameInp     = document.querySelector('[name="stop_name"]');
+const orderInp    = document.querySelector('[name="stop_order"]');
+const timeInp     = document.querySelector('[name="pickup_time"]');
+const landmarkInp = document.querySelector('[name="landmark"]');
+
+function updatePreview(){
+  const name     = nameInp?.value.trim()     || 'Stop Name';
+  const order    = orderInp?.value.trim()    || '?';
+  const time     = timeInp?.value            || '';
+  const landmark = landmarkInp?.value.trim() || 'Landmark will appear here';
+
+  document.getElementById('prevName').textContent    = name;
+  document.getElementById('prevOrder').textContent   = order;
+  document.getElementById('prevLandmark').innerHTML  = landmark !== 'Landmark will appear here'
+    ? `<i class="bi bi-geo me-1"></i>${landmark}` : landmark;
+
+  const prevTime    = document.getElementById('prevTime');
+  const prevTimeVal = document.getElementById('prevTimeVal');
+  if(time){
+    prevTime.style.display    = '';
+    prevTimeVal.textContent   = time;
+  } else {
+    prevTime.style.display = 'none';
+  }
+}
+
+nameInp?.addEventListener('input',     updatePreview);
+orderInp?.addEventListener('input',    updatePreview);
+timeInp?.addEventListener('input',     updatePreview);
+landmarkInp?.addEventListener('input', updatePreview);
+document.addEventListener('DOMContentLoaded', updatePreview);
+</script>
+
+{% endblock %}

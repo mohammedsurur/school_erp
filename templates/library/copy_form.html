@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+  .form-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.72rem 1rem;transition:border-color .2s,box-shadow .2s}
+  .form-control:focus,.form-select:focus{border-color:#1a3c72;box-shadow:0 0 0 .2rem rgba(26,60,114,.1);outline:none}
+  label{font-weight:500;font-size:.875rem;color:#374151;margin-bottom:.35rem;display:block}
+  .section-head{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;font-weight:700;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid #f1f5f9}
+  .btn-save{border-radius:.875rem;padding:.8rem 2.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-save:hover{opacity:.9;transform:translateY(-1px)}
+  .req{color:#ef4444}
+
+  /* ── Book summary banner ── */
+  .book-banner{background:linear-gradient(135deg,#1a3c72,#0ea5a0);border-radius:1rem;padding:1.25rem 1.5rem;color:#fff;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;position:relative;overflow:hidden}
+  .book-banner::before{content:"";position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.07)}
+  .book-icon-lg{width:52px;height:52px;border-radius:.875rem;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;flex-shrink:0}
+
+  /* ── Condition colours ── */
+  .cond-new    {border-left:4px solid #22c55e}
+  .cond-good   {border-left:4px solid #0ea5a0}
+  .cond-fair   {border-left:4px solid #f59e0b}
+  .cond-poor   {border-left:4px solid #f97316}
+  .cond-damaged{border-left:4px solid #ef4444}
+
+  /* ── Accession preview ── */
+  .acc-preview{background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:.75rem;padding:.85rem 1.1rem;font-family:monospace;font-size:1.1rem;font-weight:700;color:#1a3c72;text-align:center;letter-spacing:.1em}
+
+  /* ── Status info ── */
+  .status-note{background:#eff6ff;border:1px solid #bfdbfe;border-radius:.75rem;padding:.85rem 1rem;font-size:.82rem;color:#1e40af}
+</style>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-xl-5">
+
+    <!-- Back -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <a href="{% url 'book_detail' book.pk %}"
+         class="btn btn-outline-secondary rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i>Back
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ title }}</h5>
+        <p class="text-muted small mb-0">Physical copy registration</p>
+      </div>
+    </div>
+
+    <!-- Book summary -->
+    <div class="book-banner">
+      <div class="book-icon-lg" style="position:relative;z-index:1">
+        {% if book.cover_image %}
+        <img src="{{ book.cover_image.url }}"
+             style="width:100%;height:100%;object-fit:cover;border-radius:.75rem" alt="">
+        {% else %}
+        <i class="bi bi-journal-text"></i>
+        {% endif %}
+      </div>
+      <div style="position:relative;z-index:1">
+        <div class="fw-bold">{{ book.title }}</div>
+        <div style="opacity:.75;font-size:.8rem;margin-top:.2rem">
+          {% if book.author_names %}{{ book.author_names }} · {% endif %}
+          {{ book.total_copies }} cop{{ book.total_copies|pluralize:"y,ies" }} total
+        </div>
+        {% if book.isbn %}
+        <div style="opacity:.6;font-size:.72rem;font-family:monospace">
+          ISBN: {{ book.isbn }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="form-card card p-4">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger rounded-3 mb-3">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <!-- Accession number -->
+        <div class="section-head">
+          <i class="bi bi-upc me-2"></i>Identification
+        </div>
+        <div class="mb-3">
+          <label>Accession Number <span class="req">*</span></label>
+          {{ form.accession_number }}
+          {% if form.accession_number.errors %}
+          <small class="text-danger d-block mt-1">
+            {{ form.accession_number.errors.0 }}
+          </small>
+          {% endif %}
+          <small class="text-muted">
+            Unique identifier for this physical copy e.g. LIB-0042
+          </small>
+        </div>
+
+        <!-- Live preview -->
+        <div class="acc-preview mb-4" id="accPreview">
+          {{ copy.accession_number|default:"LIB-0000" }}
+        </div>
+
+        <!-- Condition & status -->
+        <div class="section-head">
+          <i class="bi bi-clipboard-check me-2"></i>Condition & Status
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label>Condition <span class="req">*</span></label>
+            {{ form.condition }}
+            {% if form.condition.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.condition.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label>Status <span class="req">*</span></label>
+            {{ form.status }}
+            {% if form.status.errors %}
+            <small class="text-danger d-block mt-1">
+              {{ form.status.errors.0 }}
+            </small>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Condition visual feedback -->
+        <div class="mb-4 p-3 rounded-3" id="conditionNote"
+             style="background:#f8f9fb;border:1.5px solid #e2e8f0;font-size:.8rem;color:#64748b">
+          <i class="bi bi-info-circle me-1"></i>
+          Select a condition to see guidance.
+        </div>
+
+        <!-- Acquired date & notes -->
+        <div class="section-head">
+          <i class="bi bi-calendar me-2"></i>Acquisition
+        </div>
+        <div class="mb-3">
+          <label>Acquired Date</label>
+          {{ form.acquired_date }}
+        </div>
+        <div class="mb-4">
+          <label>Notes</label>
+          {{ form.notes }}
+          <small class="text-muted">
+            Any remarks about this copy's history or condition
+          </small>
+        </div>
+
+        <!-- Status note -->
+        {% if copy %}
+        <div class="status-note mb-4">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>Note:</strong> Changing status to
+          <strong>Available</strong> will make this copy
+          issuable immediately.
+        </div>
+        {% endif %}
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'book_detail' book.pk %}"
+             class="btn btn-outline-secondary rounded-pill px-4">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-save text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            {% if copy %}Save Changes{% else %}Register Copy{% endif %}
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const CONDITION_NOTES = {
+  new:     { text: 'Brand new — never used.', colour: '#f0fdf4', border: '#86efac', icon: '🟢' },
+  good:    { text: 'Used but in good condition — no tears or marks.', colour: '#eff6ff', border: '#bfdbfe', icon: '🔵' },
+  fair:    { text: 'Noticeable wear — still fully readable.', colour: '#fef9c3', border: '#fde68a', icon: '🟡' },
+  poor:    { text: 'Heavy wear, torn pages or cover damage.', colour: '#fff7ed', border: '#fed7aa', icon: '🟠' },
+  damaged: { text: 'Significant damage — may need repair before issuing.', colour: '#fff1f2', border: '#fecaca', icon: '🔴' },
+};
+
+const condSel  = document.querySelector('[name="condition"]');
+const noteEl   = document.getElementById('conditionNote');
+const accInp   = document.querySelector('[name="accession_number"]');
+const accPrev  = document.getElementById('accPreview');
+
+function updateConditionNote(){
+  const val  = condSel?.value;
+  const info = CONDITION_NOTES[val];
+  if(!info){ return; }
+  noteEl.style.background   = info.colour;
+  noteEl.style.borderColor  = info.border;
+  noteEl.style.color        = '#374151';
+  noteEl.innerHTML = `${info.icon} <strong>${condSel.options[condSel.selectedIndex].text}:</strong> ${info.text}`;
+}
+
+accInp?.addEventListener('input', () => {
+  accPrev.textContent = accInp.value.trim().toUpperCase() || 'LIB-0000';
+});
+
+condSel?.addEventListener('change', updateConditionNote);
+document.addEventListener('DOMContentLoaded', () => {
+  updateConditionNote();
+  if(accInp?.value) accPrev.textContent = accInp.value.toUpperCase();
+});
+</script>
+
+{% endblock %}

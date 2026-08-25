@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Book Categories{% endblock %}
+{% block page_title %}Book Categories{% endblock %}
+
+{% block content %}
+<style>
+  .table-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+  .table thead th{background:#f8f9fb;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:2px solid #e9ecef;padding:.8rem 1rem;font-weight:700}
+  .table tbody td{padding:.85rem 1rem;vertical-align:middle;border-color:#f1f5f9}
+  .table tbody tr{transition:background .15s}
+  .table tbody tr:hover{background:#f8faff}
+  .btn-add{border-radius:.875rem;padding:.65rem 1.5rem;font-weight:600;background:linear-gradient(135deg,#1a3c72,#0ea5a0);border:none;transition:opacity .2s,transform .2s}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px)}
+  .action-icon{width:30px;height:30px;border-radius:.5rem;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:background .15s}
+  .action-icon:hover{background:#f1f5f9}
+  .cat-icon{width:40px;height:40px;border-radius:.875rem;background:linear-gradient(135deg,#1a3c72,#0ea5a0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.1rem 1.25rem;text-align:center}
+  .stat-num{font-size:1.6rem;font-weight:800;line-height:1;margin-bottom:.2rem}
+  .empty-state{text-align:center;padding:3rem 2rem;color:#9ca3af}
+</style>
+
+<!-- Top bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+  <div>
+    <h5 class="fw-bold mb-0">Book Categories</h5>
+    <p class="text-muted small mb-0">
+      {{ categories|length }} categor{{ categories|length|pluralize:"y,ies" }}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'library_category_create' %}" class="btn btn-add text-white">
+      <i class="bi bi-plus-circle me-2"></i>Add Category
+    </a>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-num text-primary">{{ categories|length }}</div>
+      <div class="text-muted small">Total Categories</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-num text-success" id="totalBooks">—</div>
+      <div class="text-muted small">Total Books</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-num text-info" id="avgBooks">—</div>
+      <div class="text-muted small">Avg Books / Category</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-num text-warning" id="topCat">—</div>
+      <div class="text-muted small">Largest Category</div>
+    </div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="table-card card">
+  <div class="table-responsive">
+    <table class="table mb-0" id="catTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Books</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categories %}
+        <tr data-books="{{ cat.book_count }}">
+          <td class="text-muted small fw-semibold">{{ forloop.counter }}</td>
+
+          <!-- Category name -->
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div class="cat-icon">
+                <i class="bi bi-tag"></i>
+              </div>
+              <span class="fw-bold">{{ cat.name }}</span>
+            </div>
+          </td>
+
+          <!-- Description -->
+          <td class="small text-muted">
+            {{ cat.description|default:"—"|truncatechars:60 }}
+          </td>
+
+          <!-- Book count -->
+          <td>
+            {% if cat.book_count %}
+            <a href="{% url 'book_list' %}?category={{ cat.pk }}"
+               class="badge rounded-pill bg-primary-subtle text-primary px-3 text-decoration-none">
+              <i class="bi bi-journal-text me-1"></i>
+              {{ cat.book_count }} book{{ cat.book_count|pluralize }}
+            </a>
+            {% else %}
+            <span class="text-muted small">No books yet</span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'library_category_edit' cat.pk %}"
+                 class="action-icon text-primary" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-tags fs-1 d-block mb-3 opacity-25"></i>
+              <h6 class="fw-bold text-dark">No categories yet</h6>
+              <p class="small text-muted mb-3">
+                Create categories like Fiction, Science, Mathematics…
+              </p>
+              <a href="{% url 'library_category_create' %}"
+                 class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-circle me-2"></i>Add First Category
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rows = document.querySelectorAll('#catTable tbody tr[data-books]');
+  let total = 0, top = 0;
+  rows.forEach(r => {
+    const n = parseInt(r.dataset.books) || 0;
+    total += n;
+    if(n > top) top = n;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('totalBooks', total || '0');
+  set('avgBooks',   rows.length > 0 ? (total / rows.length).toFixed(1) : '0');
+  set('topCat',     top || '0');
+});
+</script>
+
+{% endblock %}
