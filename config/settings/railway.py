@@ -1,6 +1,4 @@
-# config/settings/railway.py
-# Railway-specific settings.
-# Railway auto-sets DATABASE_URL and PORT environment variables.
+# config/settings/railway.py  — FIXED
 
 from .base import *
 import os
@@ -10,48 +8,71 @@ import dj_database_url
 #  Core
 # ─────────────────────────────────────────────
 
-DEBUG      = False
-SECRET_KEY = os.environ['SECRET_KEY']   # set in Railway dashboard
+DEBUG = False
 
+# FIX: use .get() with a dummy fallback for build phase
+# At runtime Railway injects the real SECRET_KEY
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'build-phase-temporary-key-replaced-at-runtime'
+)
+
+# Your Railway domain from image 4
 ALLOWED_HOSTS = [
-    '.railway.app',           # all Railway subdomains
-    '.up.railway.app',        # Railway deployment URLs
-    os.environ.get('RAILWAY_STATIC_URL', ''),
-    os.environ.get('CUSTOM_DOMAIN', ''),  # your custom domain if any
+    'schoolerp.up.railway.app',
+    '.railway.app',
+    '.up.railway.app',
+    os.environ.get('RAILWAY_PUBLIC_DOMAIN', ''),
+    os.environ.get('CUSTOM_DOMAIN', ''),
+    os.environ.get('ALLOWED_HOSTS', ''),
 ]
-# Remove empty strings
 ALLOWED_HOSTS = [h for h in ALLOWED_HOSTS if h]
 
 # ─────────────────────────────────────────────
-#  Database — Railway auto-provides DATABASE_URL
+#  Database
 # ─────────────────────────────────────────────
 
-DATABASES = {
-    'default': dj_database_url.config(
-        conn_max_age=600,
-        conn_health_checks=True,
-        ssl_require=True,
-    )
-}
+# Only configure DB if DATABASE_URL is available (not during build)
+_db_url = os.environ.get('DATABASE_URL', '')
+if _db_url:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=_db_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+            ssl_require=True,
+        )
+    }
+else:
+    # Fallback during build phase — no DB needed for collectstatic
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME':   '/tmp/build.sqlite3',
+        }
+    }
 
 # ─────────────────────────────────────────────
-#  Static files — WhiteNoise serves them
+#  Static files — WhiteNoise
 # ─────────────────────────────────────────────
 
-MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+# Insert WhiteNoise after SecurityMiddleware
+if 'whitenoise.middleware.WhiteNoiseMiddleware' not in MIDDLEWARE:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
+STATICFILES_STORAGE = (
+    'whitenoise.storage.CompressedManifestStaticFilesStorage'
+)
 MEDIA_URL  = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # ─────────────────────────────────────────────
-#  Security — HTTPS enforced by Railway
+#  Security
 # ─────────────────────────────────────────────
 
-SECURE_PROXY_SSL_HEADER       = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER        = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT            = True
 SESSION_COOKIE_SECURE          = True
 CSRF_COOKIE_SECURE             = True
@@ -61,43 +82,39 @@ SECURE_CONTENT_TYPE_NOSNIFF    = True
 X_FRAME_OPTIONS                = 'DENY'
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://schoolerp.up.railway.app',
     'https://*.railway.app',
     'https://*.up.railway.app',
 ]
-# Add your custom domain if set
 _custom = os.environ.get('CUSTOM_DOMAIN', '')
 if _custom:
     CSRF_TRUSTED_ORIGINS.append(f'https://{_custom}')
 
-# ─────────────────────────────────────────────
-#  CORS
-# ─────────────────────────────────────────────
-
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS   = [
+    'https://schoolerp.up.railway.app',
     'https://*.railway.app',
-    'https://*.up.railway.app',
 ]
-if _custom:
-    CORS_ALLOWED_ORIGINS.append(f'https://{_custom}')
 
 # ─────────────────────────────────────────────
-#  Email — console fallback (add SMTP later)
+#  Email
 # ─────────────────────────────────────────────
 
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
     'django.core.mail.backends.console.EmailBackend'
 )
-EMAIL_HOST          = os.environ.get('EMAIL_HOST', '')
+EMAIL_HOST          = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT          = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS       = True
 EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@school.com')
+DEFAULT_FROM_EMAIL  = os.environ.get(
+    'DEFAULT_FROM_EMAIL', 'noreply@schoolerp.up.railway.app'
+)
 
 # ─────────────────────────────────────────────
-#  Caching — Railway Redis (if added)
+#  Caching
 # ─────────────────────────────────────────────
 
 _redis_url = os.environ.get('REDIS_URL', '')
@@ -109,7 +126,6 @@ if _redis_url:
         }
     }
 else:
-    # Fallback to local memory cache if no Redis
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -117,7 +133,7 @@ else:
     }
 
 # ─────────────────────────────────────────────
-#  Logging — stdout so Railway dashboard shows it
+#  Logging — stdout for Railway dashboard
 # ─────────────────────────────────────────────
 
 LOGGING = {
@@ -145,16 +161,11 @@ LOGGING = {
             'level':     'INFO',
             'propagate': False,
         },
-        'django.security': {
-            'handlers':  ['console'],
-            'level':     'WARNING',
-            'propagate': False,
-        },
     },
 }
 
 # ─────────────────────────────────────────────
-#  DRF — JSON only in production
+#  DRF
 # ─────────────────────────────────────────────
 
 REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = [
@@ -162,7 +173,7 @@ REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = [
 ]
 
 # ─────────────────────────────────────────────
-#  Admin URL — obscure it
+#  Admin URL
 # ─────────────────────────────────────────────
 
 ADMIN_URL = os.environ.get('ADMIN_URL', 'admin/')
