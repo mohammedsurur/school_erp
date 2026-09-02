@@ -1,448 +1,903 @@
 {% load static %}
-
 <style>
-  /* ── Collapsible nav groups ── */
-  .nav-group-btn{
-    width:100%;background:none;border:none;
-    color:rgba(255,255,255,.4);
-    font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;font-weight:700;
-    padding:.7rem 1.25rem .25rem;
-    display:flex;align-items:center;justify-content:space-between;cursor:pointer;
-    transition:color .2s;
-  }
-  .nav-group-btn:hover{color:rgba(255,255,255,.7)}
-  .nav-group-btn .chevron{
-    font-size:.65rem;transition:transform .25s;
-    color:rgba(255,255,255,.35)
-  }
-  .nav-group-btn.collapsed .chevron{transform:rotate(-90deg)}
-  .nav-group-items{overflow:hidden;transition:max-height .3s ease}
-
-  /* ── Nav link ── */
-  .sidebar-nav .nav-link{
-    color:rgba(255,255,255,.75);
-    padding:.62rem 1.25rem;border-radius:.5rem;
-    margin:.1rem .75rem;
-    display:flex;align-items:center;gap:.65rem;
-    transition:background .2s,color .2s;
-    text-decoration:none;font-size:.875rem;
-    position:relative;
-  }
-  .sidebar-nav .nav-link:hover{background:rgba(255,255,255,.12);color:#fff}
-  .sidebar-nav .nav-link.active{background:rgba(255,255,255,.18);color:#fff}
-  .sidebar-nav .nav-link.active::before{
-    content:"";position:absolute;left:0;top:20%;bottom:20%;
-    width:3px;border-radius:0 3px 3px 0;
-    background:#fff;margin-left:.75rem;
-  }
-  .sidebar-nav .nav-link i{font-size:1rem;flex-shrink:0;width:18px;text-align:center}
-
-  /* ── Badge on link ── */
-  .nav-badge{
-    margin-left:auto;background:rgba(255,255,255,.2);
-    border-radius:999px;padding:.1rem .55rem;
-    font-size:.65rem;font-weight:700;color:#fff;flex-shrink:0
-  }
-
-  /* ── Sidebar footer ── */
-  .sidebar-footer{
-    padding:1rem 1.25rem;
-    border-top:1px solid rgba(255,255,255,.1);
-    margin-top:.5rem
-  }
-  .sidebar-footer .nav-link{margin:0;border-radius:.5rem;padding:.6rem 1rem}
-
-  .sidebar-sub-label {
-  font-size: .65rem;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  font-weight: 700;
-  color: #9ca3af;
-  padding: .55rem 1.25rem .2rem;
-  margin-top: .25rem;
+:root{
+  --sb-w:260px;--sb-mini:68px;
+  --sb-bg:#0f172a;--sb-border:rgba(255,255,255,.07);
+  --sb-text:#94a3b8;--sb-dim:#475569;
+  --sb-hover:rgba(255,255,255,.07);
+  --sb-active:rgba(99,179,237,.15);
+  --sb-accent:#3b82f6;--sb-accent2:#0ea5e9;
+  --sb-r:.55rem;--sb-t:.22s ease;
 }
+
+/* ── Shell ── */
+#adminSidebar{
+  position:fixed;top:0;left:0;bottom:0;
+  width:var(--sb-w);
+  background:var(--sb-bg);
+  display:flex;flex-direction:column;
+  z-index:1040;
+  transition:width var(--sb-t);
+  border-right:1px solid var(--sb-border);
+  box-shadow:2px 0 20px rgba(0,0,0,.35);
+}
+#adminSidebar.sb-mini{width:var(--sb-mini)}
+
+/* ── Header ── */
+.sb-hd{
+  display:flex;align-items:center;gap:.75rem;
+  padding:.9rem 1rem;
+  border-bottom:1px solid var(--sb-border);
+  flex-shrink:0;min-height:62px;
+  position:relative;overflow:visible;
+}
+.sb-logo{
+  width:36px;height:36px;flex-shrink:0;
+  border-radius:.6rem;
+  background:linear-gradient(135deg,#1d4ed8,#0ea5e9);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.95rem;font-weight:900;color:#fff;
+  box-shadow:0 2px 8px rgba(29,78,216,.4);
+}
+.sb-hd-text{overflow:hidden;transition:opacity var(--sb-t),width var(--sb-t);}
+.sb-hd-title{font-size:.82rem;font-weight:700;color:#fff;white-space:nowrap;}
+.sb-hd-sub{font-size:.67rem;color:var(--sb-dim);white-space:nowrap;}
+#adminSidebar.sb-mini .sb-hd-text{opacity:0;width:0;}
+
+/* Toggle pill */
+.sb-tog{
+  position:absolute;right:-11px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;border-radius:50%;
+  background:#1d4ed8;border:2px solid var(--sb-bg);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#fff;font-size:.6rem;
+  transition:background .2s,transform .2s;z-index:10;
+}
+.sb-tog:hover{background:#0ea5e9;}
+#adminSidebar.sb-mini .sb-tog i{transform:rotate(180deg);}
+
+/* ── Search ── */
+.sb-srch{
+  padding:.65rem .85rem;
+  border-bottom:1px solid var(--sb-border);
+  flex-shrink:0;
+}
+.sb-srch-wrap{position:relative;}
+.sb-srch-wrap i{
+  position:absolute;left:.7rem;top:50%;transform:translateY(-50%);
+  color:var(--sb-dim);font-size:.78rem;pointer-events:none;
+}
+.sb-srch input{
+  width:100%;padding:.48rem .75rem .48rem 2rem;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--sb-border);
+  border-radius:var(--sb-r);
+  color:var(--sb-text);font-size:.79rem;outline:none;
+  transition:border-color .2s,background .2s;
+}
+.sb-srch input::placeholder{color:var(--sb-dim);}
+.sb-srch input:focus{border-color:#1d4ed8;background:rgba(29,78,216,.08);}
+#adminSidebar.sb-mini .sb-srch{display:none;}
+
+/* ── Scrollable body ── */
+.sb-body{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  padding:.5rem 0 .75rem;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,.08) transparent;
+}
+.sb-body::-webkit-scrollbar{width:3px;}
+.sb-body::-webkit-scrollbar-thumb{
+  background:rgba(255,255,255,.1);border-radius:2px;
+}
+
+/* ── Section label ── */
+.sb-lbl{
+  font-size:.59rem;text-transform:uppercase;
+  letter-spacing:.12em;font-weight:700;
+  color:var(--sb-dim);
+  padding:.9rem .9rem .3rem;
+  white-space:nowrap;overflow:hidden;
+  transition:opacity var(--sb-t);
+}
+#adminSidebar.sb-mini .sb-lbl{opacity:0;height:0;padding:0;}
+
+/* ── Item (link + group header) ── */
+.sb-lnk,.sb-grp-hd{
+  display:flex;align-items:center;gap:.65rem;
+  padding:.55rem .85rem;
+  margin:.08rem .55rem;
+  border-radius:var(--sb-r);
+  color:var(--sb-text);
+  text-decoration:none;font-size:.82rem;font-weight:500;
+  cursor:pointer;transition:all var(--sb-t);
+  white-space:nowrap;overflow:hidden;
+  position:relative;user-select:none;
+}
+.sb-lnk:hover,.sb-grp-hd:hover{
+  background:var(--sb-hover);color:#e2e8f0;
+  text-decoration:none;
+}
+.sb-lnk.on{
+  background:var(--sb-active);color:#93c5fd;font-weight:600;
+}
+.sb-lnk.on::before{
+  content:'';position:absolute;left:0;top:18%;bottom:18%;
+  width:3px;background:var(--sb-accent);
+  border-radius:0 3px 3px 0;
+}
+
+/* Icon box */
+.sb-ico{
+  width:28px;height:28px;flex-shrink:0;
+  border-radius:.45rem;
+  background:rgba(255,255,255,.05);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.82rem;transition:background var(--sb-t);
+}
+.sb-lnk:hover .sb-ico,.sb-grp-hd:hover .sb-ico,
+.sb-lnk.on .sb-ico{background:rgba(255,255,255,.1);}
+
+/* Label span */
+.sb-txt{flex:1;transition:opacity var(--sb-t);}
+#adminSidebar.sb-mini .sb-txt{opacity:0;width:0;overflow:hidden;}
+
+/* Badge */
+.sb-bdg{
+  flex-shrink:0;background:#ef4444;color:#fff;
+  font-size:.57rem;font-weight:700;
+  border-radius:999px;padding:.08rem .42rem;
+  transition:opacity var(--sb-t);
+}
+#adminSidebar.sb-mini .sb-bdg{opacity:0;}
+
+/* Arrow on group */
+.sb-arr{
+  flex-shrink:0;margin-left:auto;
+  font-size:.62rem;color:var(--sb-dim);
+  transition:transform var(--sb-t);
+}
+.sb-grp-hd.open .sb-arr{transform:rotate(180deg);}
+#adminSidebar.sb-mini .sb-arr{display:none;}
+
+/* ── Group children ── */
+.sb-kids{
+  overflow:hidden;max-height:0;
+  transition:max-height .3s cubic-bezier(.4,0,.2,1);
+}
+.sb-kids.open{max-height:800px;}
+.sb-kids .sb-lnk{
+  padding:.48rem .85rem .48rem 1.1rem;
+  font-size:.79rem;
+}
+.sb-kids .sb-ico{width:24px;height:24px;font-size:.75rem;}
+
+/* Tooltip (mini mode) */
+#adminSidebar.sb-mini .sb-lnk,
+#adminSidebar.sb-mini .sb-grp-hd{
+  justify-content:center;padding:.6rem;
+}
+#adminSidebar.sb-mini .sb-lnk:hover::after{
+  content:attr(data-tip);
+  position:absolute;left:calc(var(--sb-mini) + 6px);top:50%;
+  transform:translateY(-50%);
+  background:#1e293b;color:#e2e8f0;
+  padding:.35rem .8rem;border-radius:.5rem;
+  font-size:.76rem;white-space:nowrap;z-index:200;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  border:1px solid var(--sb-border);
+  pointer-events:none;
+}
+
+/* ── Divider ── */
+.sb-div{
+  height:1px;background:var(--sb-border);
+  margin:.5rem .85rem;
+}
+
+/* ── Footer ── */
+.sb-ft{
+  flex-shrink:0;
+  border-top:1px solid var(--sb-border);
+  padding:.75rem .85rem;
+}
+.sb-user{
+  display:flex;align-items:center;gap:.65rem;
+  padding:.5rem .6rem;border-radius:var(--sb-r);
+  cursor:pointer;text-decoration:none;
+  transition:background var(--sb-t);
+}
+.sb-user:hover{background:var(--sb-hover);}
+.sb-av{
+  width:32px;height:32px;flex-shrink:0;border-radius:50%;
+  background:linear-gradient(135deg,#7c3aed,#a78bfa);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:700;color:#fff;
+}
+.sb-uname{font-size:.79rem;font-weight:600;color:#e2e8f0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-urole{font-size:.66rem;color:var(--sb-dim);white-space:nowrap;}
+#adminSidebar.sb-mini .sb-uinfo{display:none;}
+
+.sb-out{
+  display:flex;align-items:center;gap:.65rem;
+  padding:.45rem .6rem;margin-top:.25rem;
+  border-radius:var(--sb-r);
+  color:#f87171;font-size:.8rem;font-weight:500;
+  cursor:pointer;text-decoration:none;
+  transition:background var(--sb-t);
+}
+.sb-out:hover{background:rgba(239,68,68,.1);color:#f87171;text-decoration:none;}
+#adminSidebar.sb-mini .sb-out{justify-content:center;}
+#adminSidebar.sb-mini .sb-out span{display:none;}
+
+/* ── No results ── */
+.sb-empty{
+  text-align:center;padding:1.5rem 1rem;
+  color:var(--sb-dim);font-size:.76rem;display:none;
+}
+
+/* ── Mobile overlay ── */
+.sb-veil{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.6);z-index:1039;
+  backdrop-filter:blur(2px);
+}
+@media(max-width:768px){
+  #adminSidebar{transform:translateX(-100%);width:var(--sb-w)!important;}
+  #adminSidebar.sb-open{transform:translateX(0);}
+  .sb-veil.show{display:block;}
+  /* Mobile toggle button */
+  .sb-mob-btn{
+    position:fixed;top:1rem;left:1rem;z-index:1038;
+    width:40px;height:40px;border-radius:.6rem;
+    background:#1d4ed8;border:none;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:1rem;cursor:pointer;
+    box-shadow:0 2px 8px rgba(0,0,0,.4);
+  }
+}
+@media(min-width:769px){.sb-mob-btn{display:none;}}
 </style>
 
-<!-- ══════════════════════════════════ -->
-<!--  DASHBOARD                        -->
-<!-- ══════════════════════════════════ -->
-<a href="{% url 'admin_dashboard' %}"
-   class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
-  <i class="bi bi-speedometer2"></i> Dashboard
-</a>
-
-<!-- ══════════════════════════════════ -->
-<!--  PEOPLE                           -->
-<!-- ══════════════════════════════════ -->
-<button class="nav-group-btn" onclick="toggleGroup(this,'grpPeople')">
-  <span>People</span><i class="bi bi-chevron-down chevron"></i>
+<!-- Mobile toggle -->
+<button class="sb-mob-btn" onclick="sbMobOpen()">
+  <i class="bi bi-list"></i>
 </button>
-<div class="nav-group-items" id="grpPeople">
-  <a href="{% url 'user_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">
-    <i class="bi bi-people"></i> All Users
-  </a>
-  <a href="{% url 'user_create' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'user_create' %}active{% endif %}">
-    <i class="bi bi-person-plus"></i> Add User
-  </a>
-  <a href="{% url 'student_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'student_list' %}active{% endif %}">
-    <i class="bi bi-mortarboard"></i> Students
-  </a>
-  <a href="{% url 'student_create' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'student_create' %}active{% endif %}">
-    <i class="bi bi-person-add"></i> Add Student
-  </a>
-  <a href="{% url 'enrollment_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'enrollment_list' %}active{% endif %}">
-    <i class="bi bi-journal-check"></i> Enrollments
-  </a>
-  <a href="{% url 'staff_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'staff_list' %}active{% endif %}">
-    <i class="bi bi-person-badge"></i> Staff
-  </a>
-  <a href="{% url 'parent_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'parent_list' %}active{% endif %}">
-    <i class="bi bi-people-fill"></i> Parents
-  </a>
-</div>
 
-<!-- ══════════════════════════════════ -->
-<!--  ACADEMIC                         -->
-<!-- ══════════════════════════════════ -->
-<button class="nav-group-btn" onclick="toggleGroup(this,'grpAcademic')">
-  <span>Academic</span><i class="bi bi-chevron-down chevron"></i>
-</button>
-<div class="nav-group-items" id="grpAcademic">
-  <a href="{% url 'academic_year_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'academic_year_list' %}active{% endif %}">
-    <i class="bi bi-calendar2-range"></i> Academic Years
-  </a>
-  <a href="{% url 'term_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'term_list' %}active{% endif %}">
-    <i class="bi bi-calendar3"></i> Terms
-  </a>
-  <a href="{% url 'grade_list' %}"
-   class="nav-link {% if request.resolver_match.url_name == 'grade_list' %}active{% endif %}">
-  <i class="bi bi-building"></i> Grades
-  </a>
-  <a href="{% url 'section_list' %}"
-    class="nav-link {% if request.resolver_match.url_name == 'section_list' %}active{% endif %}">
-    <i class="bi bi-diagram-3"></i> Sections
-  </a>
-  <a href="{% url 'subject_list' %}"
-   class="nav-link {% if request.resolver_match.url_name == 'subject_list' %}active{% endif %}">
-  <i class="bi bi-book"></i> Subjects
-  </a>
-  <a href="{% url 'subject_teacher_list' %}"
-    class="nav-link {% if request.resolver_match.url_name == 'subject_teacher_list' %}active{% endif %}">
-    <i class="bi bi-person-workspace"></i> Subject–Teachers
-  </a>
-  <a href="{% url 'timetable_view' %}"
-    class="nav-link {% if request.resolver_match.url_name == 'timetable_view' %}active{% endif %}">
-    <i class="bi bi-table"></i> Timetable
-  </a>
-  <a href="{% url 'period_list' %}"
-    class="nav-link {% if request.resolver_match.url_name == 'period_list' %}active{% endif %}">
-    <i class="bi bi-clock"></i> Periods
-  </a>
-</div>
+<!-- Overlay -->
+<div class="sb-veil" id="sbVeil" onclick="sbMobClose()"></div>
 
-<!-- ══════════════════════════════════ -->
-<!--  OPERATIONS                       -->
-<!-- ══════════════════════════════════ -->
-<button class="nav-group-btn" onclick="toggleGroup(this,'grpOps')">
-  <span>Operations</span><i class="bi bi-chevron-down chevron"></i>
-</button>
-<div class="nav-group-items" id="grpOps">
-  <!-- Attendance -->
-  <a href="{% url 'attendance_select' %}"
-     class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}">
-    <i class="bi bi-check2-square"></i> Mark Attendance
-  </a>
-  <a href="{% url 'attendance_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'attendance_list' %}active{% endif %}">
-    <i class="bi bi-list-check"></i> Attendance Records
-  </a>
-  <a href="{% url 'attendance_report' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'attendance_report' %}active{% endif %}">
-    <i class="bi bi-bar-chart"></i> Attendance Report
-  </a>
-    <!-- Exams -->
-  <a href="{% url 'exam_list' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'exam_list' %}active{% endif %}">
-    <i class="bi bi-file-earmark-text"></i> Exams
-  </a>
-  <a href="{% url 'exam_create' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'exam_create' %}active{% endif %}">
-    <i class="bi bi-plus-circle"></i> Create Exam
-  </a>
-  <a href="{% url 'exam_list' %}"
-   class="nav-link {% if request.resolver_match.url_name in 'result_entry,result_list,exam_detail,schedule_create' %}active{% endif %}">
-  <i class="bi bi-pencil-square"></i> Enter Results
-</a>
+<!-- ══ SIDEBAR ══ -->
+<nav id="adminSidebar">
 
-  <!-- Operations → Fee Management -->
-  <a href="{% url 'student_fee_list' %}"
-    class="nav-link {% if 'fee' in request.resolver_match.url_name %}active{% endif %}">
-    <i class="bi bi-cash-coin"></i> Fee Management
-  </a>
-  <a href="{% url 'fee_structure_list' %}"
-    class="nav-link {% if request.resolver_match.url_name == 'fee_structure_list' %}active{% endif %}">
-    <i class="bi bi-list-check"></i> Fee Structures
-  </a>
-  <a href="{% url 'daily_collection' %}"
-    class="nav-link {% if request.resolver_match.url_name == 'daily_collection' %}active{% endif %}">
-    <i class="bi bi-calendar-day"></i> Daily Collection
-  </a>
-  <a href="{% url 'fee_report' %}"
-    class="nav-link {% if request.resolver_match.url_name == 'fee_report' %}active{% endif %}">
-    <i class="bi bi-graph-up"></i> Fee Report
-  </a>
-  
- 
-  <!-- sidebar_admin.html / sidebar_librarian.html -->
-  <a href="{% url 'library_dashboard' %}" class="nav-link">
-    <i class="bi bi-book-half"></i> Library
-  </a>
-  <a href="{% url 'book_list' %}" class="nav-link">
-    <i class="bi bi-journal-text"></i> Book Catalog
-  </a>
-  <a href="{% url 'library_author_list' %}" class="nav-link">
-    <i class="bi bi-journal-text"></i> Authors
-  </a>
-  <a href="{% url 'issue_book' %}" class="nav-link">
-    <i class="bi bi-box-arrow-right"></i> Issue Book
-  </a>
-  <a href="{% url 'issuance_list' %}" class="nav-link">
-    <i class="bi bi-list-check"></i> Issuances
-  </a>
-  <a href="{% url 'fine_list' %}" class="nav-link">
-    <i class="bi bi-cash-coin"></i> Fines
-  </a>
-
-  <!-- sidebar_student.html -->
-  <a href="{% url 'my_books' %}" class="nav-link">
-    <i class="bi bi-book"></i> My Books
-  </a>
-  
-  <!-- sidebar_admin.html — Operations group -->
-<a href="{% url 'transport_dashboard' %}"
-   class="nav-link {% if 'transport' in request.resolver_match.url_name %}active{% endif %}">
-  <i class="bi bi-bus-front"></i> Transport
-</a>
-<a href="{% url 'route_list' %}"
-   class="nav-link {% if request.resolver_match.url_name == 'route_list' %}active{% endif %}">
-  <i class="bi bi-signpost-split"></i> Routes
-</a>
-<a href="{% url 'vehicle_list' %}"
-   class="nav-link {% if request.resolver_match.url_name == 'vehicle_list' %}active{% endif %}">
-  <i class="bi bi-truck"></i> Vehicles
-</a>
-<a href="{% url 'student_transport_list' %}"
-   class="nav-link {% if request.resolver_match.url_name == 'student_transport_list' %}active{% endif %}">
-  <i class="bi bi-people"></i> Assignments
-</a>
-
-<!-- sidebar_student.html -->
-<a href="{% url 'my_transport' %}"
-   class="nav-link {% if request.resolver_match.url_name == 'my_transport' %}active{% endif %}">
-  <i class="bi bi-bus-front"></i> My Transport
-</a>
-
-  
-</div>
-
-<!-- ══════════════════════════════════ -->
-<!--  COMMUNICATION                    -->
-<!-- ══════════════════════════════════ -->
- 
-<button class="nav-group-btn" onclick="toggleGroup(this,'grpComm')">
-  <span>Communication</span><i class="bi bi-chevron-down chevron"></i>
-</button>
-<div class="nav-group-items" id="grpComm">
-  <!-- All roles -->
-<a href="{% url 'comm_dashboard' %}"  class="nav-link {% if request.resolver_match.url_name == 'comm_dashboard' %}active{% endif %}"><i class="bi bi-megaphone"></i> Communication</a>
-<a href="{% url 'announcement_list' %}"  class="nav-link {% if request.resolver_match.url_name == 'announcement_list' %}active{% endif %}"><i class="bi bi-bell"></i> Announcements</a>
-<a href="{% url 'inbox' %}"  class="nav-link {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}"><i class="bi bi-envelope"></i> Messages</a>
-<a href="{% url 'notification_list' %}"  class="nav-link {% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}"><i class="bi bi-bell-fill"></i> Notifications</a>
-<a href="{% url 'event_list' %}" class="nav-link {% if request.resolver_match.url_name == 'event_list' %}active{% endif %}"><i class="bi bi-calendar-event"></i> Events</a>
-  
-
-</div>
-
-<!-- ══════════════════════════════════ -->
-<!--  REPORTS                          -->
-<!-- ══════════════════════════════════ -->
-<button class="nav-group-btn" onclick="toggleGroup(this,'grpReports')">
-  <span>Reports</span><i class="bi bi-chevron-down chevron"></i>
-</button>
-<div class="sidebar-group">
-  <div class="sidebar-group-header" onclick="toggleGroup('reportsGroup')">
-    <span>
-      <i class="bi bi-file-earmark-bar-graph"></i>
-      Reports
-    </span>
-    <i class="bi bi-chevron-down toggle-icon" id="reportsGroup-icon"></i>
+  <!-- Header -->
+  <div class="sb-hd">
+    <div class="sb-logo">S</div>
+    <div class="sb-hd-text">
+      <div class="sb-hd-title">School ERP</div>
+      <div class="sb-hd-sub">Administration</div>
+    </div>
+    <div class="sb-tog" onclick="sbToggle()" title="Ctrl+B">
+      <i class="bi bi-chevron-left"></i>
+    </div>
   </div>
-  <div class="sidebar-group-items" id="reportsGroup">
 
-    <!-- Dashboard -->
-    <a href="{% url 'reports_dashboard' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'reports_dashboard' %}active{% endif %}">
-      <i class="bi bi-grid-1x2"></i>
-      Report Dashboard
-    </a>
-
-    <!-- ── Academic ── -->
-    <div class="sidebar-sub-label">Academic</div>
-
-    <a href="{% url 'report_card' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'report_card' %}active{% endif %}">
-      <i class="bi bi-card-list"></i>
-      Report Card
-    </a>
-
-    <a href="{% url 'exam_results' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'exam_results' %}active{% endif %}">
-      <i class="bi bi-journal-check"></i>
-      Exam Results
-    </a>
-
-    <!-- ── Attendance ── -->
-    <div class="sidebar-sub-label">Attendance</div>
-
-    <a href="{% url 'attendance_report' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'attendance_report' %}active{% endif %}">
-      <i class="bi bi-calendar-check"></i>
-      Attendance Report
-    </a>
-
-    <!-- ── Finance ── -->
-    <div class="sidebar-sub-label">Finance</div>
-
-    <a href="{% url 'fee_collection' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'fee_collection' %}active{% endif %}">
-      <i class="bi bi-cash-coin"></i>
-      Fee Collection
-    </a>
-
-    <a href="{% url 'outstanding_fees' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'outstanding_fees' %}active{% endif %}">
-      <i class="bi bi-exclamation-circle"></i>
-      Outstanding Fees
-    </a>
-
-    <!-- ── Library ── -->
-    <div class="sidebar-sub-label">Library</div>
-
-    <a href="{% url 'library_report' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'library_report' %}active{% endif %}">
-      <i class="bi bi-book"></i>
-      Library Report
-    </a>
-
-    <!-- ── Transport ── -->
-    <div class="sidebar-sub-label">Transport</div>
-
-    <a href="{% url 'transport_report' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'transport_report' %}active{% endif %}">
-      <i class="bi bi-bus-front"></i>
-      Transport Report
-    </a>
-
-    <!-- ── People ── -->
-    <div class="sidebar-sub-label">People</div>
-
-    <a href="{% url 'student_list_report' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'student_list_report' %}active{% endif %}">
-      <i class="bi bi-mortarboard"></i>
-      Student List
-    </a>
-
-    <a href="{% url 'staff_list_report' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'staff_list_report' %}active{% endif %}">
-      <i class="bi bi-person-badge"></i>
-      Staff List
-    </a>
-
-    <!-- ── History ── -->
-    <div class="sidebar-sub-label">Log</div>
-
-    <a href="{% url 'report_history' %}"
-       class="sidebar-item {% if request.resolver_match.url_name == 'report_history' %}active{% endif %}">
-      <i class="bi bi-clock-history"></i>
-      Report History
-    </a>
-
+  <!-- Search -->
+  <div class="sb-srch">
+    <div class="sb-srch-wrap">
+      <i class="bi bi-search"></i>
+      <input type="text" id="sbQ" placeholder="Search menu…"
+             oninput="sbSearch(this.value)" autocomplete="off">
+    </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════ -->
-<!--  SYSTEM  (always visible)         -->
-<!-- ══════════════════════════════════ -->
-<div class="sidebar-footer">
-  <a href="{% url 'school_setup' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'school_setup' %}active{% endif %}">
-    <i class="bi bi-building-gear"></i> School Setup
-  </a>
-  <a href="{% url 'audit_log' %}"
-     class="nav-link {% if request.resolver_match.url_name == 'audit_log' %}active{% endif %}">
-    <i class="bi bi-clock-history"></i> Audit Log
-  </a>
-  <a href="/admin/" class="nav-link">
-    <i class="bi bi-gear"></i> Django Admin
-  </a>
-</div>
+  <!-- Scrollable body -->
+  <div class="sb-body" id="sbBody">
+
+    <div class="sb-empty" id="sbEmpty">
+      <i class="bi bi-search d-block mb-2 opacity-25" style="font-size:1.5rem"></i>
+      No results found
+    </div>
+
+    <!-- ── Overview ─────────────────────── -->
+    <div class="sb-lbl">Overview</div>
+
+    <a href="{% url 'admin_dashboard' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'admin_dashboard' %}on{% endif %}"
+       data-tip="Dashboard">
+      <div class="sb-ico"><i class="bi bi-speedometer2"></i></div>
+      <span class="sb-txt">Dashboard</span>
+    </a>
+
+    <!-- ── People ───────────────────────── -->
+    <div class="sb-lbl">People</div>
+
+    <!-- Users group -->
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'user_list,user_create' %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Users">
+      <div class="sb-ico"><i class="bi bi-people"></i></div>
+      <span class="sb-txt">Users</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if request.resolver_match.url_name in 'user_list,user_create' %}open{% endif %}">
+      <a href="{% url 'user_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'user_list' %}on{% endif %}"
+         data-tip="All Users">
+        <div class="sb-ico"><i class="bi bi-person-lines-fill"></i></div>
+        <span class="sb-txt">All Users</span>
+      </a>
+      <a href="{% url 'user_create' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'user_create' %}on{% endif %}"
+         data-tip="Add User">
+        <div class="sb-ico"><i class="bi bi-person-plus"></i></div>
+        <span class="sb-txt">Add User</span>
+      </a>
+    </div>
+
+    <!-- Students group -->
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'student_list,student_create,enrollment_list' %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Students">
+      <div class="sb-ico"><i class="bi bi-mortarboard"></i></div>
+      <span class="sb-txt">Students</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if request.resolver_match.url_name in 'student_list,student_create,enrollment_list' %}open{% endif %}">
+      <a href="{% url 'student_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'student_list' %}on{% endif %}"
+         data-tip="All Students">
+        <div class="sb-ico"><i class="bi bi-list-ul"></i></div>
+        <span class="sb-txt">All Students</span>
+      </a>
+      <a href="{% url 'student_create' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'student_create' %}on{% endif %}"
+         data-tip="Add Student">
+        <div class="sb-ico"><i class="bi bi-person-add"></i></div>
+        <span class="sb-txt">Add Student</span>
+      </a>
+      <a href="{% url 'enrollment_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'enrollment_list' %}on{% endif %}"
+         data-tip="Enrollments">
+        <div class="sb-ico"><i class="bi bi-journal-check"></i></div>
+        <span class="sb-txt">Enrollments</span>
+      </a>
+    </div>
+
+    <!-- Staff group -->
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'staff_list,staff_create' %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Staff">
+      <div class="sb-ico"><i class="bi bi-person-badge"></i></div>
+      <span class="sb-txt">Staff</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if request.resolver_match.url_name in 'staff_list,staff_create' %}open{% endif %}">
+      <a href="{% url 'staff_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'staff_list' %}on{% endif %}"
+         data-tip="All Staff">
+        <div class="sb-ico"><i class="bi bi-list-ul"></i></div>
+        <span class="sb-txt">All Staff</span>
+      </a>
+      <a href="{% url 'staff_create' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'staff_create' %}on{% endif %}"
+         data-tip="Add Staff">
+        <div class="sb-ico"><i class="bi bi-person-plus"></i></div>
+        <span class="sb-txt">Add Staff</span>
+      </a>
+    </div>
+
+    <a href="{% url 'parent_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'parent_list' %}on{% endif %}"
+       data-tip="Parents">
+      <div class="sb-ico"><i class="bi bi-people-fill"></i></div>
+      <span class="sb-txt">Parents</span>
+    </a>
+
+    <!-- ── Academic ──────────────────────── -->
+    <div class="sb-lbl">Academic</div>
+
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'academic_year_list,term_list,grade_list,section_list,subject_list,subject_teacher_list,timetable_view,period_list' %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Academic">
+      <div class="sb-ico"><i class="bi bi-building-fill-check"></i></div>
+      <span class="sb-txt">Academic Setup</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if request.resolver_match.url_name in 'academic_year_list,term_list,grade_list,section_list,subject_list,subject_teacher_list,timetable_view,period_list' %}open{% endif %}">
+      <a href="{% url 'academic_year_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'academic_year_list' %}on{% endif %}"
+         data-tip="Academic Years">
+        <div class="sb-ico"><i class="bi bi-calendar2-range"></i></div>
+        <span class="sb-txt">Academic Years</span>
+      </a>
+      <a href="{% url 'term_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'term_list' %}on{% endif %}"
+         data-tip="Terms">
+        <div class="sb-ico"><i class="bi bi-calendar3"></i></div>
+        <span class="sb-txt">Terms</span>
+      </a>
+      <a href="{% url 'grade_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'grade_list' %}on{% endif %}"
+         data-tip="Grades">
+        <div class="sb-ico"><i class="bi bi-layers"></i></div>
+        <span class="sb-txt">Grades</span>
+      </a>
+      <a href="{% url 'section_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'section_list' %}on{% endif %}"
+         data-tip="Sections">
+        <div class="sb-ico"><i class="bi bi-diagram-3"></i></div>
+        <span class="sb-txt">Sections</span>
+      </a>
+      <a href="{% url 'subject_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'subject_list' %}on{% endif %}"
+         data-tip="Subjects">
+        <div class="sb-ico"><i class="bi bi-book"></i></div>
+        <span class="sb-txt">Subjects</span>
+      </a>
+      <a href="{% url 'subject_teacher_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'subject_teacher_list' %}on{% endif %}"
+         data-tip="Subject–Teachers">
+        <div class="sb-ico"><i class="bi bi-person-workspace"></i></div>
+        <span class="sb-txt">Subject–Teachers</span>
+      </a>
+      <a href="{% url 'timetable_view' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'timetable_view' %}on{% endif %}"
+         data-tip="Timetable">
+        <div class="sb-ico"><i class="bi bi-table"></i></div>
+        <span class="sb-txt">Timetable</span>
+      </a>
+      <a href="{% url 'period_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'period_list' %}on{% endif %}"
+         data-tip="Periods">
+        <div class="sb-ico"><i class="bi bi-clock"></i></div>
+        <span class="sb-txt">Periods</span>
+      </a>
+    </div>
+
+    <!-- ── Attendance ─────────────────────── -->
+    <div class="sb-lbl">Attendance</div>
+
+    <div class="sb-grp-hd {% if 'attendance' in request.resolver_match.url_name %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Attendance">
+      <div class="sb-ico"><i class="bi bi-calendar-check"></i></div>
+      <span class="sb-txt">Attendance</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if 'attendance' in request.resolver_match.url_name %}open{% endif %}">
+      <a href="{% url 'attendance_select' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'attendance_select' %}on{% endif %}"
+         data-tip="Mark Attendance">
+        <div class="sb-ico"><i class="bi bi-check2-square"></i></div>
+        <span class="sb-txt">Mark Attendance</span>
+      </a>
+      <a href="{% url 'attendance_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'attendance_list' %}on{% endif %}"
+         data-tip="Attendance Records">
+        <div class="sb-ico"><i class="bi bi-list-check"></i></div>
+        <span class="sb-txt">Attendance Records</span>
+      </a>
+    </div>
+
+    <!-- ── Exams ─────────────────────────── -->
+    <div class="sb-lbl">Exams</div>
+
+    <div class="sb-grp-hd {% if 'exam' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Exams">
+      <div class="sb-ico"><i class="bi bi-journal-check"></i></div>
+      <span class="sb-txt">Exams</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if 'exam' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name %}open{% endif %}">
+      <a href="{% url 'exam_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'exam_list' %}on{% endif %}"
+         data-tip="All Exams">
+        <div class="sb-ico"><i class="bi bi-journals"></i></div>
+        <span class="sb-txt">All Exams</span>
+      </a>
+      <a href="{% url 'exam_create' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'exam_create' %}on{% endif %}"
+         data-tip="Create Exam">
+        <div class="sb-ico"><i class="bi bi-plus-circle"></i></div>
+        <span class="sb-txt">Create Exam</span>
+      </a>
+      <a href="{% url 'result_entry' %}"
+         class="sb-lnk {% if request.resolver_match.url_name in 'result_entry,result_list' %}on{% endif %}"
+         data-tip="Enter Results">
+        <div class="sb-ico"><i class="bi bi-pencil-square"></i></div>
+        <span class="sb-txt">Enter Results</span>
+      </a>
+    </div>
+
+    <!-- ── Finance ───────────────────────── -->
+    <div class="sb-lbl">Finance</div>
+
+    <div class="sb-grp-hd {% if 'fee' in request.resolver_match.url_name %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Fees">
+      <div class="sb-ico"><i class="bi bi-cash-coin"></i></div>
+      <span class="sb-txt">Fees</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if 'fee' in request.resolver_match.url_name %}open{% endif %}">
+      <a href="{% url 'fee_structure_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'fee_structure_list' %}on{% endif %}"
+         data-tip="Fee Structures">
+        <div class="sb-ico"><i class="bi bi-file-ruled"></i></div>
+        <span class="sb-txt">Fee Structures</span>
+      </a>
+      <a href="{% url 'student_fee_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'student_fee_list' %}on{% endif %}"
+         data-tip="Student Fees">
+        <div class="sb-ico"><i class="bi bi-receipt"></i></div>
+        <span class="sb-txt">Student Fees</span>
+      </a>
+      <a href="{% url 'daily_collection' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'daily_collection' %}on{% endif %}"
+         data-tip="Daily Collection">
+        <div class="sb-ico"><i class="bi bi-calendar-day"></i></div>
+        <span class="sb-txt">Daily Collection</span>
+      </a>
+      <a href="{% url 'fee_report' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'fee_report' %}on{% endif %}"
+         data-tip="Fee Report">
+        <div class="sb-ico"><i class="bi bi-graph-up"></i></div>
+        <span class="sb-txt">Fee Report</span>
+      </a>
+    </div>
+
+    <!-- ── Library ───────────────────────── -->
+    <div class="sb-lbl">Library</div>
+
+    <div class="sb-grp-hd {% if 'library' in request.resolver_match.url_name or 'book' in request.resolver_match.url_name or 'issuance' in request.resolver_match.url_name or 'fine' in request.resolver_match.url_name %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Library">
+      <div class="sb-ico"><i class="bi bi-book-half"></i></div>
+      <span class="sb-txt">Library</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if 'library' in request.resolver_match.url_name or 'book' in request.resolver_match.url_name or 'issuance' in request.resolver_match.url_name or 'fine' in request.resolver_match.url_name %}open{% endif %}">
+      <a href="{% url 'library_dashboard' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'library_dashboard' %}on{% endif %}"
+         data-tip="Library Dashboard">
+        <div class="sb-ico"><i class="bi bi-grid"></i></div>
+        <span class="sb-txt">Dashboard</span>
+      </a>
+      <a href="{% url 'book_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'book_list' %}on{% endif %}"
+         data-tip="Book Catalog">
+        <div class="sb-ico"><i class="bi bi-journal-text"></i></div>
+        <span class="sb-txt">Book Catalog</span>
+      </a>
+      <a href="{% url 'library_author_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'library_author_list' %}on{% endif %}"
+         data-tip="Authors">
+        <div class="sb-ico"><i class="bi bi-person-lines-fill"></i></div>
+        <span class="sb-txt">Authors</span>
+      </a>
+      <a href="{% url 'issue_book' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'issue_book' %}on{% endif %}"
+         data-tip="Issue Book">
+        <div class="sb-ico"><i class="bi bi-box-arrow-right"></i></div>
+        <span class="sb-txt">Issue Book</span>
+      </a>
+      <a href="{% url 'issuance_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'issuance_list' %}on{% endif %}"
+         data-tip="Issuances">
+        <div class="sb-ico"><i class="bi bi-arrow-left-right"></i></div>
+        <span class="sb-txt">Issuances</span>
+      </a>
+      <a href="{% url 'fine_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'fine_list' %}on{% endif %}"
+         data-tip="Fines">
+        <div class="sb-ico"><i class="bi bi-exclamation-triangle"></i></div>
+        <span class="sb-txt">Fines</span>
+      </a>
+    </div>
+
+    <!-- ── Transport ─────────────────────── -->
+    <div class="sb-lbl">Transport</div>
+
+    <div class="sb-grp-hd {% if 'transport' in request.resolver_match.url_name or 'route' in request.resolver_match.url_name or 'vehicle' in request.resolver_match.url_name %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Transport">
+      <div class="sb-ico"><i class="bi bi-bus-front"></i></div>
+      <span class="sb-txt">Transport</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if 'transport' in request.resolver_match.url_name or 'route' in request.resolver_match.url_name or 'vehicle' in request.resolver_match.url_name %}open{% endif %}">
+      <a href="{% url 'transport_dashboard' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'transport_dashboard' %}on{% endif %}"
+         data-tip="Transport Dashboard">
+        <div class="sb-ico"><i class="bi bi-grid"></i></div>
+        <span class="sb-txt">Dashboard</span>
+      </a>
+      <a href="{% url 'route_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'route_list' %}on{% endif %}"
+         data-tip="Routes">
+        <div class="sb-ico"><i class="bi bi-signpost-split"></i></div>
+        <span class="sb-txt">Routes</span>
+      </a>
+      <a href="{% url 'vehicle_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'vehicle_list' %}on{% endif %}"
+         data-tip="Vehicles">
+        <div class="sb-ico"><i class="bi bi-truck"></i></div>
+        <span class="sb-txt">Vehicles</span>
+      </a>
+      <a href="{% url 'student_transport_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'student_transport_list' %}on{% endif %}"
+         data-tip="Assignments">
+        <div class="sb-ico"><i class="bi bi-person-check"></i></div>
+        <span class="sb-txt">Assignments</span>
+      </a>
+    </div>
+
+    <!-- ── Communication ─────────────────── -->
+    <div class="sb-lbl">Communication</div>
+
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'comm_dashboard,announcement_list,inbox,notification_list,event_list' %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Communication">
+      <div class="sb-ico"><i class="bi bi-megaphone"></i></div>
+      <span class="sb-txt">Communication</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if request.resolver_match.url_name in 'comm_dashboard,announcement_list,inbox,notification_list,event_list' %}open{% endif %}">
+      <a href="{% url 'announcement_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'announcement_list' %}on{% endif %}"
+         data-tip="Announcements">
+        <div class="sb-ico"><i class="bi bi-megaphone"></i></div>
+        <span class="sb-txt">Announcements</span>
+      </a>
+      <a href="{% url 'inbox' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'inbox' %}on{% endif %}"
+         data-tip="Messages">
+        <div class="sb-ico"><i class="bi bi-envelope"></i></div>
+        <span class="sb-txt">Messages</span>
+      </a>
+      <a href="{% url 'event_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'event_list' %}on{% endif %}"
+         data-tip="Events">
+        <div class="sb-ico"><i class="bi bi-calendar-event"></i></div>
+        <span class="sb-txt">Events</span>
+      </a>
+      <a href="{% url 'notification_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'notification_list' %}on{% endif %}"
+         data-tip="Notifications">
+        <div class="sb-ico"><i class="bi bi-bell"></i></div>
+        <span class="sb-txt">Notifications</span>
+      </a>
+    </div>
+
+    <!-- ── Reports ───────────────────────── -->
+    <div class="sb-lbl">Reports</div>
+
+    <div class="sb-grp-hd {% if 'report' in request.resolver_match.url_name %}open{% endif %}"
+         onclick="sbGrp(this)" data-tip="Reports">
+      <div class="sb-ico"><i class="bi bi-bar-chart-line"></i></div>
+      <span class="sb-txt">Reports</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if 'report' in request.resolver_match.url_name %}open{% endif %}">
+      <a href="{% url 'reports_dashboard' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'reports_dashboard' %}on{% endif %}"
+         data-tip="Reports Dashboard">
+        <div class="sb-ico"><i class="bi bi-grid-1x2"></i></div>
+        <span class="sb-txt">Dashboard</span>
+      </a>
+      <a href="{% url 'report_card' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'report_card' %}on{% endif %}"
+         data-tip="Report Card">
+        <div class="sb-ico"><i class="bi bi-card-list"></i></div>
+        <span class="sb-txt">Report Card</span>
+      </a>
+      <a href="{% url 'exam_results' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'exam_results' %}on{% endif %}"
+         data-tip="Exam Results">
+        <div class="sb-ico"><i class="bi bi-journal-check"></i></div>
+        <span class="sb-txt">Exam Results</span>
+      </a>
+      <a href="{% url 'attendance_report' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'attendance_report' %}on{% endif %}"
+         data-tip="Attendance Report">
+        <div class="sb-ico"><i class="bi bi-calendar-check"></i></div>
+        <span class="sb-txt">Attendance Report</span>
+      </a>
+      <a href="{% url 'fee_collection' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'fee_collection' %}on{% endif %}"
+         data-tip="Fee Collection">
+        <div class="sb-ico"><i class="bi bi-cash-coin"></i></div>
+        <span class="sb-txt">Fee Collection</span>
+      </a>
+      <a href="{% url 'outstanding_fees' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'outstanding_fees' %}on{% endif %}"
+         data-tip="Outstanding Fees">
+        <div class="sb-ico"><i class="bi bi-exclamation-circle"></i></div>
+        <span class="sb-txt">Outstanding Fees</span>
+      </a>
+      <a href="{% url 'library_report' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'library_report' %}on{% endif %}"
+         data-tip="Library Report">
+        <div class="sb-ico"><i class="bi bi-book"></i></div>
+        <span class="sb-txt">Library Report</span>
+      </a>
+      <a href="{% url 'transport_report' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'transport_report' %}on{% endif %}"
+         data-tip="Transport Report">
+        <div class="sb-ico"><i class="bi bi-bus-front"></i></div>
+        <span class="sb-txt">Transport Report</span>
+      </a>
+      <a href="{% url 'student_list_report' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'student_list_report' %}on{% endif %}"
+         data-tip="Student List">
+        <div class="sb-ico"><i class="bi bi-people"></i></div>
+        <span class="sb-txt">Student List</span>
+      </a>
+      <a href="{% url 'staff_list_report' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'staff_list_report' %}on{% endif %}"
+         data-tip="Staff List">
+        <div class="sb-ico"><i class="bi bi-person-badge"></i></div>
+        <span class="sb-txt">Staff List</span>
+      </a>
+      <a href="{% url 'report_history' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'report_history' %}on{% endif %}"
+         data-tip="Report History">
+        <div class="sb-ico"><i class="bi bi-clock-history"></i></div>
+        <span class="sb-txt">Report History</span>
+      </a>
+    </div>
+
+    <!-- ── System ─────────────────────────── -->
+    <div class="sb-lbl">System</div>
+
+    <a href="{% url 'school_setup' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'school_setup' %}on{% endif %}"
+       data-tip="School Setup">
+      <div class="sb-ico"><i class="bi bi-building-gear"></i></div>
+      <span class="sb-txt">School Setup</span>
+    </a>
+
+    <a href="{% url 'audit_log' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'audit_log' %}on{% endif %}"
+       data-tip="Audit Log">
+      <div class="sb-ico"><i class="bi bi-clock-history"></i></div>
+      <span class="sb-txt">Audit Log</span>
+    </a>
+
+    <a href="/admin/" class="sb-lnk" data-tip="Django Admin" target="_blank">
+      <div class="sb-ico"><i class="bi bi-shield-lock"></i></div>
+      <span class="sb-txt">Django Admin</span>
+      <i class="bi bi-box-arrow-up-right sb-arr" style="font-size:.6rem;opacity:.4;transform:none"></i>
+    </a>
+
+  </div><!-- /sb-body -->
+
+  <!-- Footer — user + logout -->
+  <div class="sb-ft">
+    <a href="{% url 'profile' %}" class="sb-user">
+      <div class="sb-av">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      <div class="sb-uinfo" style="overflow:hidden;flex:1">
+        <div class="sb-uname">{{ request.user.get_full_name }}</div>
+        <div class="sb-urole">{{ request.user.get_role_display }}</div>
+      </div>
+    </a>
+    <a href="{% url 'logout' %}" class="sb-out">
+      <i class="bi bi-box-arrow-left"></i>
+      <span>Sign Out</span>
+    </a>
+  </div>
+
+</nav>
+
 
 <script>
-/* ── Toggle group ── */
-function toggleGroup(btn, id){
-  const items = document.getElementById(id);
-  const isOpen = items.style.maxHeight && items.style.maxHeight !== '0px';
-  if(isOpen){
-    items.style.maxHeight = '0px';
-    btn.classList.add('collapsed');
-    // save state
-    sessionStorage.setItem('nav_'+id, 'closed');
-  } else {
-    items.style.maxHeight = items.scrollHeight + 'px';
-    btn.classList.remove('collapsed');
-    sessionStorage.setItem('nav_'+id, 'open');
+const SB_ID   = 'adminSidebar';
+const SB_KEY  = 'sb_state';
+
+/* ── Collapse toggle ── */
+function sbToggle(){
+  const sb = document.getElementById(SB_ID);
+  const mini = sb.classList.toggle('sb-mini');
+  document.body.style.setProperty(
+    '--sb-offset', mini ? 'var(--sb-mini)' : 'var(--sb-w)'
+  );
+  localStorage.setItem(SB_KEY, mini ? '1' : '0');
+}
+
+/* ── Restore state ── */
+(function(){
+  if(localStorage.getItem(SB_KEY) === '1'){
+    const sb = document.getElementById(SB_ID);
+    if(sb) sb.classList.add('sb-mini');
+  }
+})();
+
+/* ── Group expand / collapse ── */
+function sbGrp(hd){
+  const sb = document.getElementById(SB_ID);
+  if(sb.classList.contains('sb-mini')) return;
+
+  const kids  = hd.nextElementSibling;
+  const isOpen= hd.classList.contains('open');
+
+  // close all
+  document.querySelectorAll('#'+SB_ID+' .sb-grp-hd.open').forEach(h=>{
+    h.classList.remove('open');
+    h.nextElementSibling.classList.remove('open');
+  });
+
+  // open this if it was closed
+  if(!isOpen){
+    hd.classList.add('open');
+    kids.classList.add('open');
+    // smooth scroll into view
+    setTimeout(()=> kids.scrollIntoView({block:'nearest',behavior:'smooth'}), 50);
   }
 }
 
-/* ── Restore state on page load ── */
-document.addEventListener('DOMContentLoaded', () => {
-  const groups = ['grpPeople','grpAcademic','grpOps','grpComm','grpReports'];
+/* ── Search / filter ── */
+function sbSearch(q){
+  const term  = q.toLowerCase().trim();
+  const body  = document.getElementById('sbBody');
+  const empty = document.getElementById('sbEmpty');
+  const lbls  = body.querySelectorAll('.sb-lbl');
+  const grpHds= body.querySelectorAll('.sb-grp-hd');
+  const kids  = body.querySelectorAll('.sb-kids');
+  const links = body.querySelectorAll('.sb-lnk');
 
-  groups.forEach(id => {
-    const el  = document.getElementById(id);
-    const btn = el?.previousElementSibling;
-    if(!el || !btn) return;
+  if(!term){
+    // reset
+    [lbls,grpHds,kids,links].forEach(
+      nl => nl.forEach(el => el.style.display='')
+    );
+    // re-close non-active groups
+    kids.forEach(k=> {
+      if(!k.classList.contains('open')) k.style.maxHeight='0px';
+    });
+    empty.style.display='none';
+    return;
+  }
 
-    // Check if any child link is active
-    const hasActive = el.querySelector('.nav-link.active');
-    const saved     = sessionStorage.getItem('nav_'+id);
+  // hide everything
+  lbls.forEach(l=>l.style.display='none');
+  grpHds.forEach(g=>{g.style.display='none';});
+  kids.forEach(k=>{k.style.display='none';k.style.maxHeight='600px';});
+  let found=0;
 
-    if(hasActive || saved === 'open'){
-      // Open
-      el.style.maxHeight = el.scrollHeight + 'px';
-      btn.classList.remove('collapsed');
-    } else if(saved === 'closed'){
-      // Closed
-      el.style.maxHeight = '0px';
-      btn.classList.add('collapsed');
-    } else {
-      // Default: open People & Academic, close others
-      if(id === 'grpPeople' || id === 'grpAcademic'){
-        el.style.maxHeight = el.scrollHeight + 'px';
-      } else {
-        el.style.maxHeight = '0px';
-        btn.classList.add('collapsed');
+  links.forEach(lnk=>{
+    const tip = (lnk.dataset.tip||'').toLowerCase();
+    const txt = lnk.querySelector('.sb-txt')?.textContent.toLowerCase()||'';
+    const match = tip.includes(term)||txt.includes(term);
+    lnk.style.display = match ? '' : 'none';
+    if(match){
+      found++;
+      // show parent group if inside .sb-kids
+      const parentKids = lnk.closest('.sb-kids');
+      if(parentKids){
+        parentKids.style.display='block';
+        const hd = parentKids.previousElementSibling;
+        if(hd) hd.style.display='';
       }
     }
   });
+
+  empty.style.display = found===0 ? 'block' : 'none';
+}
+
+/* ── Mobile ── */
+function sbMobOpen(){
+  document.getElementById(SB_ID).classList.add('sb-open');
+  document.getElementById('sbVeil').classList.add('show');
+}
+function sbMobClose(){
+  document.getElementById(SB_ID).classList.remove('sb-open');
+  document.getElementById('sbVeil').classList.remove('show');
+}
+
+/* ── Keyboard: Ctrl+B ── */
+document.addEventListener('keydown', e=>{
+  if(e.ctrlKey && e.key==='b'){e.preventDefault();sbToggle();}
+  if(e.key==='Escape') sbMobClose();
+});
+
+/* ── Auto-scroll active item into view ── */
+document.addEventListener('DOMContentLoaded',()=>{
+  const active = document.querySelector('#'+SB_ID+' .sb-lnk.on');
+  if(active) active.scrollIntoView({block:'center',behavior:'smooth'});
 });
 </script>
