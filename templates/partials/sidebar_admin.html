@@ -476,42 +476,62 @@
       </a>
     </div>
 
-    <!-- ── Exams ─────────────────────────── -->
-    <div class="sb-lbl">Exams</div>
+ <!-- ── Exams group — FIXED VERSION ──────────
+     Replace the entire exams sb-grp-hd block
+     in templates/partials/sidebar_admin.html
+     ────────────────────────────────────────── -->
 
-    <div class="sb-grp-hd {% if 'exam' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name %}open{% endif %}"
+    <div class="sb-grp-hd {% if 'exam' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name or 'report_card' in request.resolver_match.url_name %}open{% endif %}"
          onclick="sbGrp(this)" data-tip="Exams">
       <div class="sb-ico"><i class="bi bi-journal-check"></i></div>
       <span class="sb-txt">Exams</span>
       <i class="bi bi-chevron-down sb-arr"></i>
     </div>
-    <div class="sb-kids {% if 'exam' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name %}open{% endif %}">
+    <div class="sb-kids {% if 'exam' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name or 'report_card' in request.resolver_match.url_name %}open{% endif %}">
+
+      <!-- All Exams list -->
       <a href="{% url 'exam_list' %}"
          class="sb-lnk {% if request.resolver_match.url_name == 'exam_list' %}on{% endif %}"
          data-tip="All Exams">
         <div class="sb-ico"><i class="bi bi-journals"></i></div>
         <span class="sb-txt">All Exams</span>
       </a>
+
+      <!-- Create Exam -->
       <a href="{% url 'exam_create' %}"
          class="sb-lnk {% if request.resolver_match.url_name == 'exam_create' %}on{% endif %}"
          data-tip="Create Exam">
         <div class="sb-ico"><i class="bi bi-plus-circle"></i></div>
         <span class="sb-txt">Create Exam</span>
       </a>
-      <!-- <a href="{% url 'result_entry' %}"
-         class="sb-lnk {% if request.resolver_match.url_name in 'result_entry,result_list' %}on{% endif %}"
+
+      <!-- Enter Results → links to exam_list, user picks exam then schedule -->
+      <!-- result_entry needs schedule_pk so we cannot link directly -->
+      <a href="{% url 'exam_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name in 'result_entry,result_list,schedule_create,component_list' %}on{% endif %}"
          data-tip="Enter Results">
         <div class="sb-ico"><i class="bi bi-pencil-square"></i></div>
         <span class="sb-txt">Enter Results</span>
-      </a> -->
-      <a href="{% url 'exam_list' %}"
-   class="sb-lnk {% if request.resolver_match.url_name in 'result_entry,result_list,exam_detail,schedule_create' %}on{% endif %}"
-   data-tip="Enter Results">
-  <div class="sb-ico"><i class="bi bi-pencil-square"></i></div>
-  <span class="sb-txt">Enter Results</span>
-</a>
-    </div>
+      </a>
 
+      <!-- Report Cards → links to exam_list, user picks exam then report cards -->
+      <!-- report_card_list needs exam_pk so we cannot link directly -->
+      <a href="{% url 'exam_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name in 'report_card_list,report_card_detail' %}on{% endif %}"
+         data-tip="Report Cards">
+        <div class="sb-ico"><i class="bi bi-card-list"></i></div>
+        <span class="sb-txt">Report Cards</span>
+      </a>
+
+      <!-- My Results (student view) -->
+      <a href="{% url 'my_results' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'my_results' %}on{% endif %}"
+         data-tip="My Results">
+        <div class="sb-ico"><i class="bi bi-bar-chart"></i></div>
+        <span class="sb-txt">My Results</span>
+      </a>
+
+    </div>
     <!-- ── Finance ───────────────────────── -->
     <div class="sb-lbl">Finance</div>
 
