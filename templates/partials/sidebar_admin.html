@@ -505,7 +505,7 @@
         <span class="sb-txt">Enter Results</span>
       </a> -->
       <a href="{% url 'exam_list' %}"
-   class="sb-lnk {% if request.resolver_match.url_name in 'result_entry,result_list,exam_list' %}on{% endif %}"
+   class="sb-lnk {% if request.resolver_match.url_name in 'result_entry,result_list,exam_detail,schedule_create' %}on{% endif %}"
    data-tip="Enter Results">
   <div class="sb-ico"><i class="bi bi-pencil-square"></i></div>
   <span class="sb-txt">Enter Results</span>
