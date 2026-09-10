@@ -9,8 +9,6 @@
   --sb-accent:#0ea5a0;
   --sb-r:.55rem;--sb-t:.22s ease;
 }
-
-/* ── Shell ── */
 #accountantSidebar{
   position:fixed;top:0;left:0;bottom:0;
   width:var(--sb-w);
@@ -22,8 +20,6 @@
   box-shadow:2px 0 20px rgba(0,0,0,.35);
 }
 #accountantSidebar.sb-mini{width:var(--sb-mini)}
-
-/* ── Header ── */
 .sb-hd{
   display:flex;align-items:center;gap:.75rem;
   padding:.9rem 1rem;
@@ -32,8 +28,7 @@
   position:relative;overflow:visible;
 }
 .sb-logo{
-  width:36px;height:36px;flex-shrink:0;
-  border-radius:.6rem;
+  width:36px;height:36px;flex-shrink:0;border-radius:.6rem;
   background:linear-gradient(135deg,#1a3c72,#0ea5a0);
   display:flex;align-items:center;justify-content:center;
   font-size:.95rem;font-weight:900;color:#fff;
@@ -53,12 +48,9 @@
 }
 .sb-tog:hover{background:#0ea5a0;}
 #accountantSidebar.sb-mini .sb-tog i{transform:rotate(180deg);}
-
-/* ── Search ── */
 .sb-srch{
   padding:.65rem .85rem;
-  border-bottom:1px solid var(--sb-border);
-  flex-shrink:0;
+  border-bottom:1px solid var(--sb-border);flex-shrink:0;
 }
 .sb-srch-wrap{position:relative;}
 .sb-srch-wrap i{
@@ -68,16 +60,13 @@
 .sb-srch input{
   width:100%;padding:.48rem .75rem .48rem 2rem;
   background:rgba(255,255,255,.05);
-  border:1px solid var(--sb-border);
-  border-radius:var(--sb-r);
+  border:1px solid var(--sb-border);border-radius:var(--sb-r);
   color:var(--sb-text);font-size:.79rem;outline:none;
   transition:border-color .2s,background .2s;
 }
 .sb-srch input::placeholder{color:var(--sb-dim);}
 .sb-srch input:focus{border-color:#0ea5a0;background:rgba(14,165,160,.08);}
 #accountantSidebar.sb-mini .sb-srch{display:none;}
-
-/* ── Scrollable body ── */
 .sb-body{
   flex:1;overflow-y:auto;overflow-x:hidden;
   padding:.5rem 0 .75rem;
@@ -85,33 +74,23 @@
   scrollbar-color:rgba(255,255,255,.08) transparent;
 }
 .sb-body::-webkit-scrollbar{width:3px;}
-.sb-body::-webkit-scrollbar-thumb{
-  background:rgba(255,255,255,.1);border-radius:2px;
-}
-
-/* ── Section label ── */
+.sb-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
 .sb-lbl{
-  font-size:.59rem;text-transform:uppercase;
-  letter-spacing:.12em;font-weight:700;
+  font-size:.59rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700;
   color:var(--sb-dim);padding:.9rem .9rem .3rem;
-  white-space:nowrap;overflow:hidden;
-  transition:opacity var(--sb-t);
+  white-space:nowrap;overflow:hidden;transition:opacity var(--sb-t);
 }
 #accountantSidebar.sb-mini .sb-lbl{opacity:0;height:0;padding:0;}
-
-/* ── Links ── */
 .sb-lnk,.sb-grp-hd{
   display:flex;align-items:center;gap:.65rem;
   padding:.55rem .85rem;margin:.08rem .55rem;
-  border-radius:var(--sb-r);
-  color:var(--sb-text);text-decoration:none;
-  font-size:.82rem;font-weight:500;
+  border-radius:var(--sb-r);color:var(--sb-text);
+  text-decoration:none;font-size:.82rem;font-weight:500;
   cursor:pointer;transition:all var(--sb-t);
-  white-space:nowrap;overflow:hidden;
-  position:relative;user-select:none;
+  white-space:nowrap;overflow:hidden;position:relative;user-select:none;
 }
 .sb-lnk:hover,.sb-grp-hd:hover{
-  background:var(--sb-hover);color:#fff;text-decoration:none;
+  background:var(--sb-hover);color:#e2e8f0;text-decoration:none;
 }
 .sb-lnk.on{background:var(--sb-active);color:#fff;font-weight:600;}
 .sb-lnk.on::before{
@@ -128,32 +107,19 @@
 .sb-lnk.on .sb-ico{background:rgba(255,255,255,.1);}
 .sb-txt{flex:1;transition:opacity var(--sb-t);}
 #accountantSidebar.sb-mini .sb-txt{opacity:0;width:0;overflow:hidden;}
-.sb-bdg{
-  flex-shrink:0;background:#ef4444;color:#fff;
-  font-size:.57rem;font-weight:700;
-  border-radius:999px;padding:.08rem .42rem;
-  transition:opacity var(--sb-t);
-}
-#accountantSidebar.sb-mini .sb-bdg{opacity:0;}
 .sb-arr{
   flex-shrink:0;margin-left:auto;font-size:.62rem;
   color:var(--sb-dim);transition:transform var(--sb-t);
 }
 .sb-grp-hd.open .sb-arr{transform:rotate(180deg);}
 #accountantSidebar.sb-mini .sb-arr{display:none;}
-
-/* ── Group children ── */
 .sb-kids{
   overflow:hidden;max-height:0;
   transition:max-height .3s cubic-bezier(.4,0,.2,1);
 }
 .sb-kids.open{max-height:600px;}
-.sb-kids .sb-lnk{
-  padding:.48rem .85rem .48rem 1.1rem;font-size:.79rem;
-}
+.sb-kids .sb-lnk{padding:.48rem .85rem .48rem 1.1rem;font-size:.79rem;}
 .sb-kids .sb-ico{width:24px;height:24px;font-size:.75rem;}
-
-/* Tooltip mini */
 #accountantSidebar.sb-mini .sb-lnk,
 #accountantSidebar.sb-mini .sb-grp-hd{justify-content:center;padding:.6rem;}
 #accountantSidebar.sb-mini .sb-lnk:hover::after{
@@ -166,18 +132,12 @@
   box-shadow:0 4px 16px rgba(0,0,0,.5);
   border:1px solid var(--sb-border);pointer-events:none;
 }
-
-/* ── Footer ── */
-.sb-ft{
-  flex-shrink:0;
-  border-top:1px solid var(--sb-border);
-  padding:.75rem .85rem;
-}
+.sb-empty{text-align:center;padding:1.5rem 1rem;color:var(--sb-dim);font-size:.76rem;display:none;}
+.sb-ft{flex-shrink:0;border-top:1px solid var(--sb-border);padding:.75rem .85rem;}
 .sb-user{
   display:flex;align-items:center;gap:.65rem;
   padding:.5rem .6rem;border-radius:var(--sb-r);
-  cursor:pointer;text-decoration:none;
-  transition:background var(--sb-t);
+  cursor:pointer;text-decoration:none;transition:background var(--sb-t);
 }
 .sb-user:hover{background:var(--sb-hover);}
 .sb-av{
@@ -194,24 +154,14 @@
   display:flex;align-items:center;gap:.65rem;
   padding:.45rem .6rem;margin-top:.25rem;border-radius:var(--sb-r);
   color:#f87171;font-size:.8rem;font-weight:500;
-  cursor:pointer;text-decoration:none;
-  transition:background var(--sb-t);
+  cursor:pointer;text-decoration:none;transition:background var(--sb-t);
 }
 .sb-out:hover{background:rgba(239,68,68,.1);color:#f87171;text-decoration:none;}
 #accountantSidebar.sb-mini .sb-out{justify-content:center;}
 #accountantSidebar.sb-mini .sb-out span{display:none;}
-
-/* ── No results ── */
-.sb-empty{
-  text-align:center;padding:1.5rem 1rem;
-  color:var(--sb-dim);font-size:.76rem;display:none;
-}
-
-/* ── Mobile ── */
 .sb-veil{
   display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.6);z-index:1039;
-  backdrop-filter:blur(2px);
+  background:rgba(0,0,0,.6);z-index:1039;backdrop-filter:blur(2px);
 }
 @media(max-width:768px){
   #accountantSidebar{transform:translateX(-100%);width:var(--sb-w)!important;}
@@ -242,9 +192,7 @@
 
   <!-- Header -->
   <div class="sb-hd">
-    <div class="sb-logo">
-      <i class="bi bi-cash-coin"></i>
-    </div>
+    <div class="sb-logo">A</div>
     <div class="sb-hd-text">
       <div class="sb-hd-title">School ERP</div>
       <div class="sb-hd-sub">Accountant Portal</div>
@@ -281,45 +229,52 @@
       <span class="sb-txt">Dashboard</span>
     </a>
 
-    <!-- ── Finance ───────────────────────── -->
-    <div class="sb-lbl">Finance</div>
+    <!-- ── Fee Management ────────────────── -->
+    <div class="sb-lbl">Fee Management</div>
 
-    <!-- Fee Management group -->
-    <div class="sb-grp-hd {% if 'fee' in request.resolver_match.url_name %}open{% endif %}"
-         onclick="acGrp(this)" data-tip="Fee Management">
-      <div class="sb-ico"><i class="bi bi-cash-coin"></i></div>
-      <span class="sb-txt">Fee Management</span>
-      <i class="bi bi-chevron-down sb-arr"></i>
-    </div>
-    <div class="sb-kids {% if 'fee' in request.resolver_match.url_name %}open{% endif %}">
-      <a href="{% url 'fee_structure_list' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'fee_structure_list' %}on{% endif %}"
-         data-tip="Fee Structures">
-        <div class="sb-ico"><i class="bi bi-file-ruled"></i></div>
-        <span class="sb-txt">Fee Structures</span>
-      </a>
-      <a href="{% url 'student_fee_list' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'student_fee_list' %}on{% endif %}"
-         data-tip="Student Fees">
-        <div class="sb-ico"><i class="bi bi-receipt"></i></div>
-        <span class="sb-txt">Student Fees</span>
-      </a>
-      <a href="{% url 'daily_collection' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'daily_collection' %}on{% endif %}"
-         data-tip="Daily Collection">
-        <div class="sb-ico"><i class="bi bi-calendar-day"></i></div>
-        <span class="sb-txt">Daily Collection</span>
-      </a>
-    </div>
+    <!-- Categories -->
+    <a href="{% url 'fee_category_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name in 'fee_category_list,fee_category_create,fee_category_edit' %}on{% endif %}"
+       data-tip="Fee Categories">
+      <div class="sb-ico"><i class="bi bi-tags"></i></div>
+      <span class="sb-txt">Fee Categories</span>
+    </a>
+
+    <!-- Structures -->
+    <a href="{% url 'fee_structure_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name in 'fee_structure_list,fee_structure_create,fee_structure_edit' %}on{% endif %}"
+       data-tip="Fee Structures">
+      <div class="sb-ico"><i class="bi bi-file-ruled"></i></div>
+      <span class="sb-txt">Fee Structures</span>
+    </a>
+
+    <!-- Bulk Assign -->
+    <a href="{% url 'bulk_assign_fees' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'bulk_assign_fees' %}on{% endif %}"
+       data-tip="Bulk Assign Fees">
+      <div class="sb-ico"><i class="bi bi-people"></i></div>
+      <span class="sb-txt">Bulk Assign</span>
+    </a>
+
+    <!-- ── Student Fees ───────────────────── -->
+    <div class="sb-lbl">Student Fees</div>
+
+    <!-- Student Fee List -->
+    <a href="{% url 'student_fee_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name in 'student_fee_list,student_fee_detail,waive_fee' %}on{% endif %}"
+       data-tip="Student Fees">
+      <div class="sb-ico"><i class="bi bi-receipt"></i></div>
+      <span class="sb-txt">Student Fees</span>
+    </a>
 
     <!-- Payments group -->
-    <div class="sb-grp-hd {% if 'payment' in request.resolver_match.url_name %}open{% endif %}"
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'payment_list,payment_create,daily_collection' %}open{% endif %}"
          onclick="acGrp(this)" data-tip="Payments">
-      <div class="sb-ico"><i class="bi bi-credit-card"></i></div>
+      <div class="sb-ico"><i class="bi bi-cash-coin"></i></div>
       <span class="sb-txt">Payments</span>
       <i class="bi bi-chevron-down sb-arr"></i>
     </div>
-    <div class="sb-kids {% if 'payment' in request.resolver_match.url_name %}open{% endif %}">
+    <div class="sb-kids {% if request.resolver_match.url_name in 'payment_list,payment_create,daily_collection' %}open{% endif %}">
       <a href="{% url 'payment_list' %}"
          class="sb-lnk {% if request.resolver_match.url_name == 'payment_list' %}on{% endif %}"
          data-tip="All Payments">
@@ -332,66 +287,36 @@
         <div class="sb-ico"><i class="bi bi-plus-circle"></i></div>
         <span class="sb-txt">Record Payment</span>
       </a>
+      <a href="{% url 'daily_collection' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'daily_collection' %}on{% endif %}"
+         data-tip="Daily Collection">
+        <div class="sb-ico"><i class="bi bi-calendar-day"></i></div>
+        <span class="sb-txt">Daily Collection</span>
+      </a>
     </div>
 
-    <!-- Outstanding Fees -->
+    <!-- ── Reports ───────────────────────── -->
+    <div class="sb-lbl">Reports</div>
+
+    <a href="{% url 'fee_report' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'fee_report' %}on{% endif %}"
+       data-tip="Fee Report">
+      <div class="sb-ico"><i class="bi bi-graph-up"></i></div>
+      <span class="sb-txt">Fee Report</span>
+    </a>
+
+    <a href="{% url 'fee_collection' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'fee_collection' %}on{% endif %}"
+       data-tip="Fee Collection Report">
+      <div class="sb-ico"><i class="bi bi-bar-chart-line"></i></div>
+      <span class="sb-txt">Collection Report</span>
+    </a>
+
     <a href="{% url 'outstanding_fees' %}"
        class="sb-lnk {% if request.resolver_match.url_name == 'outstanding_fees' %}on{% endif %}"
        data-tip="Outstanding Fees">
       <div class="sb-ico"><i class="bi bi-exclamation-circle"></i></div>
       <span class="sb-txt">Outstanding Fees</span>
-    </a>
-
-    <!-- ── Reports ───────────────────────── -->
-    <div class="sb-lbl">Reports</div>
-
-    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'fee_collection,outstanding_fees,fee_report,reports_dashboard,report_history' %}open{% endif %}"
-         onclick="acGrp(this)" data-tip="Financial Reports">
-      <div class="sb-ico"><i class="bi bi-bar-chart-line"></i></div>
-      <span class="sb-txt">Financial Reports</span>
-      <i class="bi bi-chevron-down sb-arr"></i>
-    </div>
-    <div class="sb-kids {% if request.resolver_match.url_name in 'fee_collection,outstanding_fees,fee_report,reports_dashboard,report_history' %}open{% endif %}">
-      <a href="{% url 'reports_dashboard' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'reports_dashboard' %}on{% endif %}"
-         data-tip="Reports Dashboard">
-        <div class="sb-ico"><i class="bi bi-grid-1x2"></i></div>
-        <span class="sb-txt">Dashboard</span>
-      </a>
-      <a href="{% url 'fee_collection' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'fee_collection' %}on{% endif %}"
-         data-tip="Fee Collection Report">
-        <div class="sb-ico"><i class="bi bi-cash-coin"></i></div>
-        <span class="sb-txt">Fee Collection</span>
-      </a>
-      <a href="{% url 'outstanding_fees' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'outstanding_fees' %}on{% endif %}"
-         data-tip="Outstanding Fees Report">
-        <div class="sb-ico"><i class="bi bi-exclamation-circle"></i></div>
-        <span class="sb-txt">Outstanding Fees</span>
-      </a>
-      <a href="{% url 'fee_report' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'fee_report' %}on{% endif %}"
-         data-tip="Fee Report">
-        <div class="sb-ico"><i class="bi bi-graph-up"></i></div>
-        <span class="sb-txt">Fee Report</span>
-      </a>
-      <a href="{% url 'report_history' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'report_history' %}on{% endif %}"
-         data-tip="Report History">
-        <div class="sb-ico"><i class="bi bi-clock-history"></i></div>
-        <span class="sb-txt">Report History</span>
-      </a>
-    </div>
-
-    <!-- ── Students ──────────────────────── -->
-    <div class="sb-lbl">Students</div>
-
-    <a href="{% url 'student_list' %}"
-       class="sb-lnk {% if request.resolver_match.url_name == 'student_list' %}on{% endif %}"
-       data-tip="Student List">
-      <div class="sb-ico"><i class="bi bi-mortarboard"></i></div>
-      <span class="sb-txt">Student List</span>
     </a>
 
     <!-- ── Communication ─────────────────── -->
@@ -440,12 +365,11 @@
 </nav>
 
 <script>
-const AC_KEY = 'ac_state';
-
+const AC_KEY='ac_state';
 function acToggle(){
   const sb=document.getElementById('accountantSidebar');
   sb.classList.toggle('sb-mini');
-  localStorage.setItem(AC_KEY, sb.classList.contains('sb-mini')?'1':'0');
+  localStorage.setItem(AC_KEY,sb.classList.contains('sb-mini')?'1':'0');
 }
 (function(){
   if(localStorage.getItem(AC_KEY)==='1'){
@@ -453,23 +377,19 @@ function acToggle(){
     if(sb) sb.classList.add('sb-mini');
   }
 })();
-
 function acGrp(hd){
   const sb=document.getElementById('accountantSidebar');
   if(sb.classList.contains('sb-mini')) return;
   const kids=hd.nextElementSibling;
   const isOpen=hd.classList.contains('open');
   document.querySelectorAll('#accountantSidebar .sb-grp-hd.open').forEach(h=>{
-    h.classList.remove('open');
-    h.nextElementSibling.classList.remove('open');
+    h.classList.remove('open');h.nextElementSibling.classList.remove('open');
   });
   if(!isOpen){
-    hd.classList.add('open');
-    kids.classList.add('open');
+    hd.classList.add('open');kids.classList.add('open');
     setTimeout(()=>kids.scrollIntoView({block:'nearest',behavior:'smooth'}),50);
   }
 }
-
 function acSearch(q){
   const term=q.toLowerCase().trim();
   const body=document.getElementById('acBody');
@@ -481,8 +401,7 @@ function acSearch(q){
   if(!term){
     [lbls,grpHds,kids,links].forEach(nl=>nl.forEach(el=>el.style.display=''));
     kids.forEach(k=>{if(!k.classList.contains('open'))k.style.maxHeight='0px';});
-    empty.style.display='none';
-    return;
+    empty.style.display='none';return;
   }
   lbls.forEach(l=>l.style.display='none');
   grpHds.forEach(g=>g.style.display='none');
@@ -502,7 +421,6 @@ function acSearch(q){
   });
   empty.style.display=found===0?'block':'none';
 }
-
 function acMobOpen(){
   document.getElementById('accountantSidebar').classList.add('sb-open');
   document.getElementById('acVeil').classList.add('show');
@@ -511,12 +429,10 @@ function acMobClose(){
   document.getElementById('accountantSidebar').classList.remove('sb-open');
   document.getElementById('acVeil').classList.remove('show');
 }
-
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='b'){e.preventDefault();acToggle();}
   if(e.key==='Escape') acMobClose();
 });
-
 document.addEventListener('DOMContentLoaded',()=>{
   const active=document.querySelector('#accountantSidebar .sb-lnk.on');
   if(active) active.scrollIntoView({block:'center',behavior:'smooth'});
