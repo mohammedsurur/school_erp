@@ -267,33 +267,27 @@
       <span class="sb-txt">Student Fees</span>
     </a>
 
-    <!-- Payments group -->
-    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'payment_list,payment_create,daily_collection' %}open{% endif %}"
-         onclick="acGrp(this)" data-tip="Payments">
+    <!-- Payments — uses actual fee URLs -->
+    <a href="{% url 'student_fee_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name in 'student_fee_list,student_fee_detail,waive_fee' %}on{% endif %}"
+       data-tip="All Payments">
       <div class="sb-ico"><i class="bi bi-cash-coin"></i></div>
-      <span class="sb-txt">Payments</span>
-      <i class="bi bi-chevron-down sb-arr"></i>
-    </div>
-    <div class="sb-kids {% if request.resolver_match.url_name in 'payment_list,payment_create,daily_collection' %}open{% endif %}">
-      <a href="{% url 'payment_list' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'payment_list' %}on{% endif %}"
-         data-tip="All Payments">
-        <div class="sb-ico"><i class="bi bi-list-check"></i></div>
-        <span class="sb-txt">All Payments</span>
-      </a>
-      <a href="{% url 'payment_create' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'payment_create' %}on{% endif %}"
-         data-tip="Record Payment">
-        <div class="sb-ico"><i class="bi bi-plus-circle"></i></div>
-        <span class="sb-txt">Record Payment</span>
-      </a>
-      <a href="{% url 'daily_collection' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'daily_collection' %}on{% endif %}"
-         data-tip="Daily Collection">
-        <div class="sb-ico"><i class="bi bi-calendar-day"></i></div>
-        <span class="sb-txt">Daily Collection</span>
-      </a>
-    </div>
+      <span class="sb-txt">All Payments</span>
+    </a>
+
+    <a href="{% url 'daily_collection' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'daily_collection' %}on{% endif %}"
+       data-tip="Daily Collection">
+      <div class="sb-ico"><i class="bi bi-calendar-day"></i></div>
+      <span class="sb-txt">Daily Collection</span>
+    </a>
+
+    <a href="{% url 'bulk_assign_fees' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'bulk_assign_fees' %}on{% endif %}"
+       data-tip="Bulk Assign Fees">
+      <div class="sb-ico"><i class="bi bi-people"></i></div>
+      <span class="sb-txt">Bulk Assign</span>
+    </a>
 
     <!-- ── Reports ───────────────────────── -->
     <div class="sb-lbl">Reports</div>
