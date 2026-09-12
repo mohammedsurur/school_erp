@@ -1,41 +1,424 @@
-<a href="{% url 'teacher_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}">
-  <i class="bi bi-speedometer2"></i> Dashboard
-</a>
+{% load static %}
+<style>
+:root{
+  --sb-w:260px;--sb-mini:68px;
+  --sb-bg:#162032;--sb-border:rgba(255,255,255,.08);
+  --sb-text:#cbd5e1;--sb-dim:#64748b;
+  --sb-hover:rgba(255,255,255,.08);
+  --sb-active:rgba(14,165,160,.2);
+  --sb-accent:#0ea5a0;
+  --sb-r:.55rem;--sb-t:.22s ease;
+}
+#teacherSidebar{
+  position:fixed;top:0;left:0;bottom:0;
+  width:var(--sb-w);background:var(--sb-bg);
+  display:flex;flex-direction:column;
+  z-index:1040;transition:width var(--sb-t);
+  border-right:1px solid var(--sb-border);
+  box-shadow:2px 0 20px rgba(0,0,0,.35);
+}
+#teacherSidebar.sb-mini{width:var(--sb-mini)}
+.sb-hd{
+  display:flex;align-items:center;gap:.75rem;
+  padding:.9rem 1rem;border-bottom:1px solid var(--sb-border);
+  flex-shrink:0;min-height:62px;position:relative;overflow:visible;
+}
+.sb-logo{
+  width:36px;height:36px;flex-shrink:0;border-radius:.6rem;
+  background:linear-gradient(135deg,#1a3c72,#0ea5a0);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.95rem;font-weight:900;color:#fff;
+  box-shadow:0 2px 8px rgba(26,60,114,.4);
+}
+.sb-hd-text{overflow:hidden;transition:opacity var(--sb-t),width var(--sb-t);}
+.sb-hd-title{font-size:.82rem;font-weight:700;color:#fff;white-space:nowrap;}
+.sb-hd-sub{font-size:.67rem;color:var(--sb-dim);white-space:nowrap;}
+#teacherSidebar.sb-mini .sb-hd-text{opacity:0;width:0;}
+.sb-tog{
+  position:absolute;right:-11px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;border-radius:50%;
+  background:#1a3c72;border:2px solid var(--sb-bg);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#fff;font-size:.6rem;transition:background .2s;z-index:10;
+}
+.sb-tog:hover{background:#0ea5a0;}
+#teacherSidebar.sb-mini .sb-tog i{transform:rotate(180deg);}
+.sb-srch{padding:.65rem .85rem;border-bottom:1px solid var(--sb-border);flex-shrink:0;}
+.sb-srch-wrap{position:relative;}
+.sb-srch-wrap i{
+  position:absolute;left:.7rem;top:50%;transform:translateY(-50%);
+  color:var(--sb-dim);font-size:.78rem;pointer-events:none;
+}
+.sb-srch input{
+  width:100%;padding:.48rem .75rem .48rem 2rem;
+  background:rgba(255,255,255,.05);border:1px solid var(--sb-border);
+  border-radius:var(--sb-r);color:var(--sb-text);font-size:.79rem;outline:none;
+  transition:border-color .2s,background .2s;
+}
+.sb-srch input::placeholder{color:var(--sb-dim);}
+.sb-srch input:focus{border-color:#0ea5a0;background:rgba(14,165,160,.08);}
+#teacherSidebar.sb-mini .sb-srch{display:none;}
+.sb-body{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  padding:.5rem 0 .75rem;scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,.08) transparent;
+}
+.sb-body::-webkit-scrollbar{width:3px;}
+.sb-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+.sb-lbl{
+  font-size:.59rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700;
+  color:var(--sb-dim);padding:.9rem .9rem .3rem;
+  white-space:nowrap;overflow:hidden;transition:opacity var(--sb-t);
+}
+#teacherSidebar.sb-mini .sb-lbl{opacity:0;height:0;padding:0;}
+.sb-lnk,.sb-grp-hd{
+  display:flex;align-items:center;gap:.65rem;
+  padding:.55rem .85rem;margin:.08rem .55rem;
+  border-radius:var(--sb-r);color:var(--sb-text);
+  text-decoration:none;font-size:.82rem;font-weight:500;
+  cursor:pointer;transition:all var(--sb-t);
+  white-space:nowrap;overflow:hidden;position:relative;user-select:none;
+}
+.sb-lnk:hover,.sb-grp-hd:hover{background:var(--sb-hover);color:#e2e8f0;text-decoration:none;}
+.sb-lnk.on{background:var(--sb-active);color:#fff;font-weight:600;}
+.sb-lnk.on::before{
+  content:'';position:absolute;left:0;top:18%;bottom:18%;
+  width:3px;background:#0ea5a0;border-radius:0 3px 3px 0;
+}
+.sb-ico{
+  width:28px;height:28px;flex-shrink:0;border-radius:.45rem;
+  background:rgba(255,255,255,.05);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.82rem;transition:background var(--sb-t);
+}
+.sb-lnk:hover .sb-ico,.sb-grp-hd:hover .sb-ico,.sb-lnk.on .sb-ico{background:rgba(255,255,255,.1);}
+.sb-txt{flex:1;transition:opacity var(--sb-t);}
+#teacherSidebar.sb-mini .sb-txt{opacity:0;width:0;overflow:hidden;}
+.sb-arr{flex-shrink:0;margin-left:auto;font-size:.62rem;color:var(--sb-dim);transition:transform var(--sb-t);}
+.sb-grp-hd.open .sb-arr{transform:rotate(180deg);}
+#teacherSidebar.sb-mini .sb-arr{display:none;}
+.sb-kids{overflow:hidden;max-height:0;transition:max-height .3s cubic-bezier(.4,0,.2,1);}
+.sb-kids.open{max-height:500px;}
+.sb-kids .sb-lnk{padding:.48rem .85rem .48rem 1.1rem;font-size:.79rem;}
+.sb-kids .sb-ico{width:24px;height:24px;font-size:.75rem;}
+#teacherSidebar.sb-mini .sb-lnk,
+#teacherSidebar.sb-mini .sb-grp-hd{justify-content:center;padding:.6rem;}
+#teacherSidebar.sb-mini .sb-lnk:hover::after{
+  content:attr(data-tip);
+  position:absolute;left:calc(var(--sb-mini) + 6px);top:50%;
+  transform:translateY(-50%);background:#1e293b;color:#e2e8f0;
+  padding:.35rem .8rem;border-radius:.5rem;font-size:.76rem;
+  white-space:nowrap;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.5);
+  border:1px solid var(--sb-border);pointer-events:none;
+}
+.sb-empty{text-align:center;padding:1.5rem 1rem;color:var(--sb-dim);font-size:.76rem;display:none;}
+.sb-ft{flex-shrink:0;border-top:1px solid var(--sb-border);padding:.75rem .85rem;}
+.sb-user{
+  display:flex;align-items:center;gap:.65rem;padding:.5rem .6rem;
+  border-radius:var(--sb-r);cursor:pointer;text-decoration:none;
+  transition:background var(--sb-t);
+}
+.sb-user:hover{background:var(--sb-hover);}
+.sb-av{
+  width:32px;height:32px;flex-shrink:0;border-radius:50%;
+  background:linear-gradient(135deg,#1a3c72,#0ea5a0);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:700;color:#fff;
+}
+.sb-uname{font-size:.79rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-urole{font-size:.66rem;color:var(--sb-dim);}
+#teacherSidebar.sb-mini .sb-uinfo{display:none;}
+.sb-out{
+  display:flex;align-items:center;gap:.65rem;padding:.45rem .6rem;
+  margin-top:.25rem;border-radius:var(--sb-r);color:#f87171;
+  font-size:.8rem;font-weight:500;cursor:pointer;text-decoration:none;
+  transition:background var(--sb-t);
+}
+.sb-out:hover{background:rgba(239,68,68,.1);color:#f87171;text-decoration:none;}
+#teacherSidebar.sb-mini .sb-out{justify-content:center;}
+#teacherSidebar.sb-mini .sb-out span{display:none;}
+.sb-veil{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1039;backdrop-filter:blur(2px);}
+@media(max-width:768px){
+  #teacherSidebar{transform:translateX(-100%);width:var(--sb-w)!important;}
+  #teacherSidebar.sb-open{transform:translateX(0);}
+  .sb-veil.show{display:block;}
+  .sb-mob-btn{
+    position:fixed;top:1rem;left:1rem;z-index:1038;width:40px;height:40px;
+    border-radius:.6rem;background:#1a3c72;border:none;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:1rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4);
+  }
+}
+@media(min-width:769px){.sb-mob-btn{display:none;}}
+</style>
 
-<div class="nav-section">My Classes</div>
-<a href="#" class="nav-link">
-  <i class="bi bi-building"></i> My Classes
-</a>
-<a href="#" class="nav-link">
-  <i class="bi bi-people"></i> My Students
-</a>
-<a href="#" class="nav-link">
-  <i class="bi bi-calendar3"></i> Timetable
-</a>
+<button class="sb-mob-btn" onclick="tcMobOpen()"><i class="bi bi-list"></i></button>
+<div class="sb-veil" id="tcVeil" onclick="tcMobClose()"></div>
 
-<div class="nav-section">Daily Work</div>
-<a href="#" class="nav-link">
-  <i class="bi bi-check2-square"></i> Mark Attendance
-</a>
-<a href="#" class="nav-link">
-  <i class="bi bi-file-earmark-text"></i> Enter Marks
-</a>
-<a href="#" class="nav-link">
-  <i class="bi bi-bar-chart"></i> Exam Results
-</a>
+<nav id="teacherSidebar">
 
-<div class="nav-section">Communication</div>
-<a href="#" class="nav-link">
-  <i class="bi bi-megaphone"></i> Notice Board
-</a>
-<a href="#" class="nav-link">
-  <i class="bi bi-envelope"></i> Messages
-</a>
+  <!-- Header -->
+  <div class="sb-hd">
+    <div class="sb-logo">T</div>
+    <div class="sb-hd-text">
+      <div class="sb-hd-title">{{ request.user.get_full_name }}</div>
+      <div class="sb-hd-sub">Teacher Portal</div>
+    </div>
+    <div class="sb-tog" onclick="tcToggle()" title="Ctrl+B">
+      <i class="bi bi-chevron-left"></i>
+    </div>
+  </div>
 
-<div class="nav-section">Account</div>
-<a href="{% url 'profile' %}" class="nav-link">
-  <i class="bi bi-person"></i> My Profile
-</a>
-<a href="{% url 'change_password' %}" class="nav-link">
-  <i class="bi bi-shield-lock"></i> Change Password
-</a>
+  <!-- Search -->
+  <div class="sb-srch">
+    <div class="sb-srch-wrap">
+      <i class="bi bi-search"></i>
+      <input type="text" id="tcQ" placeholder="Search menu…"
+             oninput="tcSearch(this.value)" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="sb-body" id="tcBody">
+
+    <div class="sb-empty" id="tcEmpty">
+      <i class="bi bi-search d-block mb-2 opacity-25" style="font-size:1.5rem"></i>
+      No results found
+    </div>
+
+    <!-- ── Overview ──────────────────────── -->
+    <div class="sb-lbl">Overview</div>
+
+    <a href="{% url 'teacher_dashboard' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'teacher_dashboard' %}on{% endif %}"
+       data-tip="Dashboard">
+      <div class="sb-ico"><i class="bi bi-speedometer2"></i></div>
+      <span class="sb-txt">Dashboard</span>
+    </a>
+
+    <!-- ── My Classes ─────────────────────── -->
+    <div class="sb-lbl">My Classes</div>
+
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'my_classes,my_students,my_timetable,timetable_view' %}open{% endif %}"
+         onclick="tcGrp(this)" data-tip="My Classes">
+      <div class="sb-ico"><i class="bi bi-building"></i></div>
+      <span class="sb-txt">My Classes</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if request.resolver_match.url_name in 'my_classes,my_students,my_timetable,timetable_view' %}open{% endif %}">
+      <a href="{% url 'my_classes' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'my_classes' %}on{% endif %}"
+         data-tip="My Classes">
+        <div class="sb-ico"><i class="bi bi-diagram-3"></i></div>
+        <span class="sb-txt">My Classes</span>
+      </a>
+      <a href="{% url 'my_students' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'my_students' %}on{% endif %}"
+         data-tip="My Students">
+        <div class="sb-ico"><i class="bi bi-people"></i></div>
+        <span class="sb-txt">My Students</span>
+      </a>
+      <a href="{% url 'timetable_view' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'timetable_view' %}on{% endif %}"
+         data-tip="Timetable">
+        <div class="sb-ico"><i class="bi bi-table"></i></div>
+        <span class="sb-txt">Timetable</span>
+      </a>
+    </div>
+
+    <!-- ── Attendance ─────────────────────── -->
+    <div class="sb-lbl">Daily Work</div>
+
+    <div class="sb-grp-hd {% if 'attendance' in request.resolver_match.url_name %}open{% endif %}"
+         onclick="tcGrp(this)" data-tip="Attendance">
+      <div class="sb-ico"><i class="bi bi-calendar-check"></i></div>
+      <span class="sb-txt">Attendance</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if 'attendance' in request.resolver_match.url_name %}open{% endif %}">
+      <a href="{% url 'attendance_select' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'attendance_select' %}on{% endif %}"
+         data-tip="Mark Attendance">
+        <div class="sb-ico"><i class="bi bi-check2-square"></i></div>
+        <span class="sb-txt">Mark Attendance</span>
+      </a>
+      <a href="{% url 'attendance_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'attendance_list' %}on{% endif %}"
+         data-tip="Attendance Records">
+        <div class="sb-ico"><i class="bi bi-list-check"></i></div>
+        <span class="sb-txt">Attendance Records</span>
+      </a>
+    </div>
+
+    <!-- ── Exams ──────────────────────────── -->
+    <div class="sb-grp-hd {% if 'exam' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name %}open{% endif %}"
+         onclick="tcGrp(this)" data-tip="Exams">
+      <div class="sb-ico"><i class="bi bi-journal-check"></i></div>
+      <span class="sb-txt">Exams & Marks</span>
+      <i class="bi bi-chevron-down sb-arr"></i>
+    </div>
+    <div class="sb-kids {% if 'exam' in request.resolver_match.url_name or 'result' in request.resolver_match.url_name %}open{% endif %}">
+      <a href="{% url 'exam_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'exam_list' %}on{% endif %}"
+         data-tip="Exams">
+        <div class="sb-ico"><i class="bi bi-journals"></i></div>
+        <span class="sb-txt">Exams</span>
+      </a>
+      <!-- result_entry needs schedule_pk — go to exam list first -->
+      <a href="{% url 'exam_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name in 'result_entry,result_list' %}on{% endif %}"
+         data-tip="Enter Marks">
+        <div class="sb-ico"><i class="bi bi-pencil-square"></i></div>
+        <span class="sb-txt">Enter Marks</span>
+      </a>
+      <a href="{% url 'exam_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name in 'report_card_list,report_card_detail' %}on{% endif %}"
+         data-tip="Exam Results">
+        <div class="sb-ico"><i class="bi bi-bar-chart"></i></div>
+        <span class="sb-txt">Exam Results</span>
+      </a>
+    </div>
+
+    <!-- ── Communication ─────────────────── -->
+    <div class="sb-lbl">Communication</div>
+
+    <a href="{% url 'announcement_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'announcement_list' %}on{% endif %}"
+       data-tip="Notice Board">
+      <div class="sb-ico"><i class="bi bi-megaphone"></i></div>
+      <span class="sb-txt">Notice Board</span>
+    </a>
+
+    <a href="{% url 'inbox' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'inbox' %}on{% endif %}"
+       data-tip="Messages">
+      <div class="sb-ico"><i class="bi bi-envelope"></i></div>
+      <span class="sb-txt">Messages</span>
+    </a>
+
+    <a href="{% url 'event_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'event_list' %}on{% endif %}"
+       data-tip="Events">
+      <div class="sb-ico"><i class="bi bi-calendar-event"></i></div>
+      <span class="sb-txt">Events</span>
+    </a>
+
+    <a href="{% url 'notification_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'notification_list' %}on{% endif %}"
+       data-tip="Notifications">
+      <div class="sb-ico"><i class="bi bi-bell"></i></div>
+      <span class="sb-txt">Notifications</span>
+    </a>
+
+    <!-- ── Account ───────────────────────── -->
+    <div class="sb-lbl">Account</div>
+
+    <a href="{% url 'profile' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'profile' %}on{% endif %}"
+       data-tip="My Profile">
+      <div class="sb-ico"><i class="bi bi-person-circle"></i></div>
+      <span class="sb-txt">My Profile</span>
+    </a>
+
+    <a href="{% url 'change_password' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'change_password' %}on{% endif %}"
+       data-tip="Change Password">
+      <div class="sb-ico"><i class="bi bi-shield-lock"></i></div>
+      <span class="sb-txt">Change Password</span>
+    </a>
+
+  </div><!-- /sb-body -->
+
+  <!-- Footer -->
+  <div class="sb-ft">
+    <a href="{% url 'profile' %}" class="sb-user">
+      <div class="sb-av">
+        {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+      </div>
+      <div class="sb-uinfo" style="overflow:hidden;flex:1">
+        <div class="sb-uname">{{ request.user.get_full_name }}</div>
+        <div class="sb-urole">Teacher</div>
+      </div>
+    </a>
+    <a href="{% url 'logout' %}" class="sb-out">
+      <i class="bi bi-box-arrow-left"></i>
+      <span>Sign Out</span>
+    </a>
+  </div>
+
+</nav>
+
+<script>
+const TC_KEY='tc_state';
+function tcToggle(){
+  const sb=document.getElementById('teacherSidebar');
+  sb.classList.toggle('sb-mini');
+  localStorage.setItem(TC_KEY,sb.classList.contains('sb-mini')?'1':'0');
+}
+(function(){
+  if(localStorage.getItem(TC_KEY)==='1'){
+    const sb=document.getElementById('teacherSidebar');
+    if(sb) sb.classList.add('sb-mini');
+  }
+})();
+function tcGrp(hd){
+  const sb=document.getElementById('teacherSidebar');
+  if(sb.classList.contains('sb-mini')) return;
+  const kids=hd.nextElementSibling;
+  const isOpen=hd.classList.contains('open');
+  document.querySelectorAll('#teacherSidebar .sb-grp-hd.open').forEach(h=>{
+    h.classList.remove('open');h.nextElementSibling.classList.remove('open');
+  });
+  if(!isOpen){
+    hd.classList.add('open');kids.classList.add('open');
+    setTimeout(()=>kids.scrollIntoView({block:'nearest',behavior:'smooth'}),50);
+  }
+}
+function tcSearch(q){
+  const term=q.toLowerCase().trim();
+  const body=document.getElementById('tcBody');
+  const empty=document.getElementById('tcEmpty');
+  const lbls=body.querySelectorAll('.sb-lbl');
+  const grpHds=body.querySelectorAll('.sb-grp-hd');
+  const kids=body.querySelectorAll('.sb-kids');
+  const links=body.querySelectorAll('.sb-lnk');
+  if(!term){
+    [lbls,grpHds,kids,links].forEach(nl=>nl.forEach(el=>el.style.display=''));
+    kids.forEach(k=>{if(!k.classList.contains('open'))k.style.maxHeight='0px';});
+    empty.style.display='none';return;
+  }
+  lbls.forEach(l=>l.style.display='none');
+  grpHds.forEach(g=>g.style.display='none');
+  kids.forEach(k=>{k.style.display='none';k.style.maxHeight='500px';});
+  let found=0;
+  links.forEach(lnk=>{
+    const tip=(lnk.dataset.tip||'').toLowerCase();
+    const txt=lnk.querySelector('.sb-txt')?.textContent.toLowerCase()||'';
+    const match=tip.includes(term)||txt.includes(term);
+    lnk.style.display=match?'':'none';
+    if(match){
+      found++;
+      const pk=lnk.closest('.sb-kids');
+      if(pk){pk.style.display='block';pk.style.maxHeight='500px';
+        if(pk.previousElementSibling)pk.previousElementSibling.style.display='';}
+    }
+  });
+  empty.style.display=found===0?'block':'none';
+}
+function tcMobOpen(){
+  document.getElementById('teacherSidebar').classList.add('sb-open');
+  document.getElementById('tcVeil').classList.add('show');
+}
+function tcMobClose(){
+  document.getElementById('teacherSidebar').classList.remove('sb-open');
+  document.getElementById('tcVeil').classList.remove('show');
+}
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='b'){e.preventDefault();tcToggle();}
+  if(e.key==='Escape') tcMobClose();
+});
+document.addEventListener('DOMContentLoaded',()=>{
+  const active=document.querySelector('#teacherSidebar .sb-lnk.on');
+  if(active) active.scrollIntoView({block:'center',behavior:'smooth'});
+});
+</script>
