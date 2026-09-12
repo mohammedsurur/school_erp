@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}My Attendance{% endblock %}
+{% block page_title %}My Attendance{% endblock %}
+
+{% block content %}
+<style>
+  .stat-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1.25rem 1.5rem;display:flex;align-items:center;gap:1rem}
+  .stat-icon{width:48px;height:48px;border-radius:.875rem;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+  .stat-num{font-size:1.7rem;font-weight:800;line-height:1;margin-bottom:.15rem}
+  .stat-lbl{font-size:.72rem;color:#9ca3af;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .info-card{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .filter-bar{border:none;border-radius:1rem;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:1rem 1.5rem;margin-bottom:1.5rem}
+  .form-control,.form-select{border-radius:.75rem;border:1.5px solid #e2e8f0;padding:.6rem 1rem;font-size:.875rem;transition:border-color .2s}
+  .form-control:focus,.form-select:focus{border-color:#0ea5a0;box-shadow:0 0 0 .2rem rgba(14,165,160,.1);outline:none}
+  label{font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.3rem;display:block}
+
+  /* Status badges */
+  .s-present{background:#dcfce7;color:#15803d;border-radius:999px;padding:.2rem .85rem;font-size:.72rem;font-weight:700;display:inline-block}
+  .s-absent {background:#fee2e2;color:#dc2626;border-radius:999px;padding:.2rem .85rem;font-size:.72rem;font-weight:700;display:inline-block}
+  .s-late   {background:#fef9c3;color:#854d0e;border-radius:999px;padding:.2rem .85rem;font-size:.72rem;font-weight:700;display:inline-block}
+
+  /* Progress bar */
+  .att-bar{height:10px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin-top:.5rem}
+  .att-fill{height:100%;border-radius:999px;transition:width .6s ease;background:linear-gradient(90deg,#0ea5a0,#1a3c72)}
+
+  /* Table */
+  .att-table th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;font-weight:700;border:none;padding:.75rem 1rem;background:#f8faff}
+  .att-table td{padding:.75rem 1rem;border-bottom:1px solid #f1f5f9;font-size:.875rem;vertical-align:middle}
+  .att-table tbody tr:hover{background:#f8faff}
+
+  /* Month tab */
+  .month-tab{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem}
+  .month-btn{border:1.5px solid #e2e8f0;border-radius:999px;padding:.3rem .9rem;font-size:.76rem;font-weight:500;background:#fff;color:#374151;cursor:pointer;transition:all .2s;text-decoration:none}
+  .month-btn:hover{border-color:#0ea5a0;color:#0ea5a0}
+  .month-btn.active{background:#0ea5a0;border-color:#0ea5a0;color:#fff}
+
+  /* Calendar legend */
+  .legend-dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:.35rem}
+</style>
+
+<!-- Page header -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+  <div>
+    <h5 class="fw-bold mb-0">My Attendance</h5>
+    <p class="text-muted small mb-0">
+      {{ request.user.get_full_name }} &mdash; Attendance Record
+    </p>
+  </div>
+  <!-- Filter form -->
+  <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+    <div>
+      <select name="term" class="form-select form-select-sm" style="min-width:140px" onchange="this.form.submit()">
+        <option value="">All Terms</option>
+        {% for t in terms %}
+        <option value="{{ t.pk }}" {% if selected_term == t.pk|stringformat:'s' %}selected{% endif %}>
+          {{ t.name }} — {{ t.academic_year.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <select name="month" class="form-select form-select-sm" style="min-width:130px" onchange="this.form.submit()">
+        <option value="">All Months</option>
+        {% for m in months %}
+        <option value="{{ m.value }}" {% if selected_month == m.value|stringformat:'s' %}selected{% endif %}>
+          {{ m.label }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if request.GET %}
+    <a href="{% url 'my_attendance' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+      <i class="bi bi-x"></i> Clear
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#eff6ff">
+        <i class="bi bi-calendar3 text-primary"></i>
+      </div>
+      <div>
+        <div class="stat-num text-primary">{{ total_days }}</div>
+        <div class="stat-lbl">Total Days</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#f0fdf4">
+        <i class="bi bi-check-circle text-success"></i>
+      </div>
+      <div>
+        <div class="stat-num text-success">{{ present_days }}</div>
+        <div class="stat-lbl">Present</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8f8">
+        <i class="bi bi-x-circle text-danger"></i>
+      </div>
+      <div>
+        <div class="stat-num text-danger">{{ absent_days }}</div>
+        <div class="stat-lbl">Absent</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3">
+        <i class="bi bi-clock text-warning"></i>
+      </div>
+      <div>
+        <div class="stat-num text-warning">{{ late_days }}</div>
+        <div class="stat-lbl">Late</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance rate card -->
+<div class="info-card card mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <span class="fw-bold" style="font-size:1rem">Attendance Rate</span>
+        <span class="text-muted small ms-2">
+          {{ present_days }} present out of {{ total_days }} school days
+        </span>
+      </div>
+      <span class="fw-bold fs-4
+        {% if attendance_rate >= 90 %}text-success
+        {% elif attendance_rate >= 75 %}text-warning
+        {% else %}text-danger{% endif %}">
+        {{ attendance_rate|floatformat:1 }}%
+      </span>
+    </div>
+    <div class="att-bar">
+      <div class="att-fill" style="width:{{ attendance_rate }}%"></div>
+    </div>
+    <div class="d-flex gap-3 mt-2" style="font-size:.72rem">
+      <span><span class="legend-dot" style="background:#0ea5a0"></span>Present</span>
+      <span><span class="legend-dot" style="background:#ef4444"></span>Absent</span>
+      <span><span class="legend-dot" style="background:#f59e0b"></span>Late</span>
+      {% if attendance_rate < 75 %}
+      <span class="text-danger fw-bold ms-auto">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Below minimum attendance (75%)
+      </span>
+      {% elif attendance_rate >= 90 %}
+      <span class="text-success fw-bold ms-auto">
+        <i class="bi bi-award me-1"></i>
+        Excellent attendance!
+      </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Attendance records table -->
+<div class="info-card card">
+  <div class="card-body p-0">
+    <div class="d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
+      <h6 class="fw-bold mb-0">Attendance Records</h6>
+      <span class="text-muted small">{{ attendance_records.count }} record{{ attendance_records.count|pluralize }}</span>
+    </div>
+
+    {% if attendance_records %}
+    <div class="table-responsive">
+      <table class="table att-table mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Status</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in attendance_records %}
+          <tr>
+            <td class="text-muted" style="font-size:.75rem">{{ forloop.counter }}</td>
+            <td>
+              <span class="fw-semibold">{{ record.date|date:"M d, Y" }}</span>
+            </td>
+            <td class="text-muted">{{ record.date|date:"l" }}</td>
+            <td>
+              {% if record.status == 'present' %}
+                <span class="s-present"><i class="bi bi-check-circle me-1"></i>Present</span>
+              {% elif record.status == 'absent' %}
+                <span class="s-absent"><i class="bi bi-x-circle me-1"></i>Absent</span>
+              {% elif record.status == 'late' %}
+                <span class="s-late"><i class="bi bi-clock me-1"></i>Late</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ record.status|title }}</span>
+              {% endif %}
+            </td>
+            <td class="text-muted" style="font-size:.82rem">
+              {{ record.remarks|default:"—" }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+      <i class="bi bi-calendar-x fs-1 text-muted opacity-25 d-block mb-3"></i>
+      <h6 class="fw-bold text-dark">No attendance records found</h6>
+      <p class="text-muted small mb-0">
+        {% if request.GET %}
+          No records match your filter. <a href="{% url 'my_attendance' %}">Clear filters</a>
+        {% else %}
+          Your attendance records will appear here.
+        {% endif %}
+      </p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
