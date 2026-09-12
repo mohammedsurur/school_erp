@@ -199,21 +199,21 @@
     <!-- ── My Classes ─────────────────────── -->
     <div class="sb-lbl">My Classes</div>
 
-    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'my_classes,my_students,my_timetable,timetable_view' %}open{% endif %}"
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'section_list,student_list,timetable_view' %}open{% endif %}"
          onclick="tcGrp(this)" data-tip="My Classes">
       <div class="sb-ico"><i class="bi bi-building"></i></div>
       <span class="sb-txt">My Classes</span>
       <i class="bi bi-chevron-down sb-arr"></i>
     </div>
-    <div class="sb-kids {% if request.resolver_match.url_name in 'my_classes,my_students,my_timetable,timetable_view' %}open{% endif %}">
-      <a href="{% url 'my_classes' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'my_classes' %}on{% endif %}"
+    <div class="sb-kids {% if request.resolver_match.url_name in 'section_list,student_list,timetable_view' %}open{% endif %}">
+      <a href="{% url 'section_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'section_list' %}on{% endif %}"
          data-tip="My Classes">
         <div class="sb-ico"><i class="bi bi-diagram-3"></i></div>
         <span class="sb-txt">My Classes</span>
       </a>
-      <a href="{% url 'my_students' %}"
-         class="sb-lnk {% if request.resolver_match.url_name == 'my_students' %}on{% endif %}"
+      <a href="{% url 'student_list' %}"
+         class="sb-lnk {% if request.resolver_match.url_name == 'student_list' %}on{% endif %}"
          data-tip="My Students">
         <div class="sb-ico"><i class="bi bi-people"></i></div>
         <span class="sb-txt">My Students</span>
