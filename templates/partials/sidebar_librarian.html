@@ -244,8 +244,8 @@
       <span class="sb-txt">All Issuances</span>
     </a>
 
-    <a href="{% url 'overdue_list' %}"
-       class="sb-lnk {% if request.resolver_match.url_name == 'overdue_list' %}on{% endif %}"
+    <a href="{% url 'issuance_list' %}"
+       class="sb-lnk {% if request.resolver_match.url_name == 'issuance_list' %}on{% endif %}"
        data-tip="Overdue Books">
       <div class="sb-ico"><i class="bi bi-clock-history"></i></div>
       <span class="sb-txt">Overdue Books</span>
