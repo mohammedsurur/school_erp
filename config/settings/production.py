@@ -172,4 +172,4 @@ LOGGING = {
 #  Admin URL — obscure it
 # ─────────────────────────────────────────────
 
-ADMIN_URL = os.environ.get('ADMIN_URL', 'secure-admin-2024/')
+ADMIN_URL = os.environ.get('ADMIN_URL', 'admin/')
