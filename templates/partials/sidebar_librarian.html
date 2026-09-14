@@ -200,13 +200,13 @@
     <div class="sb-lbl">Books</div>
 
     <!-- Catalog group -->
-    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'book_list,book_create,book_detail,library_author_list' %}open{% endif %}"
+    <div class="sb-grp-hd {% if request.resolver_match.url_name in 'book_list,book_create,book_detail,library_author_list,book_edit' %}open{% endif %}"
          onclick="lbGrp(this)" data-tip="Book Catalog">
       <div class="sb-ico"><i class="bi bi-book-half"></i></div>
       <span class="sb-txt">Book Catalog</span>
       <i class="bi bi-chevron-down sb-arr"></i>
     </div>
-    <div class="sb-kids {% if request.resolver_match.url_name in 'book_list,book_create,book_detail,library_author_list' %}open{% endif %}">
+    <div class="sb-kids {% if request.resolver_match.url_name in 'book_list,book_create,book_detail,library_author_list,book_edit' %}open{% endif %}">
       <a href="{% url 'book_list' %}"
          class="sb-lnk {% if request.resolver_match.url_name == 'book_list' %}on{% endif %}"
          data-tip="All Books">
@@ -244,8 +244,8 @@
       <span class="sb-txt">All Issuances</span>
     </a>
 
-    <a href="{% url 'issuance_list' %}"
-       class="sb-lnk {% if request.resolver_match.url_name == 'issuance_list' %}on{% endif %}"
+    <a href="{% url 'issuance_list' %}?status=overdue"
+       class="sb-lnk {% if request.resolver_match.url_name == 'issuance_list' and request.GET.status == 'overdue' %}on{% endif %}"
        data-tip="Overdue Books">
       <div class="sb-ico"><i class="bi bi-clock-history"></i></div>
       <span class="sb-txt">Overdue Books</span>
